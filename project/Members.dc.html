@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="icon" type="image/svg+xml" href="brand/icon-b.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body{margin:0;background:#ffffff;color:#0F2A47;font-family:'Manrope',sans-serif;-webkit-font-smoothing:antialiased;}
+  a{color:#1F8A5B;text-decoration:none;}
+  a:hover{color:#16714A;}
+</style>
+</helmet>
+
+<div style="min-height:100vh;display:flex;flex-direction:column;">
+
+<!-- NAV -->
+<header data-screen-label="Nav" style="position:sticky;top:0;z-index:50;background:rgba(255,255,255,.94);backdrop-filter:blur(10px);border-bottom:1px solid rgba(15,42,71,.08);">
+  <div style="max-width:1160px;margin:0 auto;padding:0 32px;min-height:68px;padding-top:10px;padding-bottom:10px;box-sizing:border-box;display:flex;flex-wrap:wrap;align-items:center;gap:10px 32px;">
+    <a href="Home.dc.html" style="display:flex;align-items:center;gap:10px;color:#0F2A47;">
+      <span style="font-family:'Sora',sans-serif;font-weight:600;font-size:29px;letter-spacing:-.02em;">Ben<span style="color:#1F8A5B;">Sync</span></span>
+    </a>
+    <nav style="display:flex;flex-wrap:wrap;align-items:center;gap:12px 26px;margin-left:auto;font-size:14px;font-weight:600;">
+      <a href="Whats Included.dc.html" style="color:#47586B;" style-hover="color:#0F2A47;">What's Included</a>
+      <a href="Employers.dc.html" style="color:#47586B;" style-hover="color:#0F2A47;">Employers</a>
+      <a href="Brokers.dc.html" style="color:#47586B;" style-hover="color:#0F2A47;">Brokers &amp; Consultants</a>
+      <a href="Members.dc.html" style="color:#0F2A47;border-bottom:2px solid #1F8A5B;padding-bottom:2px;">Members</a>
+      <span style="width:1px;height:18px;background:rgba(15,42,71,.18);"></span>
+      <a href="Login.dc.html" style="color:#0F2A47;font-weight:700;" style-hover="color:#1F8A5B;">Log In</a>
+      <a href="Brokers.dc.html" style="background:#0F2A47;color:#ffffff;padding:10px 18px;border-radius:10px;font-size:13.5px;" style-hover="background:#16385C;color:#ffffff;">Become A Broker Partner</a>
+    </nav>
+  </div>
+</header>
+
+<!-- PAGE HERO -->
+<section data-screen-label="Members hero" style="background:linear-gradient(180deg,#F6F8F7 0%,#ffffff 100%);border-bottom:1px solid rgba(15,42,71,.06);">
+  <div style="max-width:1160px;margin:0 auto;padding:76px 32px 56px;display:flex;flex-direction:column;gap:16px;box-sizing:border-box;">
+    <span style="font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#1F8A5B;">Member support</span>
+    <h1 style="font-family:'Sora',sans-serif;font-size:clamp(31px,4.4vw,44px);line-height:1.12;letter-spacing:-.025em;margin:0;font-weight:700;">Use your BenSync benefits.</h1>
+    <p style="font-size:17px;line-height:1.65;color:#47586B;margin:0;max-width:560px;text-wrap:pretty;">One place to get help, no matter which part of your benefits you have a question about.</p>
+  </div>
+</section>
+
+<!-- SUPPORT TILES -->
+<section data-screen-label="Support tiles" style="max-width:1160px;margin:0 auto;padding:56px 32px 0;width:100%;box-sizing:border-box;">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;">
+    <sc-for list="{{ tiles }}" as="t" hint-placeholder-count="8">
+      <a href="Members.dc.html" style="display:flex;flex-direction:column;gap:12px;border:1px solid rgba(15,42,71,.10);border-radius:16px;padding:24px 22px;background:#ffffff;color:#0F2A47;min-height:150px;box-sizing:border-box;" style-hover="border-color:rgba(31,138,91,.5);box-shadow:0 12px 28px -18px rgba(15,42,71,.25);color:#0F2A47;">
+        <span style="width:38px;height:38px;border-radius:11px;background:{{ t.iconBg }};display:flex;align-items:center;justify-content:center;">
+          <span style="width:14px;height:14px;border-radius:{{ t.iconRadius }};background:{{ t.iconFg }};"></span>
+        </span>
+        <span style="font-family:'Sora',sans-serif;font-size:16px;font-weight:600;letter-spacing:-.01em;">{{ t.title }}</span>
+        <span style="font-size:13.5px;line-height:1.55;color:#47586B;">{{ t.desc }}</span>
+        <span style="font-size:13px;font-weight:700;color:#1F8A5B;margin-top:auto;">{{ t.cta }} →</span>
+      </a>
+    </sc-for>
+  </div>
+</section>
+
+<!-- CONTACT BAND -->
+<section data-screen-label="Contact" style="max-width:1160px;margin:0 auto;padding:64px 32px 88px;width:100%;box-sizing:border-box;">
+  <div style="background:#0F2A47;border-radius:20px;padding:40px 44px;display:flex;align-items:center;justify-content:space-between;gap:40px;flex-wrap:wrap;">
+    <div style="display:flex;flex-direction:column;gap:8px;max-width:520px;">
+      <span style="font-family:'Sora',sans-serif;font-size:24px;font-weight:700;letter-spacing:-.015em;color:#ffffff;">Not sure where to start?</span>
+      <span style="font-size:15px;line-height:1.65;color:rgba(255,255,255,.72);">Contact BenSync member support and we'll route you to the right place. That's the point of one connected program.</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <span style="display:flex;align-items:baseline;gap:12px;">
+        <span style="font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:rgba(255,255,255,.5);">Phone</span>
+        <span style="font-family:'Sora',sans-serif;font-size:19px;font-weight:700;color:#ffffff;">1-800-000-0000</span>
+      </span>
+      <span style="display:flex;align-items:baseline;gap:12px;">
+        <span style="font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:rgba(255,255,255,.5);">Email</span>
+        <span style="font-size:15px;font-weight:600;color:#7FD6A8;">support@bensync.com</span>
+      </span>
+      <span style="font-size:12.5px;color:rgba(255,255,255,.5);">Mon–Fri, 8am–6pm CT</span>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer data-screen-label="Footer" style="background:#0B2138;border-top:1px solid rgba(255,255,255,.08);margin-top:auto;">
+  <div style="max-width:1160px;margin:0 auto;padding:56px 32px 40px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:40px;">
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <span style="display:flex;align-items:center;gap:10px;">
+        <img src="brand/icon-sync-white.svg" alt="BenSync" style="width:32px;height:32px;">
+      </span>
+      <span style="font-size:13.5px;line-height:1.65;color:rgba(255,255,255,.6);max-width:290px;"><span style="color:rgba(255,255,255,.92);font-weight:700;">BenSync</span> helps small employers control health plan costs, simplify administration, and offer better benefits through a bundled program delivered by broker partners.</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <span style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.45);">Program</span>
+      <a href="Whats Included.dc.html" style="font-size:14px;color:rgba(255,255,255,.78);" style-hover="color:#ffffff;">What's Included</a>
+      <a href="The System.dc.html" style="font-size:14px;color:rgba(255,255,255,.78);" style-hover="color:#ffffff;">The BenSync System</a>
+      <a href="Partner Network.dc.html" style="font-size:14px;color:rgba(255,255,255,.78);" style-hover="color:#ffffff;">Partner Network</a>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <span style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.45);">Who We Serve</span>
+      <a href="Employers.dc.html" style="font-size:14px;color:rgba(255,255,255,.78);" style-hover="color:#ffffff;">Employers</a>
+      <a href="Brokers.dc.html" style="font-size:14px;color:rgba(255,255,255,.78);" style-hover="color:#ffffff;">Brokers &amp; Consultants</a>
+      <a href="Members.dc.html" style="font-size:14px;color:rgba(255,255,255,.78);" style-hover="color:#ffffff;">Members</a>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <span style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.45);">Quick Links</span>
+      <a href="Login.dc.html" style="font-size:14px;color:rgba(255,255,255,.78);" style-hover="color:#ffffff;">Log In</a>
+      <a href="Brokers.dc.html" style="font-size:14px;color:rgba(255,255,255,.78);" style-hover="color:#ffffff;">Become A Broker Partner</a>
+      <a href="Contact.dc.html" style="font-size:14px;color:rgba(255,255,255,.78);" style-hover="color:#ffffff;">Contact Us</a>
+    </div>
+  </div>
+  <div style="border-top:1px solid rgba(255,255,255,.08);">
+    <div style="max-width:1160px;margin:0 auto;padding:18px 32px;display:flex;align-items:center;justify-content:space-between;gap:16px;">
+      <span style="font-size:12.5px;color:rgba(255,255,255,.45);">© 2026 BenSync. All rights reserved.</span>
+      <span style="display:flex;align-items:center;gap:18px;"><a href="Login.dc.html" style="font-size:12.5px;font-weight:700;color:#7FD6A8;" style-hover="color:#ffffff;">Log In</a><span style="font-size:12.5px;color:rgba(255,255,255,.45);">Distributed through independent brokers and consultants.</span></span>
+    </div>
+  </div>
+</footer>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      tiles: [
+        { title: "Access HealthJoy", desc: "Your benefits app for navigating care and getting answers.", cta: "Open the app", iconBg: "#E8F3ED", iconFg: "#1F8A5B", iconRadius: "5px" },
+        { title: "Use Paytient", desc: "Manage out-of-pocket healthcare costs with your Paytient card.", cta: "Card help", iconBg: "#E8F3ED", iconFg: "#1F8A5B", iconRadius: "3px" },
+        { title: "Enrollment help", desc: "Enroll online or get help from the enrollment call center.", cta: "Get help", iconBg: "#EDF1F6", iconFg: "#16385C", iconRadius: "50%" },
+        { title: "Find ID card information", desc: "Where to find your medical, dental, and vision ID cards.", cta: "Find my card", iconBg: "#EDF1F6", iconFg: "#16385C", iconRadius: "4px" },
+        { title: "Billing questions", desc: "Questions about the consolidated bill or payments.", cta: "Billing support", iconBg: "#E8F3ED", iconFg: "#1F8A5B", iconRadius: "50%" },
+        { title: "Medical plan support", desc: "Claims, coverage, and medical plan questions.", cta: "Medical support", iconBg: "#EDF1F6", iconFg: "#16385C", iconRadius: "5px" },
+        { title: "Dental & vision support", desc: "Help with your dental and vision benefits.", cta: "Dental & vision help", iconBg: "#E8F3ED", iconFg: "#1F8A5B", iconRadius: "4px" },
+        { title: "Contact member support", desc: "Talk to a real person who can route you anywhere.", cta: "Contact us", iconBg: "#0F2A47", iconFg: "#7FD6A8", iconRadius: "50%" }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

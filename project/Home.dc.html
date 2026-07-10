@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="icon" type="image/svg+xml" href="brand/icon-b.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body{margin:0;background:#ffffff;color:#0F2A47;font-family:'Manrope',sans-serif;-webkit-font-smoothing:antialiased;}
+  a{color:#1F8A5B;text-decoration:none;}
+  a:hover{color:#16714A;}
+  @keyframes heroIn{from{opacity:0;}to{opacity:1;}}
+</style>
+</helmet>
+
+<div style="min-height:100vh;display:flex;flex-direction:column;">
+
+<!-- NAV -->
+<header data-screen-label="Nav" style="position:sticky;top:0;z-index:50;background:rgba(255,255,255,.94);backdrop-filter:blur(10px);border-bottom:1px solid rgba(15,42,71,.08);">
+  <div style="max-width:1160px;margin:0 auto;padding:0 32px;min-height:68px;padding-top:10px;padding-bottom:10px;box-sizing:border-box;display:flex;flex-wrap:wrap;align-items:center;gap:10px 32px;">
+    <a href="Home.dc.html" style="display:flex;align-items:center;gap:10px;color:#0F2A47;">
+      <span style="font-family:'Sora',sans-serif;font-weight:600;font-size:29px;letter-spacing:-.02em;">Ben<span style="color:#1F8A5B;">Sync</span></span>
+    </a>
+    <nav style="display:flex;flex-wrap:wrap;align-items:center;gap:12px 26px;margin-left:auto;font-size:14px;font-weight:600;">
+      <a href="Whats Included.dc.html" style="color:#47586B;" style-hover="color:#0F2A47;">What's Included</a>
+      <a href="Employers.dc.html" style="color:#47586B;" style-hover="color:#0F2A47;">Employers</a>
+      <a href="Brokers.dc.html" style="color:#47586B;" style-hover="color:#0F2A47;">Brokers &amp; Consultants</a>
+      <a href="Members.dc.html" style="color:#47586B;" style-hover="color:#0F2A47;">Members</a>
+      <span style="width:1px;height:18px;background:rgba(15,42,71,.18);"></span>
+      <a href="Login.dc.html" style="color:#0F2A47;font-weight:700;" style-hover="color:#1F8A5B;">Log In</a>
+      <a href="Brokers.dc.html" style="background:#0F2A47;color:#ffffff;padding:10px 18px;border-radius:10px;font-size:13.5px;" style-hover="background:#16385C;color:#ffffff;">Become A Broker Partner</a>
+    </nav>
+  </div>
+</header>
+
+<!-- HERO -->
+<section data-screen-label="Hero" style="background:linear-gradient(180deg,#F6F8F7 0%,#ffffff 100%);border-bottom:1px solid rgba(15,42,71,.06);">
+  <div style="max-width:1160px;margin:0 auto;padding:88px 32px 72px;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:64px;align-items:center;">
+    <div style="display:flex;flex-direction:column;gap:24px;">
+      <span style="align-self:flex-start;display:inline-flex;align-items:center;gap:8px;background:#E8F3ED;color:#16714A;font-size:12.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:7px 14px;border-radius:999px;">Built for small groups · 2–99 employees</span>
+      <h1 style="font-family:'Sora',sans-serif;font-size:clamp(34px,5vw,52px);line-height:1.08;letter-spacing:-.025em;margin:0;font-weight:700;">A better benefits program for small employers.</h1>
+      <p style="font-size:18px;line-height:1.65;color:#47586B;margin:0;max-width:520px;text-wrap:pretty;">BenSync helps employers control health plan costs, simplify administration, and offer better benefits through a bundled program delivered by broker partners.</p>
+      <p style="font-family:'Sora',sans-serif;font-size:17px;font-weight:600;color:#1F8A5B;margin:0;">One program. One bill. One connected benefits experience.</p>
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin-top:6px;">
+        <a href="Whats Included.dc.html" style="background:#0F2A47;color:#ffffff;padding:15px 26px;border-radius:12px;font-weight:700;font-size:15px;" style-hover="background:#16385C;color:#ffffff;">Explore The Program</a>
+        <a href="Brokers.dc.html" style="background:#ffffff;color:#0F2A47;border:1.5px solid rgba(15,42,71,.18);padding:14px 24px;border-radius:12px;font-weight:700;font-size:15px;" style-hover="border-color:#0F2A47;color:#0F2A47;">Become A Broker Partner</a>
+        <a href="Members.dc.html" style="color:#47586B;font-size:14px;font-weight:600;text-decoration:underline;text-underline-offset:3px;" style-hover="color:#0F2A47;">Member Support</a>
+      </div>
+    </div>
+    <!-- Hero program card -->
+    <div style="background:#ffffff;border:1px solid rgba(15,42,71,.10);border-radius:20px;box-shadow:0 24px 60px -28px rgba(15,42,71,.25);padding:28px;display:flex;flex-direction:column;gap:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-family:'Sora',sans-serif;font-weight:600;font-size:15px;">The BenSync Program</span>
+        <span style="font-size:11.5px;font-weight:700;color:#16714A;background:#E8F3ED;padding:5px 10px;border-radius:999px;">Bundled</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <sc-for list="{{ heroItems }}" as="it" hint-placeholder-count="8">
+          <div style="display:flex;align-items:center;gap:10px;background:{{ it.bg }};border:1px solid {{ it.border }};border-radius:10px;padding:11px 13px;transition:background .5s ease,border-color .5s ease,transform .5s ease;transform:{{ it.lift }};animation:heroIn .5s ease both;animation-delay:{{ it.delay }};">
+            <span style="flex:none;width:8px;height:8px;border-radius:3px;background:#1F8A5B;transition:box-shadow .5s ease;box-shadow:{{ it.glow }};"></span>
+            <span style="font-size:13px;font-weight:600;color:{{ it.fg }};transition:color .5s ease;">{{ it.name }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="border-top:1px dashed rgba(15,42,71,.14);padding-top:14px;display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:13px;color:#47586B;font-weight:600;">Delivered as one coordinated program</span>
+        <span style="font-family:'Sora',sans-serif;font-size:13px;font-weight:700;color:{{ billColor }};transform:{{ billScale }};transition:color .4s ease,transform .4s ease;">1 bill</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROBLEM / SOLUTION / OUTCOME -->
+<section data-screen-label="Problem Solution Outcome" style="max-width:1160px;margin:0 auto;padding:88px 32px 0;width:100%;box-sizing:border-box;">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;align-items:stretch;">
+    <div style="display:flex;flex-direction:column;gap:12px;background:#F6F8F7;border:1px solid rgba(15,42,71,.08);border-radius:16px;padding:30px 28px;">
+      <span style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#7A8A99;">The Problem</span>
+      <span style="font-family:'Sora',sans-serif;font-size:19px;font-weight:600;letter-spacing:-.01em;line-height:1.3;">Stuck between rising costs and rising expectations.</span>
+      <span style="font-size:14.5px;line-height:1.65;color:#47586B;text-wrap:pretty;">Traditional fully insured plans keep getting more expensive, but building a modern benefits program with health, pharmacy, enrollment, advocacy, payment tools, dental, vision, supplemental benefits, billing, and support is too complex for most small groups.</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;background:#0F2A47;border-radius:16px;padding:30px 28px;">
+      <span style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#7FD6A8;">The Solution</span>
+      <span style="font-family:'Sora',sans-serif;font-size:19px;font-weight:600;letter-spacing:-.01em;line-height:1.3;color:#ffffff;">One integrated program, already assembled.</span>
+      <span style="font-size:14.5px;line-height:1.65;color:rgba(255,255,255,.75);text-wrap:pretty;">BenSync brings those pieces together into one integrated employee benefits program built for small employers and delivered through trusted brokers and consultants.</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;background:#E8F3ED;border:1px solid rgba(31,138,91,.25);border-radius:16px;padding:30px 28px;">
+      <span style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#16714A;">The Outcome</span>
+      <span style="font-family:'Sora',sans-serif;font-size:19px;font-weight:600;letter-spacing:-.01em;line-height:1.3;color:#0F2A47;">Everyone gets a better deal.</span>
+      <span style="font-size:14.5px;line-height:1.65;color:#3B5A4C;text-wrap:pretty;">Employers get a better way to offer benefits. Employees get more support. Brokers get a complete solution they can bring to clients.</span>
+    </div>
+  </div>
+</section>
+
+<!-- WHAT BENSYNC IS -->
+<section data-screen-label="What BenSync is" style="max-width:1160px;margin:0 auto;padding:88px 32px 0;width:100%;box-sizing:border-box;">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:64px;align-items:start;">
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <span style="font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#1F8A5B;">What BenSync is</span>
+      <h2 style="font-family:'Sora',sans-serif;font-size:clamp(27px,3.4vw,34px);line-height:1.18;letter-spacing:-.02em;margin:0;font-weight:700;">The program layer for small-group benefits.</h2>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:18px;font-size:16.5px;line-height:1.7;color:#47586B;">
+      <p style="margin:0;text-wrap:pretty;">BenSync is not just a health plan. Not just a claims administrator. Not just enrollment technology. It's the program layer that connects best-in-class partners into one bundled small-group benefits solution.</p>
+      <p style="margin:0;text-wrap:pretty;">Small employers can't realistically assemble the right vendors, systems, enrollment, billing, and support on their own, and most agencies don't want to build every piece themselves. BenSync already did the assembly, so brokers and employers get the finished program.</p>
+      <a href="The System.dc.html" style="font-weight:700;font-size:15px;">See how the system works →</a>
+    </div>
+  </div>
+</section>
+
+<!-- WHO IT'S FOR -->
+<section data-screen-label="Audiences" style="max-width:1160px;margin:0 auto;padding:72px 32px 0;width:100%;box-sizing:border-box;">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;">
+    <a href="Employers.dc.html" style="display:flex;flex-direction:column;gap:12px;background:#F6F8F7;border:1px solid rgba(15,42,71,.08);border-radius:16px;padding:28px;color:#0F2A47;" style-hover="border-color:rgba(31,138,91,.5);color:#0F2A47;">
+      <span style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#1F8A5B;">Employers</span>
+      <span style="font-family:'Sora',sans-serif;font-size:20px;font-weight:600;letter-spacing:-.01em;">The best benefits program for your team.</span>
+      <span style="font-size:14.5px;line-height:1.6;color:#47586B;">A complete, bundled benefits package with one bill and real support for your employees.</span>
+      <span style="font-size:14px;font-weight:700;color:#1F8A5B;margin-top:auto;">For employers →</span>
+    </a>
+    <a href="Brokers.dc.html" style="display:flex;flex-direction:column;gap:12px;background:#0F2A47;border:1px solid #0F2A47;border-radius:16px;padding:28px;color:#ffffff;" style-hover="background:#16385C;color:#ffffff;">
+      <span style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#7FD6A8;">Brokers &amp; Consultants</span>
+      <span style="font-family:'Sora',sans-serif;font-size:20px;font-weight:600;letter-spacing:-.01em;">Offer a modern benefits solution under your brand.</span>
+      <span style="font-size:14.5px;line-height:1.6;color:rgba(255,255,255,.75);">A turnkey program you can bring to clients, white-label or co-branded. Your clients. Your brand. BenSync behind the scenes.</span>
+      <span style="font-size:14px;font-weight:700;color:#7FD6A8;margin-top:auto;">For brokers →</span>
+    </a>
+    <a href="Members.dc.html" style="display:flex;flex-direction:column;gap:12px;background:#F6F8F7;border:1px solid rgba(15,42,71,.08);border-radius:16px;padding:28px;color:#0F2A47;" style-hover="border-color:rgba(31,138,91,.5);color:#0F2A47;">
+      <span style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#1F8A5B;">Members</span>
+      <span style="font-family:'Sora',sans-serif;font-size:20px;font-weight:600;letter-spacing:-.01em;">Get help using your BenSync benefits.</span>
+      <span style="font-size:14.5px;line-height:1.6;color:#47586B;">Enrollment help, app access, payment tools, ID cards, and support, all in one place.</span>
+      <span style="font-size:14px;font-weight:700;color:#1F8A5B;margin-top:auto;">Member support →</span>
+    </a>
+  </div>
+</section>
+
+<!-- THE SYSTEM (mini diagram) -->
+<section data-screen-label="System preview" style="margin-top:88px;background:#F6F8F7;border-top:1px solid rgba(15,42,71,.06);border-bottom:1px solid rgba(15,42,71,.06);">
+  <div style="max-width:1160px;margin:0 auto;padding:76px 32px;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:64px;align-items:center;">
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      <span style="font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#1F8A5B;">The BenSync System</span>
+      <h2 style="font-family:'Sora',sans-serif;font-size:clamp(25px,3.2vw,32px);line-height:1.2;letter-spacing:-.02em;margin:0;font-weight:700;">One program layer connecting the entire benefits experience.</h2>
+      <p style="font-size:16px;line-height:1.7;color:#47586B;margin:0;text-wrap:pretty;">The broker remains the advisor. BenSync coordinates the program. Integrated partners deliver the specialized components. Employers receive one bundled experience.</p>
+      <a href="The System.dc.html" style="font-weight:700;font-size:15px;">Explore the system →</a>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:stretch;gap:0;">
+      <sc-for list="{{ systemFlow }}" as="row" hint-placeholder-count="5">
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div style="width:100%;display:flex;align-items:center;gap:16px;background:{{ row.bg }};border:1px solid {{ row.border }};border-radius:14px;padding:16px 22px;box-sizing:border-box;">
+            <span style="font-family:'Sora',sans-serif;font-size:15.5px;font-weight:700;color:{{ row.fg }};">{{ row.label }}</span>
+            <span style="font-size:13px;color:{{ row.sub }};margin-left:auto;text-align:right;">{{ row.desc }}</span>
+          </div>
+          <sc-if value="{{ row.arrow }}" hint-placeholder-val="{{ true }}">
+            <span style="width:2px;height:16px;background:rgba(15,42,71,.22);"></span>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</section>
+
+<!-- PARTNER STRIP -->
+<section data-screen-label="Partner strip" style="max-width:1160px;margin:0 auto;padding:80px 32px 0;width:100%;box-sizing:border-box;">
+  <div style="display:flex;align-items:baseline;justify-content:space-between;gap:24px;flex-wrap:wrap;">
+    <div style="display:flex;flex-direction:column;gap:10px;max-width:560px;">
+      <span style="font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#1F8A5B;">Partner network</span>
+      <h2 style="font-family:'Sora',sans-serif;font-size:clamp(24px,3vw,30px);line-height:1.2;letter-spacing:-.02em;margin:0;font-weight:700;">Best-in-class partners in one coordinated system.</h2>
+    </div>
+    <a href="Partner Network.dc.html" style="font-weight:700;font-size:15px;">See the partner network →</a>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-top:32px;">
+    <sc-for list="{{ partnerStrip }}" as="p" hint-placeholder-count="5">
+      <div style="display:flex;flex-direction:column;gap:8px;border:1px solid rgba(15,42,71,.10);border-radius:14px;padding:20px;background:#ffffff;">
+        <span style="font-family:'Sora',sans-serif;font-size:15px;font-weight:700;color:#0F2A47;">{{ p.name }}</span>
+        <span style="font-size:12.5px;line-height:1.5;color:#47586B;">{{ p.role }}</span>
+        <span style="font-size:11px;font-weight:700;color:#16714A;margin-top:auto;">Integrated partner</span>
+      </div>
+    </sc-for>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section data-screen-label="How it works" style="max-width:1160px;margin:0 auto;padding:88px 32px;width:100%;box-sizing:border-box;">
+  <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:36px;">
+    <span style="font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#1F8A5B;">How it works</span>
+    <h2 style="font-family:'Sora',sans-serif;font-size:clamp(24px,3vw,30px);line-height:1.2;letter-spacing:-.02em;margin:0;font-weight:700;">Assembled, integrated, and ready to go.</h2>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;">
+    <sc-for list="{{ steps }}" as="s" hint-placeholder-count="4">
+      <div style="display:flex;flex-direction:column;gap:12px;border-top:3px solid #1F8A5B;background:#F6F8F7;border-radius:0 0 14px 14px;padding:22px;">
+        <span style="font-family:'Sora',sans-serif;font-size:13px;font-weight:700;color:#1F8A5B;">{{ s.num }}</span>
+        <span style="font-family:'Sora',sans-serif;font-size:17px;font-weight:600;color:#0F2A47;letter-spacing:-.01em;">{{ s.title }}</span>
+        <span style="font-size:14px;line-height:1.6;color:#47586B;">{{ s.desc }}</span>
+      </div>
+    </sc-for>
+  </div>
+</section>
+
+<!-- CTA BAND -->
+<section data-screen-label="CTA" style="background:#0F2A47;">
+  <div style="max-width:1160px;margin:0 auto;padding:72px 32px;display:flex;align-items:center;justify-content:space-between;gap:40px;flex-wrap:wrap;">
+    <div style="display:flex;flex-direction:column;gap:10px;max-width:600px;">
+      <h2 style="font-family:'Sora',sans-serif;font-size:clamp(25px,3.2vw,32px);line-height:1.2;letter-spacing:-.02em;margin:0;font-weight:700;color:#ffffff;">Offer more without building more.</h2>
+      <p style="font-size:16px;line-height:1.65;color:rgba(255,255,255,.72);margin:0;">Bring a complete small-group benefits program to your clients, already assembled, packaged, and ready to run.</p>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:14px;">
+      <a href="Brokers.dc.html" style="background:#1F8A5B;color:#ffffff;padding:15px 26px;border-radius:12px;font-weight:700;font-size:15px;" style-hover="background:#26A06C;color:#ffffff;">Become A Broker Partner</a>
+      <a href="Employers.dc.html" style="color:#ffffff;border:1.5px solid rgba(255,255,255,.35);padding:14px 24px;border-radius:12px;font-weight:700;font-size:15px;" style-hover="border-color:#ffffff;color:#ffffff;">I'm An Employer</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer data-screen-label="Footer" style="background:#0B2138;border-top:1px solid rgba(255,255,255,.08);margin-top:auto;">
+  <div style="max-width:1160px;margin:0 auto;padding:56px 32px 40px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:40px;">
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <span style="display:flex;align-items:center;gap:10px;">
+        <img src="brand/icon-sync-white.svg" alt="BenSync" style="width:32px;height:32px;">
+      </span>
+      <span style="font-size:13.5px;line-height:1.65;color:rgba(255,255,255,.6);max-width:290px;"><span style="color:rgba(255,255,255,.92);font-weight:700;">BenSync</span> helps small employers control health plan costs, simplify administration, and offer better benefits through a bundled program delivered by broker partners.</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <span style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.45);">Program</span>
+      <a href="Whats Included.dc.html" style="font-size:14px;color:rgba(255,255,255,.78);" style-hover="color:#ffffff;">What's Included</a>
+      <a href="The System.dc.html" style="font-size:14px;color:rgba(255,255,255,.78);" style-hover="color:#ffffff;">The BenSync System</a>
+      <a href="Partner Network.dc.html" style="font-size:14px;color:rgba(255,255,255,.78);" style-hover="color:#ffffff;">Partner Network</a>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <span style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.45);">Who We Serve</span>
+      <a href="Employers.dc.html" style="font-size:14px;color:rgba(255,255,255,.78);" style-hover="color:#ffffff;">Employers</a>
+      <a href="Brokers.dc.html" style="font-size:14px;color:rgba(255,255,255,.78);" style-hover="color:#ffffff;">Brokers &amp; Consultants</a>
+      <a href="Members.dc.html" style="font-size:14px;color:rgba(255,255,255,.78);" style-hover="color:#ffffff;">Members</a>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <span style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.45);">Quick Links</span>
+      <a href="Login.dc.html" style="font-size:14px;color:rgba(255,255,255,.78);" style-hover="color:#ffffff;">Log In</a>
+      <a href="Brokers.dc.html" style="font-size:14px;color:rgba(255,255,255,.78);" style-hover="color:#ffffff;">Become A Broker Partner</a>
+      <a href="Contact.dc.html" style="font-size:14px;color:rgba(255,255,255,.78);" style-hover="color:#ffffff;">Contact Us</a>
+    </div>
+  </div>
+  <div style="border-top:1px solid rgba(255,255,255,.08);">
+    <div style="max-width:1160px;margin:0 auto;padding:18px 32px;display:flex;align-items:center;justify-content:space-between;gap:16px;">
+      <span style="font-size:12.5px;color:rgba(255,255,255,.45);">© 2026 BenSync. All rights reserved.</span>
+      <span style="display:flex;align-items:center;gap:18px;"><a href="Login.dc.html" style="font-size:12.5px;font-weight:700;color:#7FD6A8;" style-hover="color:#ffffff;">Log In</a><span style="font-size:12.5px;color:rgba(255,255,255,.45);">Distributed through independent brokers and consultants.</span></span>
+    </div>
+  </div>
+</footer>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { tick: -1 };
+  componentDidMount() {
+    this.timer = setInterval(() => {
+      this.setState(s => ({ tick: (s.tick + 1) % 10 }));
+    }, 1000);
+  }
+  componentWillUnmount() {
+    clearInterval(this.timer);
+  }
+  renderVals() {
+    const names = [
+      "Medical plan", "Pharmacy benefits",
+      "Dental & vision", "Supplemental benefits",
+      "Online enrollment", "Member app & navigation",
+      "Payment card", "Consolidated billing"
+    ];
+    const t = this.state.tick;
+    const heroItems = names.map((name, i) => {
+      const active = t === i;
+      return {
+        name,
+        bg: active ? "#E8F3ED" : "#F6F8F7",
+        border: active ? "rgba(31,138,91,.45)" : "rgba(15,42,71,.06)",
+        fg: active ? "#16714A" : "#16385C",
+        lift: active ? "translateY(-2px)" : "none",
+        glow: active ? "0 0 0 4px rgba(31,138,91,.18)" : "0 0 0 0 rgba(31,138,91,0)",
+        delay: (i * 0.07) + "s"
+      };
+    });
+    const billActive = t === 8;
+    return {
+      heroItems,
+      billColor: billActive ? "#1F8A5B" : "#0F2A47",
+      billScale: billActive ? "scale(1.25)" : "scale(1)",
+      systemFlow: [
+        { label: "Broker / Consultant", desc: "The advisor. The relationship.", bg: "#ffffff", border: "rgba(15,42,71,.12)", fg: "#0F2A47", sub: "#47586B", arrow: true },
+        { label: "BenSync Program", desc: "Coordinates the entire program.", bg: "#0F2A47", border: "#0F2A47", fg: "#ffffff", sub: "rgba(255,255,255,.65)", arrow: true },
+        { label: "Integrated Partners", desc: "Specialized components, one system.", bg: "#E8F3ED", border: "rgba(31,138,91,.3)", fg: "#16714A", sub: "#3B7A5C", arrow: true },
+        { label: "Employer", desc: "One bundled experience. One bill.", bg: "#ffffff", border: "rgba(15,42,71,.12)", fg: "#0F2A47", sub: "#47586B", arrow: true },
+        { label: "Members", desc: "Support, tools, and guidance.", bg: "#ffffff", border: "rgba(15,42,71,.12)", fg: "#0F2A47", sub: "#47586B", arrow: false }
+      ],
+      partnerStrip: [
+        { name: "Employee Navigator", role: "Enrollment and benefits administration workflows." },
+        { name: "HealthJoy", role: "Member navigation and benefits support." },
+        { name: "Paytient", role: "Payment support for out-of-pocket costs." },
+        { name: "HealthEZ", role: "Medical plan administration." },
+        { name: "MedOne", role: "Pharmacy benefit management." }
+      ],
+      steps: [
+        { num: "01", title: "Partner with BenSync", desc: "Brokers and consultants join as distribution partners, white-label or co-branded." },
+        { num: "02", title: "Bring it to clients", desc: "Present a complete, pre-assembled benefits program under your own brand." },
+        { num: "03", title: "Enroll with support", desc: "Online enrollment through the program's platform, with call center support when needed." },
+        { num: "04", title: "One coordinated experience", desc: "One bill, member support, renewal coordination, BenSync runs the program layer." }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

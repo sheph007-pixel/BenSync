@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="icon" type="image/svg+xml" href="brand/icon-b.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body{margin:0;background:#ffffff;color:#0F2A47;font-family:'Manrope',sans-serif;-webkit-font-smoothing:antialiased;}
+  a{color:#1F8A5B;text-decoration:none;}
+  a:hover{color:#16714A;}
+</style>
+</helmet>
+
+<div style="min-height:100vh;display:flex;flex-direction:column;">
+
+<!-- NAV -->
+<header data-screen-label="Nav" style="position:sticky;top:0;z-index:50;background:rgba(255,255,255,.94);backdrop-filter:blur(10px);border-bottom:1px solid rgba(15,42,71,.08);">
+  <div style="max-width:1160px;margin:0 auto;padding:0 32px;min-height:68px;padding-top:10px;padding-bottom:10px;box-sizing:border-box;display:flex;flex-wrap:wrap;align-items:center;gap:10px 32px;">
+    <a href="Home.dc.html" style="display:flex;align-items:center;gap:10px;color:#0F2A47;">
+      <span style="font-family:'Sora',sans-serif;font-weight:600;font-size:29px;letter-spacing:-.02em;">Ben<span style="color:#1F8A5B;">Sync</span></span>
+    </a>
+    <nav style="display:flex;flex-wrap:wrap;align-items:center;gap:12px 26px;margin-left:auto;font-size:14px;font-weight:600;">
+      <a href="Whats Included.dc.html" style="color:#47586B;" style-hover="color:#0F2A47;">What's Included</a>
+      <a href="Employers.dc.html" style="color:#47586B;" style-hover="color:#0F2A47;">Employers</a>
+      <a href="Brokers.dc.html" style="color:#0F2A47;border-bottom:2px solid #1F8A5B;padding-bottom:2px;">Brokers &amp; Consultants</a>
+      <a href="Members.dc.html" style="color:#47586B;" style-hover="color:#0F2A47;">Members</a>
+      <span style="width:1px;height:18px;background:rgba(15,42,71,.18);"></span>
+      <a href="Login.dc.html" style="color:#0F2A47;font-weight:700;" style-hover="color:#1F8A5B;">Log In</a>
+      <a href="Brokers.dc.html" style="background:#0F2A47;color:#ffffff;padding:10px 18px;border-radius:10px;font-size:13.5px;" style-hover="background:#16385C;color:#ffffff;">Become A Broker Partner</a>
+    </nav>
+  </div>
+</header>
+
+<!-- PAGE HERO (dark) -->
+<section data-screen-label="Brokers hero" style="background:#0F2A47;">
+  <div style="max-width:1160px;margin:0 auto;padding:84px 32px 72px;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:56px;align-items:center;box-sizing:border-box;">
+    <div style="display:flex;flex-direction:column;gap:20px;">
+      <span style="font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#7FD6A8;">For brokers &amp; consultants</span>
+      <h1 style="font-family:'Sora',sans-serif;font-size:clamp(32px,4.6vw,46px);line-height:1.1;letter-spacing:-.025em;margin:0;font-weight:700;color:#ffffff;">Offer a modern benefits program without building one from scratch.</h1>
+      <p style="font-size:17px;line-height:1.68;color:rgba(255,255,255,.75);margin:0;max-width:540px;text-wrap:pretty;">BenSync helps brokers and consultants bring a complete small-group benefits solution to their clients under their own brand.</p>
+      <p style="font-family:'Sora',sans-serif;font-size:16px;font-weight:600;color:#7FD6A8;margin:0;">Your clients. Your brand. BenSync behind the scenes.</p>
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin-top:4px;">
+        <a href="Broker Landing Demo.dc.html" style="background:#1F8A5B;color:#ffffff;padding:14px 24px;border-radius:12px;font-weight:700;font-size:15px;" style-hover="background:#26A06C;color:#ffffff;">Become A Broker Partner</a>
+        <a href="Whats Included.dc.html" style="color:#ffffff;border:1.5px solid rgba(255,255,255,.35);padding:13px 22px;border-radius:12px;font-weight:700;font-size:15px;" style-hover="border-color:#ffffff;color:#ffffff;">See The Program</a>
+      </div>
+    </div>
+    <div style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:26px;display:flex;flex-direction:column;gap:14px;">
+      <span style="font-family:'Sora',sans-serif;font-size:14px;font-weight:700;color:#ffffff;">What you skip building</span>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        <sc-for list="{{ skipChips }}" as="c" hint-placeholder-count="9">
+          <span style="background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:7px 14px;font-size:12.5px;font-weight:600;color:rgba(255,255,255,.85);">{{ c }}</span>
+        </sc-for>
+      </div>
+      <span style="font-size:13px;line-height:1.6;color:rgba(255,255,255,.6);border-top:1px dashed rgba(255,255,255,.18);padding-top:12px;">Already assembled, packaged, and ready to run. You bring it to clients.</span>
+    </div>
+  </div>
+</section>
+
+<!-- BROKER VALUE -->
+<section data-screen-label="Broker value" style="max-width:1160px;margin:0 auto;padding:84px 32px 0;width:100%;box-sizing:border-box;">
+  <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:32px;">
+    <h2 style="font-family:'Sora',sans-serif;font-size:clamp(24px,3vw,30px);letter-spacing:-.02em;margin:0;font-weight:700;">Brokers are the channel. Full stop.</h2>
+    <p style="font-size:15.5px;color:#47586B;margin:0;max-width:640px;text-wrap:pretty;">BenSync does not replace the advisor. BenSync powers the program behind the advisor.</p>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;">
+    <sc-for list="{{ brokerValues }}" as="v" hint-placeholder-count="9">
+      <div style="display:flex;flex-direction:column;gap:8px;border:1px solid rgba(15,42,71,.10);border-radius:14px;padding:22px;background:#ffffff;">
+        <span style="font-family:'Sora',sans-serif;font-size:16px;font-weight:600;letter-spacing:-.01em;color:#0F2A47;">{{ v.title }}</span>
+        <span style="font-size:14px;line-height:1.6;color:#47586B;">{{ v.desc }}</span>
+      </div>
+    </sc-for>
+  </div>
+</section>
+
+<!-- BRANDED PAGES -->
+<section data-screen-label="Branded pages" style="max-width:1160px;margin:0 auto;padding:84px 32px 88px;width:100%;box-sizing:border-box;">
+  <div style="background:#F6F8F7;border:1px solid rgba(15,42,71,.08);border-radius:20px;padding:44px;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:56px;align-items:center;">
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <span style="font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#1F8A5B;">Broker-branded pages</span>
+      <h2 style="font-family:'Sora',sans-serif;font-size:28px;line-height:1.22;letter-spacing:-.02em;margin:0;font-weight:700;">Your own employer-facing landing page.</h2>
+      <p style="font-size:15.5px;line-height:1.7;color:#47586B;margin:0;text-wrap:pretty;">Every partner gets a co-branded page (your logo, your producer, your contact) that explains the program in employer-friendly language while keeping you front and center.</p>
+      <div style="display:flex;flex-direction:column;gap:6px;font-family:ui-monospace,Menlo,monospace;font-size:13.5px;color:#16385C;">
+        <span>bensync.com/<span style="color:#1F8A5B;font-weight:700;">youragency</span></span>
+      </div>
+      <a href="Broker Landing Demo.dc.html" style="align-self:flex-start;background:#0F2A47;color:#ffffff;padding:13px 22px;border-radius:12px;font-weight:700;font-size:14.5px;margin-top:6px;" style-hover="background:#16385C;color:#ffffff;">See A Live Example</a>
+    </div>
+    <a href="Broker Landing Demo.dc.html" style="display:block;background:#ffffff;border:1px solid rgba(15,42,71,.12);border-radius:14px;overflow:hidden;box-shadow:0 18px 40px -24px rgba(15,42,71,.3);color:#0F2A47;" style-hover="border-color:rgba(31,138,91,.5);color:#0F2A47;">
+      <span style="display:flex;align-items:center;gap:6px;background:#F1F4F2;border-bottom:1px solid rgba(15,42,71,.08);padding:9px 14px;">
+        <span style="width:9px;height:9px;border-radius:50%;background:#D9E0DB;"></span>
+        <span style="width:9px;height:9px;border-radius:50%;background:#D9E0DB;"></span>
+        <span style="width:9px;height:9px;border-radius:50%;background:#D9E0DB;"></span>
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:#7A8A99;margin-left:8px;">bensync.com/youragency</span>
+      </span>
+      <span style="display:flex;flex-direction:column;gap:10px;padding:22px;">
+        <span style="display:flex;align-items:center;gap:10px;">
+          <span style="width:30px;height:30px;border-radius:8px;background:repeating-linear-gradient(-45deg,#EAF0EC 0 6px,#F3F7F4 6px 12px);border:1px solid rgba(15,42,71,.1);"></span>
+          <span style="display:flex;flex-direction:column;">
+            <span style="font-family:'Sora',sans-serif;font-size:13.5px;font-weight:700;">Your Agency Benefits Program</span>
+            <span style="font-size:11px;color:#7A8A99;">Powered by BenSync</span>
+          </span>
+        </span>
+        <span style="height:8px;border-radius:4px;background:#EDF1EE;width:86%;"></span>
+        <span style="height:8px;border-radius:4px;background:#EDF1EE;width:64%;"></span>
+        <span style="display:flex;gap:8px;margin-top:4px;">
+          <span style="flex:1;height:44px;border-radius:8px;background:#F6F8F7;border:1px solid rgba(15,42,71,.07);"></span>
+          <span style="flex:1;height:44px;border-radius:8px;background:#F6F8F7;border:1px solid rgba(15,42,71,.07);"></span>
+          <span style="flex:1;height:44px;border-radius:8px;background:#F6F8F7;border:1px solid rgba(15,42,71,.07);"></span>
+        </span>
+        <span style="align-self:flex-start;background:#1F8A5B;color:#ffffff;font-size:11.5px;font-weight:700;padding:8px 14px;border-radius:8px;margin-top:2px;">Request information</span>
+      </span>
+    </a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer data-screen-label="Footer" style="background:#0B2138;border-top:1px solid rgba(255,255,255,.08);margin-top:auto;">
+  <div style="max-width:1160px;margin:0 auto;padding:56px 32px 40px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:40px;">
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <span style="display:flex;align-items:center;gap:10px;">
+        <img src="brand/icon-sync-white.svg" alt="BenSync" style="width:32px;height:32px;">
+      </span>
+      <span style="font-size:13.5px;line-height:1.65;color:rgba(255,255,255,.6);max-width:290px;"><span style="color:rgba(255,255,255,.92);font-weight:700;">BenSync</span> helps small employers control health plan costs, simplify administration, and offer better benefits through a bundled program delivered by broker partners.</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <span style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.45);">Program</span>
+      <a href="Whats Included.dc.html" style="font-size:14px;color:rgba(255,255,255,.78);" style-hover="color:#ffffff;">What's Included</a>
+      <a href="The System.dc.html" style="font-size:14px;color:rgba(255,255,255,.78);" style-hover="color:#ffffff;">The BenSync System</a>
+      <a href="Partner Network.dc.html" style="font-size:14px;color:rgba(255,255,255,.78);" style-hover="color:#ffffff;">Partner Network</a>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <span style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.45);">Who We Serve</span>
+      <a href="Employers.dc.html" style="font-size:14px;color:rgba(255,255,255,.78);" style-hover="color:#ffffff;">Employers</a>
+      <a href="Brokers.dc.html" style="font-size:14px;color:rgba(255,255,255,.78);" style-hover="color:#ffffff;">Brokers &amp; Consultants</a>
+      <a href="Members.dc.html" style="font-size:14px;color:rgba(255,255,255,.78);" style-hover="color:#ffffff;">Members</a>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <span style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.45);">Quick Links</span>
+      <a href="Login.dc.html" style="font-size:14px;color:rgba(255,255,255,.78);" style-hover="color:#ffffff;">Log In</a>
+      <a href="Brokers.dc.html" style="font-size:14px;color:rgba(255,255,255,.78);" style-hover="color:#ffffff;">Become A Broker Partner</a>
+      <a href="Contact.dc.html" style="font-size:14px;color:rgba(255,255,255,.78);" style-hover="color:#ffffff;">Contact Us</a>
+    </div>
+  </div>
+  <div style="border-top:1px solid rgba(255,255,255,.08);">
+    <div style="max-width:1160px;margin:0 auto;padding:18px 32px;display:flex;align-items:center;justify-content:space-between;gap:16px;">
+      <span style="font-size:12.5px;color:rgba(255,255,255,.45);">© 2026 BenSync. All rights reserved.</span>
+      <span style="display:flex;align-items:center;gap:18px;"><a href="Login.dc.html" style="font-size:12.5px;font-weight:700;color:#7FD6A8;" style-hover="color:#ffffff;">Log In</a><span style="font-size:12.5px;color:rgba(255,255,255,.45);">Distributed through independent brokers and consultants.</span></span>
+    </div>
+  </div>
+</footer>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      skipChips: ["Claims administration", "Pharmacy contracts", "Enrollment system", "Billing process", "Member app", "Payment card", "COBRA administration", "Dental & vision carriers", "Service team", "Renewal workflow"],
+      brokerValues: [
+        { title: "Grow benefits revenue", desc: "Add a complete benefits offering without hiring a team to run it." },
+        { title: "Cross-sell commercial clients", desc: "Offer benefits to the business insurance clients you already serve." },
+        { title: "Keep the client relationship", desc: "You stay your client's advisor. BenSync stays behind the scenes." },
+        { title: "Increase revenue per account", desc: "Earn recurring commission and program fee income on every group." },
+        { title: "Offer a complete package", desc: "Medical, pharmacy, dental, vision, supplemental, billing, and support, all bundled." },
+        { title: "Compete with larger agencies", desc: "Deliver a big-agency program without big-agency staffing." },
+        { title: "Skip the build", desc: "No piecing together administrators, pharmacy contracts, enrollment systems, or service teams yourself." },
+        { title: "Broker-branded materials", desc: "Landing pages, proposals, and enrollment materials under your brand." },
+        { title: "Renewal support", desc: "Reporting and renewal coordination that keeps clients year after year." }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
