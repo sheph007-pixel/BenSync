@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contact Us · BenSync</title>
+<meta name="description" content="Employer, broker, or member: contact BenSync once and we'll route you to the right people. One number, one email, one form.">
+<link rel="icon" type="image/svg+xml" href="/brand/icon-b.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body class="soft">
+<div style="min-height:100vh;display:flex;flex-direction:column;">
+
+<!-- NAV -->
+<header style="position:sticky;top:0;z-index:50;background:rgba(255,255,255,.94);backdrop-filter:blur(10px);border-bottom:1px solid rgba(15,42,71,.08);">
+  <div style="max-width:1160px;margin:0 auto;padding:10px 32px;min-height:68px;display:flex;flex-wrap:wrap;align-items:center;gap:10px 32px;">
+    <a href="/" style="display:flex;align-items:center;gap:10px;color:#0F2A47;">
+      <span style="font-family:'Sora',sans-serif;font-weight:600;font-size:29px;letter-spacing:-.02em;">Ben<span style="color:#1F8A5B;">Sync</span></span>
+    </a>
+    <nav style="display:flex;flex-wrap:wrap;align-items:center;gap:12px 26px;margin-left:auto;font-size:14px;font-weight:600;">
+      <a class="nl" href="/whats-included" style="color:#47586B;">What's Included</a>
+      <a class="nl" href="/employers" style="color:#47586B;">Employers</a>
+      <a class="nl" href="/brokers" style="color:#47586B;">Brokers &amp; Consultants</a>
+      <a class="nl" href="/members" style="color:#47586B;">Members</a>
+      <span style="width:1px;height:18px;background:rgba(15,42,71,.18);"></span>
+      <a class="nl-login" href="/login" style="color:#0F2A47;font-weight:700;">Log In</a>
+      <a class="btn-navy" href="/brokers" style="background:#0F2A47;color:#ffffff;padding:10px 18px;border-radius:10px;font-size:13.5px;">Become A Broker Partner</a>
+    </nav>
+  </div>
+</header>
+
+<!-- CONTACT -->
+<section style="flex:1;display:flex;flex-direction:column;align-items:center;padding:72px 32px 88px;">
+  <div style="display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;margin-bottom:40px;">
+    <h1 style="font-family:'Sora',sans-serif;font-size:clamp(28px,3.6vw,36px);line-height:1.15;letter-spacing:-.02em;margin:0;font-weight:700;">One place to reach us.</h1>
+    <p style="font-size:16px;line-height:1.6;color:#47586B;margin:0;max-width:500px;">Employer, broker, or member: contact us once and we'll route you to the right people. That's the point of one connected program.</p>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;max-width:940px;width:100%;align-items:start;">
+
+    <!-- One number, one email -->
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;flex-direction:column;gap:6px;background:#0F2A47;border-radius:16px;padding:26px;">
+        <span style="font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#7FD6A8;">One number for everything</span>
+        <span style="font-family:'Sora',sans-serif;font-size:26px;font-weight:700;color:#ffffff;">1-800-000-0000</span>
+        <span style="font-size:13px;line-height:1.6;color:rgba(255,255,255,.65);">Mon–Fri, 8am–6pm CT. One menu routes you to enrollment, billing, medical, dental and vision, or partner support.</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;background:#ffffff;border:1px solid rgba(15,42,71,.10);border-radius:16px;padding:26px;">
+        <span style="font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#1F8A5B;">One support email</span>
+        <span style="font-family:'Sora',sans-serif;font-size:19px;font-weight:700;color:#0F2A47;">support@bensync.com</span>
+        <span style="font-size:13px;line-height:1.6;color:#47586B;">Every message is read and routed by a real person within one business day.</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:9px;background:#ffffff;border:1px solid rgba(15,42,71,.10);border-radius:16px;padding:22px 26px;">
+        <span style="font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#7A8A99;">In a hurry?</span>
+        <a href="/login" style="font-size:14px;font-weight:700;">Log in to your tools →</a>
+        <a href="/members" style="font-size:14px;font-weight:700;">Member support hub →</a>
+        <a href="/brokers" style="font-size:14px;font-weight:700;">Become A Broker Partner →</a>
+      </div>
+    </div>
+
+    <!-- One form -->
+    <div style="display:flex;flex-direction:column;gap:12px;background:#ffffff;border:1px solid rgba(15,42,71,.10);border-radius:18px;padding:28px;box-shadow:0 14px 36px -26px rgba(15,42,71,.25);">
+      <span style="font-family:'Sora',sans-serif;font-size:19px;font-weight:600;letter-spacing:-.01em;">Send us a message</span>
+      <div id="contact-sent" style="display:none;flex-direction:column;gap:8px;background:#E8F3ED;border:1px solid rgba(31,138,91,.3);border-radius:12px;padding:20px;">
+        <span style="font-family:'Sora',sans-serif;font-size:15.5px;font-weight:700;color:#16714A;">Message received.</span>
+        <span style="font-size:13.5px;line-height:1.6;color:#3B5A4C;">Thanks for reaching out. The right person will follow up within one business day.</span>
+      </div>
+      <div id="contact-form" style="display:flex;flex-direction:column;gap:10px;">
+        <label style="display:flex;flex-direction:column;gap:5px;">
+          <span style="font-size:12.5px;font-weight:700;color:#47586B;">Who are you?</span>
+          <select id="contact-who" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;cursor:pointer;">
+            <option>Employer</option>
+            <option>Broker / Consultant</option>
+            <option>Member</option>
+          </select>
+        </label>
+        <input placeholder="Your name" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;">
+        <input type="email" placeholder="Email" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;">
+        <input id="contact-org" placeholder="Company name" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;">
+        <textarea id="contact-msg" placeholder="What would you like help with?" rows="4" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;resize:vertical;background:#ffffff;"></textarea>
+        <button id="contact-send" class="btn-green" style="border:none;cursor:pointer;background:#1F8A5B;color:#ffffff;border-radius:10px;padding:14px;font-family:'Manrope',sans-serif;font-size:14.5px;font-weight:700;">Send Message</button>
+        <span style="font-size:12px;color:#7A8A99;text-align:center;">We route your message so you don't have to find the right department.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer style="background:#0B2138;border-top:1px solid rgba(255,255,255,.08);margin-top:auto;">
+  <div style="max-width:1160px;margin:0 auto;padding:56px 32px 40px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:40px;">
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <span style="display:flex;align-items:center;gap:10px;">
+        <img src="/brand/icon-sync-white.svg" alt="BenSync" style="width:32px;height:32px;">
+      </span>
+      <span style="font-size:13.5px;line-height:1.65;color:rgba(255,255,255,.6);max-width:290px;"><span style="color:rgba(255,255,255,.92);font-weight:700;">BenSync</span> helps small employers control health plan costs, simplify administration, and offer better benefits through a bundled program delivered by broker partners.</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <span style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.45);">Program</span>
+      <a class="fl" href="/whats-included" style="font-size:14px;color:rgba(255,255,255,.78);">What's Included</a>
+      <a class="fl" href="/system" style="font-size:14px;color:rgba(255,255,255,.78);">The BenSync System</a>
+      <a class="fl" href="/partner-network" style="font-size:14px;color:rgba(255,255,255,.78);">Partner Network</a>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <span style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.45);">Who We Serve</span>
+      <a class="fl" href="/employers" style="font-size:14px;color:rgba(255,255,255,.78);">Employers</a>
+      <a class="fl" href="/brokers" style="font-size:14px;color:rgba(255,255,255,.78);">Brokers &amp; Consultants</a>
+      <a class="fl" href="/members" style="font-size:14px;color:rgba(255,255,255,.78);">Members</a>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <span style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.45);">Quick Links</span>
+      <a class="fl" href="/login" style="font-size:14px;color:rgba(255,255,255,.78);">Log In</a>
+      <a class="fl" href="/brokers" style="font-size:14px;color:rgba(255,255,255,.78);">Become A Broker Partner</a>
+      <a class="fl" href="/contact" style="font-size:14px;color:rgba(255,255,255,.78);">Contact Us</a>
+    </div>
+  </div>
+  <div style="border-top:1px solid rgba(255,255,255,.08);">
+    <div style="max-width:1160px;margin:0 auto;padding:18px 32px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <span style="font-size:12.5px;color:rgba(255,255,255,.45);">© 2026 BenSync. All rights reserved.</span>
+      <span style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;"><a class="fl-green" href="/login" style="font-size:12.5px;font-weight:700;color:#7FD6A8;">Log In</a><span style="font-size:12.5px;color:rgba(255,255,255,.45);">Distributed through independent brokers and consultants.</span></span>
+    </div>
+  </div>
+</footer>
+
+</div>
+<script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "name": "bensync-site",
+  "version": "1.0.0",
+  "private": true,
+  "description": "BenSync marketing website: a bundled small-group benefits program.",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

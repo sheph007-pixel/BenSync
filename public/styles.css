@@ -1,0 +1,31 @@
+/* BenSync site styles ------------------------------------------------------ */
+/* Base tokens live inline on elements (matching the design source); this file
+   carries the shared base rules plus the hover/focus states that inline styles
+   can't express. */
+
+*{box-sizing:border-box;}
+body{margin:0;background:#ffffff;color:#0F2A47;font-family:'Manrope',sans-serif;-webkit-font-smoothing:antialiased;}
+body.soft{background:#F6F8F7;}
+img{max-width:100%;}
+a{color:#1F8A5B;text-decoration:none;}
+a:hover{color:#16714A;}
+input,textarea,select{font-family:'Manrope',sans-serif;}
+input:focus,textarea:focus,select:focus{border-color:#1F8A5B !important;outline:none;}
+@keyframes heroIn{from{opacity:0;}to{opacity:1;}}
+
+/* --- hover utilities (inline styles win over plain rules, so force these) --- */
+.nl:hover{color:#0F2A47 !important;}
+.nl-login:hover{color:#1F8A5B !important;}
+.btn-navy:hover{background:#16385C !important;color:#ffffff !important;}
+.btn-green:hover{background:#26A06C !important;color:#ffffff !important;}
+.btn-outline:hover{border-color:#0F2A47 !important;color:#0F2A47 !important;}
+.btn-outline-light:hover{border-color:#ffffff !important;color:#ffffff !important;}
+.fl:hover{color:#ffffff !important;}
+.fl-green:hover{color:#ffffff !important;}
+.card-hover:hover{border-color:rgba(31,138,91,.5) !important;color:#0F2A47 !important;}
+.audience-navy:hover{background:#16385C !important;color:#ffffff !important;}
+.tile:hover{border-color:rgba(31,138,91,.5) !important;box-shadow:0 12px 28px -18px rgba(15,42,71,.25) !important;color:#0F2A47 !important;}
+.login-opt:hover{border-color:#1F8A5B !important;background:#F8FBF9 !important;color:#0F2A47 !important;}
+.demo-frame:hover{border-color:rgba(31,138,91,.5) !important;color:#0F2A47 !important;}
+.member-link:hover{background:rgba(255,255,255,.14) !important;color:#ffffff !important;}
+.ribbon-back:hover{color:#ffffff !important;}
