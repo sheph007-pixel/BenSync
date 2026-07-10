@@ -29,3 +29,34 @@ input:focus,textarea:focus,select:focus{border-color:#1F8A5B !important;outline:
 .demo-frame:hover{border-color:rgba(31,138,91,.5) !important;color:#0F2A47 !important;}
 .member-link:hover{background:rgba(255,255,255,.14) !important;color:#ffffff !important;}
 .ribbon-back:hover{color:#ffffff !important;}
+
+/* --- mobile nav --------------------------------------------------------- */
+.nav-toggle{display:none;}
+
+@media (max-width:860px){
+  .nav-toggle{display:flex;}
+  header nav{
+    display:none !important;
+    width:100%;
+    flex-direction:column;
+    align-items:stretch !important;
+    gap:2px !important;
+    margin-left:0 !important;
+    order:3;
+    padding:8px 0 14px;
+    border-top:1px solid rgba(15,42,71,.08);
+  }
+  header.nav-open nav{display:flex !important;}
+  header nav a{padding:12px 4px;}
+  header nav > span{display:none;}
+  header nav .btn-navy{justify-content:center;text-align:center;margin-top:8px;}
+}
+
+/* --- system.html diagrams: collapse to a single stacked column on phones --- */
+@media (max-width:640px){
+  .tsys-a{flex-direction:column;}
+  .tsys-b-grid{grid-template-columns:1fr !important;justify-items:stretch;}
+  .tsys-b-center{flex-direction:column;}
+  .tsys-b-side{justify-self:stretch !important;max-width:none !important;width:100%;}
+  .tsys-arrow-h{display:none;}
+}

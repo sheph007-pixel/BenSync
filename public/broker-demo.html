@@ -23,7 +23,7 @@
 
 <!-- CO-BRANDED NAV -->
 <header style="background:#ffffff;border-bottom:1px solid rgba(15,42,71,.08);">
-  <div style="max-width:1080px;margin:0 auto;padding:0 32px;min-height:72px;display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;">
+  <div style="max-width:1080px;margin:0 auto;padding:0 clamp(20px,5vw,32px);min-height:72px;display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;">
     <span style="display:flex;align-items:center;gap:12px;">
       <span style="width:38px;height:38px;border-radius:10px;background:repeating-linear-gradient(-45deg,#EAF0EC 0 8px,#F3F7F4 8px 16px);border:1px solid rgba(15,42,71,.1);display:flex;align-items:center;justify-content:center;">
         <span style="font-family:ui-monospace,Menlo,monospace;font-size:9px;color:#7A8A99;">logo</span>
@@ -44,7 +44,7 @@
 
 <!-- HERO -->
 <section style="background:linear-gradient(180deg,#F6F8F7 0%,#ffffff 100%);border-bottom:1px solid rgba(15,42,71,.06);">
-  <div style="max-width:1080px;margin:0 auto;padding:72px 32px 60px;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:56px;align-items:center;">
+  <div style="max-width:1080px;margin:0 auto;padding:72px clamp(20px,5vw,32px) 60px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:56px;align-items:center;">
     <div style="display:flex;flex-direction:column;gap:18px;">
       <h1 style="font-family:'Sora',sans-serif;font-size:clamp(30px,4vw,40px);line-height:1.14;letter-spacing:-.025em;margin:0;font-weight:700;">A complete benefits program for your small business.</h1>
       <p style="font-size:16.5px;line-height:1.68;color:#47586B;margin:0;max-width:520px;text-wrap:pretty;">Your advisor has partnered with BenSync to offer a complete employee benefits program for small employers, including health, dental, vision, supplemental benefits, enrollment, billing, and member support.</p>
@@ -73,12 +73,12 @@
 </section>
 
 <!-- WHAT'S INCLUDED -->
-<section style="max-width:1080px;margin:0 auto;padding:72px 32px 0;width:100%;">
+<section style="max-width:1080px;margin:0 auto;padding:72px clamp(20px,5vw,32px) 0;width:100%;">
   <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:28px;">
     <h2 style="font-family:'Sora',sans-serif;font-size:27px;letter-spacing:-.02em;margin:0;font-weight:700;">What's included</h2>
     <p style="font-size:15px;color:#47586B;margin:0;">One coordinated program, delivered through your advisor.</p>
   </div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr));gap:14px;">
     <div style="display:flex;align-items:center;gap:12px;border:1px solid rgba(15,42,71,.10);border-radius:12px;padding:16px 18px;background:#ffffff;"><span style="flex:none;width:9px;height:9px;border-radius:3px;background:#1F8A5B;"></span><span style="font-size:14px;font-weight:700;color:#16385C;">Medical plan</span></div>
     <div style="display:flex;align-items:center;gap:12px;border:1px solid rgba(15,42,71,.10);border-radius:12px;padding:16px 18px;background:#ffffff;"><span style="flex:none;width:9px;height:9px;border-radius:3px;background:#1F8A5B;"></span><span style="font-size:14px;font-weight:700;color:#16385C;">Pharmacy benefits</span></div>
     <div style="display:flex;align-items:center;gap:12px;border:1px solid rgba(15,42,71,.10);border-radius:12px;padding:16px 18px;background:#ffffff;"><span style="flex:none;width:9px;height:9px;border-radius:3px;background:#1F8A5B;"></span><span style="font-size:14px;font-weight:700;color:#16385C;">Dental &amp; vision</span></div>
@@ -92,8 +92,8 @@
 </section>
 
 <!-- EMPLOYER BENEFITS + MEMBER LINKS -->
-<section style="max-width:1080px;margin:0 auto;padding:64px 32px 0;width:100%;">
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;align-items:stretch;">
+<section style="max-width:1080px;margin:0 auto;padding:64px clamp(20px,5vw,32px) 0;width:100%;">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:20px;align-items:stretch;">
     <div style="background:#F6F8F7;border:1px solid rgba(15,42,71,.08);border-radius:16px;padding:28px;display:flex;flex-direction:column;gap:14px;">
       <span style="font-family:'Sora',sans-serif;font-size:18px;font-weight:600;letter-spacing:-.01em;">Why employers choose this program</span>
       <div style="display:flex;flex-direction:column;gap:12px;">
@@ -128,18 +128,18 @@
 </section>
 
 <!-- REQUEST INFO -->
-<section id="request-info" style="max-width:1080px;margin:0 auto;padding:72px 32px 88px;width:100%;">
-  <div style="border:1px solid rgba(15,42,71,.10);border-radius:20px;padding:40px 44px;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:48px;align-items:center;background:#ffffff;box-shadow:0 20px 48px -30px rgba(15,42,71,.25);">
+<section id="request-info" style="max-width:1080px;margin:0 auto;padding:72px clamp(20px,5vw,32px) 88px;width:100%;">
+  <div style="border:1px solid rgba(15,42,71,.10);border-radius:20px;padding:40px 44px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:48px;align-items:center;background:#ffffff;box-shadow:0 20px 48px -30px rgba(15,42,71,.25);">
     <div style="display:flex;flex-direction:column;gap:10px;">
       <h2 style="font-family:'Sora',sans-serif;font-size:26px;letter-spacing:-.02em;margin:0;font-weight:700;">Request information</h2>
       <p style="font-size:15px;line-height:1.65;color:#47586B;margin:0;">Tell us about your team and your advisor will follow up with program details and a quote.</p>
     </div>
     <div style="display:flex;flex-direction:column;gap:10px;">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-        <input placeholder="Company name" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:13.5px;color:#0F2A47;outline:none;background:#ffffff;">
-        <input placeholder="# of employees" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:13.5px;color:#0F2A47;outline:none;background:#ffffff;">
+        <input placeholder="Company name" style="min-width:0;width:100%;border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:13.5px;color:#0F2A47;outline:none;background:#ffffff;">
+        <input placeholder="# of employees" style="min-width:0;width:100%;border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:13.5px;color:#0F2A47;outline:none;background:#ffffff;">
       </div>
-      <input type="email" placeholder="Work email" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:13.5px;color:#0F2A47;outline:none;background:#ffffff;">
+      <input type="email" placeholder="Work email" style="min-width:0;width:100%;border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:13.5px;color:#0F2A47;outline:none;background:#ffffff;">
       <button class="btn-green" style="border:none;cursor:pointer;background:#1F8A5B;color:#ffffff;border-radius:10px;padding:13px 14px;font-family:'Manrope',sans-serif;font-size:14.5px;font-weight:700;text-align:center;">Send Request</button>
     </div>
   </div>
@@ -147,7 +147,7 @@
 
 <!-- MINIMAL FOOTER -->
 <footer style="background:#0B2138;margin-top:auto;">
-  <div style="max-width:1080px;margin:0 auto;padding:26px 32px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+  <div style="max-width:1080px;margin:0 auto;padding:26px clamp(20px,5vw,32px);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
     <span style="display:flex;align-items:center;gap:10px;">
       <span style="font-family:'Sora',sans-serif;font-size:14px;font-weight:700;color:#ffffff;">Your Agency</span>
       <span style="width:1px;height:14px;background:rgba(255,255,255,.25);"></span>

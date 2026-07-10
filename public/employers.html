@@ -16,11 +16,15 @@
 
 <!-- NAV -->
 <header style="position:sticky;top:0;z-index:50;background:rgba(255,255,255,.94);backdrop-filter:blur(10px);border-bottom:1px solid rgba(15,42,71,.08);">
-  <div style="max-width:1160px;margin:0 auto;padding:10px 32px;min-height:68px;display:flex;flex-wrap:wrap;align-items:center;gap:10px 32px;">
+  <div style="max-width:1160px;margin:0 auto;padding:10px clamp(20px,5vw,32px);min-height:68px;display:flex;flex-wrap:wrap;align-items:center;gap:10px 32px;">
     <a href="/" style="display:flex;align-items:center;gap:10px;color:#0F2A47;">
       <span style="font-family:'Sora',sans-serif;font-weight:600;font-size:29px;letter-spacing:-.02em;">Ben<span style="color:#1F8A5B;">Sync</span></span>
     </a>
-    <nav style="display:flex;flex-wrap:wrap;align-items:center;gap:12px 26px;margin-left:auto;font-size:14px;font-weight:600;">
+    <button type="button" class="nav-toggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="site-nav" style="align-items:center;justify-content:center;width:40px;height:40px;border-radius:8px;border:1px solid rgba(15,42,71,.14);background:#ffffff;cursor:pointer;margin-left:auto;padding:0;flex:none;">
+      <svg data-icon-menu width="20" height="20" viewBox="0 0 20 20" fill="none" style="display:block;"><path d="M2 5H18M2 10H18M2 15H18" stroke="#0F2A47" stroke-width="1.6" stroke-linecap="round"/></svg>
+      <svg data-icon-close width="20" height="20" viewBox="0 0 20 20" fill="none" style="display:none;"><path d="M4 4L16 16M16 4L4 16" stroke="#0F2A47" stroke-width="1.6" stroke-linecap="round"/></svg>
+    </button>
+    <nav id="site-nav" style="display:flex;flex-wrap:wrap;align-items:center;gap:12px 26px;margin-left:auto;font-size:14px;font-weight:600;">
       <a class="nl" href="/whats-included" style="color:#47586B;">What's Included</a>
       <a href="/employers" style="color:#0F2A47;border-bottom:2px solid #1F8A5B;padding-bottom:2px;">Employers</a>
       <a class="nl" href="/brokers" style="color:#47586B;">Brokers &amp; Consultants</a>
@@ -34,7 +38,7 @@
 
 <!-- PAGE HERO -->
 <section style="background:linear-gradient(180deg,#F6F8F7 0%,#ffffff 100%);border-bottom:1px solid rgba(15,42,71,.06);">
-  <div style="max-width:1160px;margin:0 auto;padding:76px 32px 64px;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:56px;align-items:center;box-sizing:border-box;">
+  <div style="max-width:1160px;margin:0 auto;padding:76px clamp(20px,5vw,32px) 64px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:56px;align-items:center;box-sizing:border-box;">
     <div style="display:flex;flex-direction:column;gap:18px;">
       <span style="font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#1F8A5B;">For employers · 2–99 employees</span>
       <h1 style="font-family:'Sora',sans-serif;font-size:clamp(32px,4.6vw,46px);line-height:1.1;letter-spacing:-.025em;margin:0;font-weight:700;">Better benefits for small teams.</h1>
@@ -51,12 +55,12 @@
 </section>
 
 <!-- VALUE POINTS -->
-<section style="max-width:1160px;margin:0 auto;padding:80px 32px 0;width:100%;box-sizing:border-box;">
+<section style="max-width:1160px;margin:0 auto;padding:80px clamp(20px,5vw,32px) 0;width:100%;box-sizing:border-box;">
   <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:32px;">
     <h2 style="font-family:'Sora',sans-serif;font-size:clamp(24px,3vw,30px);letter-spacing:-.02em;margin:0;font-weight:700;">Everything your team needs, in one program.</h2>
     <p style="font-size:15.5px;color:#47586B;margin:0;max-width:600px;">You don't have to evaluate vendors, coordinate systems, or juggle invoices. The program arrives assembled.</p>
   </div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(180px,100%),1fr));gap:14px;">
     <div style="display:flex;flex-direction:column;gap:10px;border:1px solid rgba(15,42,71,.10);border-radius:14px;padding:20px 18px;background:#ffffff;">
       <span style="width:10px;height:10px;border-radius:4px;background:#1F8A5B;"></span>
       <span style="font-size:14px;font-weight:700;color:#16385C;line-height:1.4;">Lower-cost health plan strategy</span>
@@ -101,8 +105,8 @@
 </section>
 
 <!-- ONE BILL -->
-<section style="max-width:1160px;margin:0 auto;padding:80px 32px 88px;width:100%;box-sizing:border-box;">
-  <div style="background:#F6F8F7;border:1px solid rgba(15,42,71,.08);border-radius:20px;padding:44px;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:56px;align-items:center;">
+<section style="max-width:1160px;margin:0 auto;padding:80px clamp(20px,5vw,32px) 88px;width:100%;box-sizing:border-box;">
+  <div style="background:#F6F8F7;border:1px solid rgba(15,42,71,.08);border-radius:20px;padding:44px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:56px;align-items:center;">
     <div style="display:flex;flex-direction:column;gap:14px;">
       <span style="font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#1F8A5B;">Why it feels simple</span>
       <h2 style="font-family:'Sora',sans-serif;font-size:28px;line-height:1.22;letter-spacing:-.02em;margin:0;font-weight:700;">One program. One bill. Real support for your employees.</h2>
@@ -146,7 +150,7 @@
 
 <!-- FOOTER -->
 <footer style="background:#0B2138;border-top:1px solid rgba(255,255,255,.08);margin-top:auto;">
-  <div style="max-width:1160px;margin:0 auto;padding:56px 32px 40px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:40px;">
+  <div style="max-width:1160px;margin:0 auto;padding:56px clamp(20px,5vw,32px) 40px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr));gap:40px;">
     <div style="display:flex;flex-direction:column;gap:14px;">
       <span style="display:flex;align-items:center;gap:10px;">
         <img src="/brand/icon-sync-white.svg" alt="BenSync" style="width:32px;height:32px;">
@@ -173,7 +177,7 @@
     </div>
   </div>
   <div style="border-top:1px solid rgba(255,255,255,.08);">
-    <div style="max-width:1160px;margin:0 auto;padding:18px 32px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+    <div style="max-width:1160px;margin:0 auto;padding:18px clamp(20px,5vw,32px);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
       <span style="font-size:12.5px;color:rgba(255,255,255,.45);">© 2026 BenSync. All rights reserved.</span>
       <span style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;"><a class="fl-green" href="/login" style="font-size:12.5px;font-weight:700;color:#7FD6A8;">Log In</a><span style="font-size:12.5px;color:rgba(255,255,255,.45);">Distributed through independent brokers and consultants.</span></span>
     </div>

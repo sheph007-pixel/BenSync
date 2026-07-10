@@ -65,9 +65,42 @@
     }
   }
 
+  // --- Mobile nav: hamburger toggle for the sticky header ---
+  function initNavToggle() {
+    var toggles = document.querySelectorAll('.nav-toggle');
+
+    toggles.forEach(function (btn) {
+      var header = btn.closest('header');
+      var nav = header ? header.querySelector('nav') : null;
+      var menuIcon = btn.querySelector('[data-icon-menu]');
+      var closeIcon = btn.querySelector('[data-icon-close]');
+      if (!header || !nav) return;
+
+      function setOpen(open) {
+        header.classList.toggle('nav-open', open);
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        if (menuIcon) menuIcon.style.display = open ? 'none' : 'block';
+        if (closeIcon) closeIcon.style.display = open ? 'block' : 'none';
+      }
+
+      btn.addEventListener('click', function () {
+        setOpen(!header.classList.contains('nav-open'));
+      });
+
+      nav.querySelectorAll('a').forEach(function (link) {
+        link.addEventListener('click', function () { setOpen(false); });
+      });
+
+      window.addEventListener('resize', function () {
+        if (window.innerWidth > 860) setOpen(false);
+      });
+    });
+  }
+
   function init() {
     initHeroSweep();
     initContactForm();
+    initNavToggle();
   }
 
   if (document.readyState === 'loading') {

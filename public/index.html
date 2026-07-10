@@ -16,11 +16,15 @@
 
 <!-- NAV -->
 <header style="position:sticky;top:0;z-index:50;background:rgba(255,255,255,.94);backdrop-filter:blur(10px);border-bottom:1px solid rgba(15,42,71,.08);">
-  <div style="max-width:1160px;margin:0 auto;padding:10px 32px;min-height:68px;display:flex;flex-wrap:wrap;align-items:center;gap:10px 32px;">
+  <div style="max-width:1160px;margin:0 auto;padding:10px clamp(20px,5vw,32px);min-height:68px;display:flex;flex-wrap:wrap;align-items:center;gap:10px 32px;">
     <a href="/" style="display:flex;align-items:center;gap:10px;color:#0F2A47;">
       <span style="font-family:'Sora',sans-serif;font-weight:600;font-size:29px;letter-spacing:-.02em;">Ben<span style="color:#1F8A5B;">Sync</span></span>
     </a>
-    <nav style="display:flex;flex-wrap:wrap;align-items:center;gap:12px 26px;margin-left:auto;font-size:14px;font-weight:600;">
+    <button type="button" class="nav-toggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="site-nav" style="align-items:center;justify-content:center;width:40px;height:40px;border-radius:8px;border:1px solid rgba(15,42,71,.14);background:#ffffff;cursor:pointer;margin-left:auto;padding:0;flex:none;">
+      <svg data-icon-menu width="20" height="20" viewBox="0 0 20 20" fill="none" style="display:block;"><path d="M2 5H18M2 10H18M2 15H18" stroke="#0F2A47" stroke-width="1.6" stroke-linecap="round"/></svg>
+      <svg data-icon-close width="20" height="20" viewBox="0 0 20 20" fill="none" style="display:none;"><path d="M4 4L16 16M16 4L4 16" stroke="#0F2A47" stroke-width="1.6" stroke-linecap="round"/></svg>
+    </button>
+    <nav id="site-nav" style="display:flex;flex-wrap:wrap;align-items:center;gap:12px 26px;margin-left:auto;font-size:14px;font-weight:600;">
       <a class="nl" href="/whats-included" style="color:#47586B;">What's Included</a>
       <a class="nl" href="/employers" style="color:#47586B;">Employers</a>
       <a class="nl" href="/brokers" style="color:#47586B;">Brokers &amp; Consultants</a>
@@ -34,7 +38,7 @@
 
 <!-- HERO -->
 <section style="background:linear-gradient(180deg,#F6F8F7 0%,#ffffff 100%);border-bottom:1px solid rgba(15,42,71,.06);">
-  <div style="max-width:1160px;margin:0 auto;padding:88px 32px 72px;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:64px;align-items:center;">
+  <div style="max-width:1160px;margin:0 auto;padding:88px clamp(20px,5vw,32px) 72px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:64px;align-items:center;">
     <div style="display:flex;flex-direction:column;gap:24px;">
       <span style="align-self:flex-start;display:inline-flex;align-items:center;gap:8px;background:#E8F3ED;color:#16714A;font-size:12.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:7px 14px;border-radius:999px;">Built for small groups · 2–99 employees</span>
       <h1 style="font-family:'Sora',sans-serif;font-size:clamp(34px,5vw,52px);line-height:1.08;letter-spacing:-.025em;margin:0;font-weight:700;">A better benefits program for small employers.</h1>
@@ -95,8 +99,8 @@
 </section>
 
 <!-- PROBLEM / SOLUTION / OUTCOME -->
-<section style="max-width:1160px;margin:0 auto;padding:88px 32px 0;width:100%;">
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;align-items:stretch;">
+<section style="max-width:1160px;margin:0 auto;padding:88px clamp(20px,5vw,32px) 0;width:100%;">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr));gap:20px;align-items:stretch;">
     <div style="display:flex;flex-direction:column;gap:12px;background:#F6F8F7;border:1px solid rgba(15,42,71,.08);border-radius:16px;padding:30px 28px;">
       <span style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#7A8A99;">The Problem</span>
       <span style="font-family:'Sora',sans-serif;font-size:19px;font-weight:600;letter-spacing:-.01em;line-height:1.3;">Stuck between rising costs and rising expectations.</span>
@@ -116,8 +120,8 @@
 </section>
 
 <!-- WHAT BENSYNC IS -->
-<section style="max-width:1160px;margin:0 auto;padding:88px 32px 0;width:100%;">
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:64px;align-items:start;">
+<section style="max-width:1160px;margin:0 auto;padding:88px clamp(20px,5vw,32px) 0;width:100%;">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:64px;align-items:start;">
     <div style="display:flex;flex-direction:column;gap:14px;">
       <span style="font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#1F8A5B;">What BenSync is</span>
       <h2 style="font-family:'Sora',sans-serif;font-size:clamp(27px,3.4vw,34px);line-height:1.18;letter-spacing:-.02em;margin:0;font-weight:700;">The program layer for small-group benefits.</h2>
@@ -131,8 +135,8 @@
 </section>
 
 <!-- WHO IT'S FOR -->
-<section style="max-width:1160px;margin:0 auto;padding:72px 32px 0;width:100%;">
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;">
+<section style="max-width:1160px;margin:0 auto;padding:72px clamp(20px,5vw,32px) 0;width:100%;">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr));gap:20px;">
     <a class="card-hover" href="/employers" style="display:flex;flex-direction:column;gap:12px;background:#F6F8F7;border:1px solid rgba(15,42,71,.08);border-radius:16px;padding:28px;color:#0F2A47;">
       <span style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#1F8A5B;">Employers</span>
       <span style="font-family:'Sora',sans-serif;font-size:20px;font-weight:600;letter-spacing:-.01em;">The best benefits program for your team.</span>
@@ -156,7 +160,7 @@
 
 <!-- THE SYSTEM (mini diagram) -->
 <section style="margin-top:88px;background:#F6F8F7;border-top:1px solid rgba(15,42,71,.06);border-bottom:1px solid rgba(15,42,71,.06);">
-  <div style="max-width:1160px;margin:0 auto;padding:76px 32px;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:64px;align-items:center;">
+  <div style="max-width:1160px;margin:0 auto;padding:76px clamp(20px,5vw,32px);display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:64px;align-items:center;">
     <div style="display:flex;flex-direction:column;gap:16px;">
       <span style="font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#1F8A5B;">The BenSync System</span>
       <h2 style="font-family:'Sora',sans-serif;font-size:clamp(25px,3.2vw,32px);line-height:1.2;letter-spacing:-.02em;margin:0;font-weight:700;">One program layer connecting the entire benefits experience.</h2>
@@ -203,7 +207,7 @@
 </section>
 
 <!-- PARTNER STRIP -->
-<section style="max-width:1160px;margin:0 auto;padding:80px 32px 0;width:100%;">
+<section style="max-width:1160px;margin:0 auto;padding:80px clamp(20px,5vw,32px) 0;width:100%;">
   <div style="display:flex;align-items:baseline;justify-content:space-between;gap:24px;flex-wrap:wrap;">
     <div style="display:flex;flex-direction:column;gap:10px;max-width:560px;">
       <span style="font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#1F8A5B;">Partner network</span>
@@ -211,7 +215,7 @@
     </div>
     <a href="/partner-network" style="font-weight:700;font-size:15px;">See the partner network →</a>
   </div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-top:32px;">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(180px,100%),1fr));gap:14px;margin-top:32px;">
     <div style="display:flex;flex-direction:column;gap:8px;border:1px solid rgba(15,42,71,.10);border-radius:14px;padding:20px;background:#ffffff;">
       <span style="font-family:'Sora',sans-serif;font-size:15px;font-weight:700;color:#0F2A47;">Employee Navigator</span>
       <span style="font-size:12.5px;line-height:1.5;color:#47586B;">Enrollment and benefits administration workflows.</span>
@@ -241,12 +245,12 @@
 </section>
 
 <!-- HOW IT WORKS -->
-<section style="max-width:1160px;margin:0 auto;padding:88px 32px;width:100%;">
+<section style="max-width:1160px;margin:0 auto;padding:88px clamp(20px,5vw,32px);width:100%;">
   <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:36px;">
     <span style="font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#1F8A5B;">How it works</span>
     <h2 style="font-family:'Sora',sans-serif;font-size:clamp(24px,3vw,30px);line-height:1.2;letter-spacing:-.02em;margin:0;font-weight:700;">Assembled, integrated, and ready to go.</h2>
   </div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr));gap:20px;">
     <div style="display:flex;flex-direction:column;gap:12px;border-top:3px solid #1F8A5B;background:#F6F8F7;border-radius:0 0 14px 14px;padding:22px;">
       <span style="font-family:'Sora',sans-serif;font-size:13px;font-weight:700;color:#1F8A5B;">01</span>
       <span style="font-family:'Sora',sans-serif;font-size:17px;font-weight:600;color:#0F2A47;letter-spacing:-.01em;">Partner with BenSync</span>
@@ -272,7 +276,7 @@
 
 <!-- CTA BAND -->
 <section style="background:#0F2A47;">
-  <div style="max-width:1160px;margin:0 auto;padding:72px 32px;display:flex;align-items:center;justify-content:space-between;gap:40px;flex-wrap:wrap;">
+  <div style="max-width:1160px;margin:0 auto;padding:72px clamp(20px,5vw,32px);display:flex;align-items:center;justify-content:space-between;gap:40px;flex-wrap:wrap;">
     <div style="display:flex;flex-direction:column;gap:10px;max-width:600px;">
       <h2 style="font-family:'Sora',sans-serif;font-size:clamp(25px,3.2vw,32px);line-height:1.2;letter-spacing:-.02em;margin:0;font-weight:700;color:#ffffff;">Offer more without building more.</h2>
       <p style="font-size:16px;line-height:1.65;color:rgba(255,255,255,.72);margin:0;">Bring a complete small-group benefits program to your clients, already assembled, packaged, and ready to run.</p>
@@ -286,7 +290,7 @@
 
 <!-- FOOTER -->
 <footer style="background:#0B2138;border-top:1px solid rgba(255,255,255,.08);margin-top:auto;">
-  <div style="max-width:1160px;margin:0 auto;padding:56px 32px 40px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:40px;">
+  <div style="max-width:1160px;margin:0 auto;padding:56px clamp(20px,5vw,32px) 40px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr));gap:40px;">
     <div style="display:flex;flex-direction:column;gap:14px;">
       <span style="display:flex;align-items:center;gap:10px;">
         <img src="/brand/icon-sync-white.svg" alt="BenSync" style="width:32px;height:32px;">
@@ -313,7 +317,7 @@
     </div>
   </div>
   <div style="border-top:1px solid rgba(255,255,255,.08);">
-    <div style="max-width:1160px;margin:0 auto;padding:18px 32px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+    <div style="max-width:1160px;margin:0 auto;padding:18px clamp(20px,5vw,32px);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
       <span style="font-size:12.5px;color:rgba(255,255,255,.45);">© 2026 BenSync. All rights reserved.</span>
       <span style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;"><a class="fl-green" href="/login" style="font-size:12.5px;font-weight:700;color:#7FD6A8;">Log In</a><span style="font-size:12.5px;color:rgba(255,255,255,.45);">Distributed through independent brokers and consultants.</span></span>
     </div>
