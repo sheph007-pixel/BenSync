@@ -3,8 +3,6 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-  schedule:
-    - cron: "*/30 * * * *"
 
 jobs:
   smoke:
@@ -18,8 +16,3 @@ jobs:
           curl -s -b /tmp/cj -o /tmp/groups.json -w "admin-groups: %{http_code}\n" https://www.bensync.com/api/admin/groups || true
           count=$(jq 'length' /tmp/groups.json 2>/dev/null || echo 0)
           echo "group count: $count"
-          jq -r '.[0:3][] | .companyName' /tmp/groups.json 2>/dev/null || head -c 200 /tmp/groups.json || true
-          echo "count=$count" >> "$GITHUB_OUTPUT"
-      - name: DATA PRESENT
-        if: steps.probe.outputs.count != '0' && steps.probe.outputs.count != ''
-        run: echo "real data present, group count = ${{ steps.probe.outputs.count }}"
