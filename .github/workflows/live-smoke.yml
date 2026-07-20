@@ -3,15 +3,23 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    - cron: "*/30 * * * *"
 
 jobs:
   smoke:
     runs-on: ubuntu-latest
     steps:
       - name: Probe live site
+        id: probe
         run: |
           echo "== login and count groups =="
           curl -s -c /tmp/cj -o /tmp/login.json -w "login: %{http_code}\n" -X POST -H "Content-Type: application/json" -d '{"email":"admin@kennion.com","password":"admin123"}' https://www.bensync.com/api/auth/login || true
           curl -s -b /tmp/cj -o /tmp/groups.json -w "admin-groups: %{http_code}\n" https://www.bensync.com/api/admin/groups || true
-          echo "group count: $(jq 'length' /tmp/groups.json 2>/dev/null || echo unparseable)"
+          count=$(jq 'length' /tmp/groups.json 2>/dev/null || echo 0)
+          echo "group count: $count"
           jq -r '.[0:3][] | .companyName' /tmp/groups.json 2>/dev/null || head -c 200 /tmp/groups.json || true
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+      - name: DATA PRESENT
+        if: steps.probe.outputs.count != '0' && steps.probe.outputs.count != ''
+        run: echo "real data present, group count = ${{ steps.probe.outputs.count }}"
