@@ -62,9 +62,16 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Run database migrations first
-  const { runMigrations } = await import("./migrate");
-  await runMigrations();
+  // Run database migrations first. Non-fatal: an unreachable database or a
+  // failed migration must not keep the whole site down. On a fresh database
+  // the schema is created by db:push:ci in the start command before this
+  // process boots; the .sql migrations only patch long-lived databases.
+  try {
+    const { runMigrations } = await import("./migrate");
+    await runMigrations();
+  } catch (err: any) {
+    console.error("Migrations failed (continuing to serve):", err?.message ?? err);
+  }
 
   // BenSync marketing site at the root (/, /employers, /brokers, /login
   // chooser, assets). Registered before the API/session stack so public
