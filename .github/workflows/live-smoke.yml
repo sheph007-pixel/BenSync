@@ -1,0 +1,28 @@
+name: Live smoke check
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe live bensync.com
+        run: |
+          echo "== home =="
+          curl -s -o /tmp/home.html -w "home: %{http_code}\n" https://bensync.com/ || true
+          echo "== portal shell =="
+          curl -s -o /tmp/portal.html -w "portal: %{http_code}\n" https://bensync.com/portal || true
+          head -c 400 /tmp/portal.html || true; echo
+          echo "== marketing page =="
+          curl -s -o /dev/null -w "employers: %{http_code}\n" https://bensync.com/employers || true
+          echo "== api: rate tables (proves new server) =="
+          curl -s -o /tmp/rate.json -w "rate-tables: %{http_code}\n" https://bensync.com/api/rate/tables || true
+          head -c 300 /tmp/rate.json || true; echo
+          echo "== api: auth me =="
+          curl -s -o /tmp/me.json -w "auth-me: %{http_code}\n" https://bensync.com/api/auth/me || true
+          head -c 200 /tmp/me.json || true; echo
+          echo "== api: admin login probe =="
+          curl -s -o /tmp/login.json -w "login: %{http_code}\n" -X POST -H "Content-Type: application/json" -d '{"email":"admin@kennion.com","password":"admin123"}' https://bensync.com/api/auth/login || true
+          head -c 300 /tmp/login.json || true; echo
