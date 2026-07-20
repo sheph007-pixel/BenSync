@@ -4,6 +4,16 @@ import { serveStatic } from "./static";
 import { serveMarketing } from "./marketing";
 import { createServer } from "http";
 
+// Never let an async failure kill the process before the server binds; a
+// broken or missing database must degrade the portal, not take down the
+// marketing site and the healthcheck with it.
+process.on("unhandledRejection", (reason) => {
+  console.error("Unhandled rejection (continuing):", reason);
+});
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught exception (continuing):", err);
+});
+
 const app = express();
 app.set("trust proxy", 1);
 const httpServer = createServer(app);
@@ -79,7 +89,11 @@ app.use((req, res, next) => {
   // through to the API and the React portal.
   app.use(serveMarketing);
 
-  await registerRoutes(httpServer, app);
+  try {
+    await registerRoutes(httpServer, app);
+  } catch (err: any) {
+    console.error("Route registration failed (marketing still serves):", err?.message ?? err);
+  }
 
   const { seedDatabase } = await import("./seed");
   try {
