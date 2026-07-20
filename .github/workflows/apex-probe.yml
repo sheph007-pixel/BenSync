@@ -1,0 +1,22 @@
+name: Apex domain probe
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: DNS and HTTP for apex vs www
+        run: |
+          echo "== DNS bensync.com =="
+          dig +short bensync.com A || true
+          dig +short bensync.com CNAME || true
+          echo "== DNS www.bensync.com =="
+          dig +short www.bensync.com A || true
+          dig +short www.bensync.com CNAME || true
+          echo "== HTTP headers apex =="
+          curl -s -o /dev/null -D - --max-time 15 https://bensync.com/ || true
+          echo "== HTTP headers www =="
+          curl -s -o /dev/null -D - --max-time 15 https://www.bensync.com/ | head -20 || true
+          echo "== whois-ish NS records =="
+          dig +short bensync.com NS || true
