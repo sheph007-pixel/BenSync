@@ -9,17 +9,15 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: DNS and HTTP for apex vs www
+      - name: Compare old vs new system
         run: |
-          echo "== DNS bensync.com =="
-          dig +short bensync.com A || true
-          dig +short bensync.com CNAME || true
-          echo "== DNS www.bensync.com =="
-          dig +short www.bensync.com A || true
-          dig +short www.bensync.com CNAME || true
-          echo "== HTTP headers apex =="
-          curl -s -o /dev/null -D - --max-time 15 https://bensync.com/ || true
-          echo "== HTTP headers www =="
-          curl -s -o /dev/null -D - --max-time 15 https://www.bensync.com/ | head -20 || true
-          echo "== whois-ish NS records =="
-          dig +short bensync.com NS || true
+          CREDS='{"email":"admin@kennion.com","password":"admin123"}'
+          for site in www.kennion.com www.bensync.com; do
+            curl -s -c /tmp/j -o /dev/null -w "$site login: %{http_code}\n" -X POST -H "Content-Type: application/json" -d "$CREDS" "https://$site/api/auth/login"
+            curl -s -b /tmp/j -o /tmp/g.json "https://$site/api/admin/groups"
+            curl -s -b /tmp/j -o /tmp/q.json "https://$site/api/admin/quotes"
+            curl -s -b /tmp/j -o /tmp/u.json "https://$site/api/admin/users"
+            echo "$site groups: $(jq 'length' /tmp/g.json 2>/dev/null || echo err)  quotes: $(jq 'length' /tmp/q.json 2>/dev/null || echo err)  users: $(jq 'length' /tmp/u.json 2>/dev/null || echo err)"
+            echo "$site first groups: $(jq -r '[.[0:3][] | .companyName] | join(", ")' /tmp/g.json 2>/dev/null || echo err)"
+            rm -f /tmp/j
+          done
