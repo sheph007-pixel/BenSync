@@ -8,21 +8,27 @@ jobs:
   smoke:
     runs-on: ubuntu-latest
     steps:
-      - name: Probe live bensync.com
+      - name: Probe live site on both hosts
         run: |
-          echo "== home =="
-          curl -s -o /tmp/home.html -w "home: %{http_code}\n" https://bensync.com/ || true
-          echo "== portal shell =="
-          curl -s -o /tmp/portal.html -w "portal: %{http_code}\n" https://bensync.com/portal || true
-          head -c 400 /tmp/portal.html || true; echo
-          echo "== marketing page =="
-          curl -s -o /dev/null -w "employers: %{http_code}\n" https://bensync.com/employers || true
-          echo "== api: rate tables (proves new server) =="
-          curl -s -o /tmp/rate.json -w "rate-tables: %{http_code}\n" https://bensync.com/api/rate/tables || true
+          echo "== apex redirect target =="
+          curl -sI https://bensync.com/ | grep -iE "^(HTTP|location)" || true
+          echo "== www home =="
+          curl -s -o /tmp/home.html -w "www-home: %{http_code}\n" https://www.bensync.com/ || true
+          grep -oE "<title>[^<]*</title>" /tmp/home.html | head -1 || true
+          echo "== www portal =="
+          curl -s -o /tmp/portal.html -w "www-portal: %{http_code}\n" https://www.bensync.com/portal || true
+          grep -oE "<title>[^<]*</title>" /tmp/portal.html | head -1 || true
+          echo "== www employers =="
+          curl -s -o /dev/null -w "www-employers: %{http_code}\n" https://www.bensync.com/employers || true
+          echo "== www api rate tables =="
+          curl -s -o /tmp/rate.json -w "www-rate-tables: %{http_code}\n" https://www.bensync.com/api/rate/tables || true
           head -c 300 /tmp/rate.json || true; echo
-          echo "== api: auth me =="
-          curl -s -o /tmp/me.json -w "auth-me: %{http_code}\n" https://bensync.com/api/auth/me || true
+          echo "== www api auth me =="
+          curl -s -o /tmp/me.json -w "www-auth-me: %{http_code}\n" https://www.bensync.com/api/auth/me || true
           head -c 200 /tmp/me.json || true; echo
-          echo "== api: admin login probe =="
-          curl -s -o /tmp/login.json -w "login: %{http_code}\n" -X POST -H "Content-Type: application/json" -d '{"email":"admin@kennion.com","password":"admin123"}' https://bensync.com/api/auth/login || true
+          echo "== www admin login probe =="
+          curl -s -o /tmp/login.json -w "www-login: %{http_code}\n" -X POST -H "Content-Type: application/json" -d '{"email":"admin@kennion.com","password":"admin123"}' https://www.bensync.com/api/auth/login || true
           head -c 300 /tmp/login.json || true; echo
+          echo "== apex followed =="
+          curl -sL -o /tmp/apex.html -w "apex-followed: %{http_code} final=%{url_effective}\n" https://bensync.com/portal || true
+          grep -oE "<title>[^<]*</title>" /tmp/apex.html | head -1 || true
