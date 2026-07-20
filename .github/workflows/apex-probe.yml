@@ -1,5 +1,8 @@
 name: Apex domain probe
 on:
+  push:
+    paths:
+      - ".github/workflows/apex-probe.yml"
   workflow_dispatch:
 
 jobs:
