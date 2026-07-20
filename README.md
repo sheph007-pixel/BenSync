@@ -1,25 +1,38 @@
-# CODING AGENTS: READ THIS FIRST
+# BenSync
 
-This is a **handoff bundle** from Claude Design (claude.ai/design).
+BenSync is a bundled employee benefits program for small and mid-sized
+employers, delivered through independent broker partners.
 
-A user mocked up designs in HTML/CSS/JS using an AI design tool, then exported this bundle so a coding agent can implement the designs for real.
+This repo contains the whole platform:
 
-## What you should do — IMPORTANT
+- **Marketing site** (`marketing/`): static pages served at the site root
+  (/, /employers, /brokers, /members, /whats-included, /partner-network,
+  /system, /contact, /login).
+- **Platform** (`server/` + `client/` + `shared/`): Express + TypeScript API,
+  React portal (sign in at `/portal`), census upload, rate engine, risk
+  screen, proposal PDFs, and the admin cockpit. PostgreSQL via Drizzle ORM.
+- **Rate engine inputs**: the actuary's workbook, stored split in
+  `rater-parts/` and reassembled to `Kennion Actuarial Rater.xlsm` at
+  install/build time by `script/assemble-rater.mjs` (the filename is
+  load-bearing, referenced by `server/xlsm-rate-engine.ts`), plus
+  `server/factor-tables.json`.
+- **Design source** (`project/`, `chats/`): the original marketing design
+  handoff bundle. See `project/HANDOFF-README.md`.
 
-**Read the chat transcripts first.** There are 1 chat transcript(s) in `chats/`. The transcripts show the full back-and-forth between the user and the design assistant — they tell you **what the user actually wants** and **where they landed** after iterating. Don't skip them. The final HTML files are the output, but the chat is where the intent lives.
+## Run
 
-**Read `project/Contact.dc.html` in full.** The user had this file open when they triggered the handoff, so it's almost certainly the primary design they want built. Read it top to bottom — don't skim. Then **follow its imports**: open every file it pulls in (shared components, CSS, scripts) so you understand how the pieces fit together before you start implementing.
+```bash
+npm install
+npm run dev      # development
+npm run build    # production build
+npm run start    # serve production build
+```
 
-**If anything is ambiguous, ask the user to confirm before you start implementing.** It's much cheaper to clarify scope up front than to build the wrong thing.
+Deployed on Railway (nixpacks; see `railway.toml` and `nixpacks.toml`,
+which installs LibreOffice + Python UNO for xlsm-based rating).
 
-## About the design files
+## Environment
 
-The design medium is **HTML/CSS/JS** — these are prototypes, not production code. Your job is to **recreate them pixel-perfectly** in whatever technology makes sense for the target codebase (React, Vue, native, whatever fits). Match the visual output; don't copy the prototype's internal structure unless it happens to fit.
-
-**Don't render these files in a browser or take screenshots unless the user asks you to.** Everything you need — dimensions, colors, layout rules — is spelled out in the source. Read the HTML and CSS directly; a screenshot won't tell you anything they don't.
-
-## Bundle contents
-
-- `README.md` — this file
-- `chats/` — conversation transcripts (read these!)
-- `project/` — the `BenSync Website Strategy Brief` project files (HTML prototypes, assets, components)
+`DATABASE_URL` (Postgres), `SESSION_SECRET`, `RESEND_API_KEY`,
+`OPENAI_API_KEY`, `ANTHROPIC_API_KEY` (or legacy `CLAUDE`),
+`APP_URL` (public origin, e.g. https://bensync.com), optional `PORT`.

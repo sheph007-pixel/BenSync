@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://bensync.com/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://bensync.com/whats-included</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://bensync.com/employers</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://bensync.com/brokers</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://bensync.com/members</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://bensync.com/partner-network</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://bensync.com/system</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://bensync.com/contact</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+</urlset>

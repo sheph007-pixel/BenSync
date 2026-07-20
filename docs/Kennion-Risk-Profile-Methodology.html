@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Kennion Risk Profile Methodology — Actuarial Review</title>
+<style>
+  @page { size: Letter; margin: 0.85in; }
+  body {
+    font-family: "Calibri", "Helvetica", "Arial", sans-serif;
+    color: #1a1a1a;
+    line-height: 1.45;
+    font-size: 11pt;
+  }
+  h1 {
+    font-size: 22pt;
+    color: #0b3d2e;
+    margin: 0 0 4pt 0;
+    border-bottom: 2px solid #0b3d2e;
+    padding-bottom: 6pt;
+  }
+  h2 {
+    font-size: 14pt;
+    color: #0b3d2e;
+    margin: 22pt 0 6pt 0;
+    border-bottom: 1px solid #cccccc;
+    padding-bottom: 3pt;
+  }
+  h3 {
+    font-size: 12pt;
+    color: #1a4d3a;
+    margin: 14pt 0 4pt 0;
+  }
+  .subtitle { color: #555; font-size: 11pt; margin: 0 0 18pt 0; }
+  .meta { color: #777; font-size: 9.5pt; margin-bottom: 22pt; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 8pt 0 12pt 0;
+    font-size: 10pt;
+  }
+  th, td {
+    border: 1px solid #bbb;
+    padding: 4pt 8pt;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: #eaf1ee;
+    color: #0b3d2e;
+    font-weight: 600;
+  }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  code, .mono {
+    font-family: "Consolas", "Menlo", "Courier New", monospace;
+    font-size: 10pt;
+    background: #f4f4f4;
+    padding: 1pt 3pt;
+    border-radius: 2pt;
+  }
+  pre {
+    background: #f4f4f4;
+    border: 1px solid #ddd;
+    padding: 8pt 10pt;
+    font-family: "Consolas", "Menlo", "Courier New", monospace;
+    font-size: 9.5pt;
+    line-height: 1.35;
+    white-space: pre-wrap;
+    border-radius: 3pt;
+  }
+  ul, ol { margin: 4pt 0 10pt 22pt; }
+  li { margin-bottom: 3pt; }
+  .callout {
+    border-left: 3px solid #0b3d2e;
+    background: #f3f7f5;
+    padding: 8pt 12pt;
+    margin: 10pt 0;
+    font-size: 10.5pt;
+  }
+  .tier-pref { background: #e8f5e9; }
+  .tier-std  { background: #fff8e1; }
+  .tier-high { background: #ffebee; }
+  .small { font-size: 9.5pt; color: #555; }
+  .nowrap { white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<h1>Kennion Risk Profile Methodology</h1>
+<p class="subtitle">How the Kennion website turns an uploaded census into a group-level risk score and risk-tier classification.</p>
+<p class="meta">Prepared for actuarial review &middot; Document version 1.0 &middot; Source of truth: Kennion website production code base.</p>
+
+<h2>1. Purpose of this document</h2>
+<p>
+  This document describes, end-to-end, how the Kennion website processes a
+  customer-uploaded employee census and arrives at the group-level
+  <em>composite risk score</em> and <em>risk-tier classification</em>
+  (Preferred / Standard / High) that is shown to the customer and used in
+  their proposal narrative. It is intended as a reference for the actuary so
+  the demographic risk inputs and the qualification thresholds can be
+  reviewed, challenged, or updated.
+</p>
+<p>
+  Note: the <em>rate</em> a customer is quoted on each plan (EE / EC / ES / FAM
+  monthly premium) is computed by a separate engine that uses the actuary's
+  Excel rater (age curve, area factors, plan base PMPM, trend, tier
+  multipliers) and is described separately. The methodology in this document
+  covers only the demographic <em>risk profile / risk score</em> shown on the
+  proposal — i.e., the qualification signal, not the price.
+</p>
+
+<h2>2. What the customer uploads</h2>
+<p>
+  The customer downloads a CSV template from the Kennion site and uploads it
+  back populated with their employee + dependent roster. The template is
+  strict — exactly six columns, named exactly as below — and the parser
+  rejects the upload if any required column is missing or any extra column
+  is present.
+</p>
+
+<table>
+  <thead>
+    <tr><th>Column</th><th>Required values</th><th>Used for</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>First Name</td><td>Free text</td><td>Identification only — not used in risk math</td></tr>
+    <tr><td>Last Name</td><td>Free text</td><td>Identification only — not used in risk math</td></tr>
+    <tr><td>Type</td><td><span class="mono">EE</span> (employee), <span class="mono">SP</span> (spouse), <span class="mono">CH</span> (child)</td><td>Counts &amp; dependency ratio; all members count equally in the risk score</td></tr>
+    <tr><td>Date of Birth</td><td>Accepted: <span class="mono">YYYY-MM-DD</span>, <span class="mono">M/D/YYYY</span>, <span class="mono">M-D-YYYY</span></td><td>Age (used in age band lookup)</td></tr>
+    <tr><td>Gender</td><td><span class="mono">Male</span> / <span class="mono">M</span> or <span class="mono">Female</span> / <span class="mono">F</span></td><td>Selects male vs. female factor in the risk lookup</td></tr>
+    <tr><td>Zip Code</td><td>5-digit US zip</td><td>Rating-area inference (rate engine, not risk score)</td></tr>
+  </tbody>
+</table>
+
+<p class="small">
+  Sample template row: <span class="mono">John,Smith,EE,3/15/1985,Male,30301</span>.
+</p>
+
+<h2>3. Sensitive-data handling (before any processing)</h2>
+<p>
+  The very first thing the parse endpoint does — before AI cleaning, before
+  validation, before storage — is run the parsed CSV through a header-pattern
+  scrubber that <em>drops</em> any column whose header matches a sensitive
+  pattern. Dropped columns never reach the AI cleaner, the database, the
+  session table, the response payload, or the request log.
+</p>
+<p>The scrubbed patterns include:</p>
+<ul>
+  <li>Social Security number (<span class="mono">SSN</span>, "social security")</li>
+  <li>Tax ID, EIN, federal ID</li>
+  <li>Credit card number, CVV</li>
+  <li>Driver license number, passport</li>
+  <li>Bank account, routing number</li>
+</ul>
+<p>
+  The Kennion system stores no SSN or other tax-ID anywhere in its database
+  and does not echo such fields back in any API response. The only place an
+  SSN ever enters the system is the proposal-acceptance form, where the
+  last 4 digits are entered by the prospective member, transmitted in the
+  acceptance email body to Kennion staff, and immediately discarded — there
+  is no DB write and no log line.
+</p>
+
+<h2>4. Column normalization (AI-assisted)</h2>
+<p>
+  After the strict-template column check and PHI scrub, the cleaned headers
+  and rows are passed to an LLM-backed cleaner whose only job is to
+  normalize the values into a canonical schema:
+</p>
+<ul>
+  <li>Coerce <span class="mono">Date of Birth</span> into a single ISO-style date.</li>
+  <li>Map <span class="mono">Type</span> values to <span class="mono">EE</span> / <span class="mono">SP</span> / <span class="mono">CH</span>.</li>
+  <li>Map <span class="mono">Gender</span> values to <span class="mono">Male</span> / <span class="mono">Female</span>.</li>
+  <li>Trim &amp; case-normalize names and zip codes.</li>
+</ul>
+<p>
+  The cleaner does <strong>not</strong> invent data, does not change the
+  shape of the schema, and does not see any column the PHI scrubber
+  removed. The output is shown back to the customer for confirmation
+  before it is written to the database.
+</p>
+
+<h2>5. Storage</h2>
+<p>
+  Confirmed rows are written to the <span class="mono">census_entries</span>
+  table in PostgreSQL, one row per person, with a foreign key to the
+  customer's <span class="mono">groups</span> row. The schema (in
+  <span class="mono">shared/schema.ts</span>) holds: first name, last name,
+  date of birth, gender, zip code, relationship — and nothing else from the
+  original CSV.
+</p>
+
+<h2>6. Computing the group risk score</h2>
+
+<h3>6.1 Step 1 — Per-person age</h3>
+<p>
+  For each row in the census, age is computed as
+  <span class="mono">floor((today − dob) / 365.25 days)</span>. Rows with
+  unparseable dates of birth, or with age &le; 0 or age &ge; 120, are
+  excluded from the score. Their absence is detected by the audit checks
+  in section 8.
+</p>
+
+<h3>6.2 Step 2 — Age band</h3>
+<p>The age is mapped to one of fifteen 5-year bands:</p>
+<p class="small">
+  0–4, 5–9, 10–14, 15–19, 20–24, 25–29, 30–34, 35–39, 40–44, 45–49, 50–54, 55–59, 60–64, 65–69, 70+.
+</p>
+
+<h3>6.3 Step 3 — Per-person demographic factor</h3>
+<p>
+  The (age band, gender) pair indexes a fixed lookup table — the
+  <em>Demographic Risk Table</em> — which returns a single numeric factor
+  per person. The current production table is reproduced below in full.
+  This is the table the actuary is asked to review, validate, or replace.
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Age band</th>
+      <th class="num">Female factor</th>
+      <th class="num">Male factor</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>0–4</td>     <td class="num">0.35</td>  <td class="num">0.40</td></tr>
+    <tr><td>5–9</td>     <td class="num">0.30</td>  <td class="num">0.55</td></tr>
+    <tr><td>10–14</td>   <td class="num">0.37</td>  <td class="num">0.46</td></tr>
+    <tr><td>15–19</td>   <td class="num">0.62</td>  <td class="num">0.46</td></tr>
+    <tr><td>20–24</td>   <td class="num">0.80</td>  <td class="num">0.46</td></tr>
+    <tr><td>25–29</td>   <td class="num">0.92</td>  <td class="num">0.46</td></tr>
+    <tr><td>30–34</td>   <td class="num">0.88</td>  <td class="num">0.45</td></tr>
+    <tr><td>35–39</td>   <td class="num">0.81</td>  <td class="num">0.52</td></tr>
+    <tr><td>40–44</td>   <td class="num">1.18</td>  <td class="num">0.77</td></tr>
+    <tr><td>45–49</td>   <td class="num">1.03</td>  <td class="num">0.67</td></tr>
+    <tr><td>50–54</td>   <td class="num">1.43</td>  <td class="num">1.20</td></tr>
+    <tr><td>55–59</td>   <td class="num">1.22</td>  <td class="num">1.52</td></tr>
+    <tr><td>60–64</td>   <td class="num">1.49</td>  <td class="num">1.99</td></tr>
+    <tr><td>65–69</td>   <td class="num">3.81</td>  <td class="num">1.64</td></tr>
+    <tr><td>70+</td>     <td class="num">10.36</td> <td class="num">2.78</td></tr>
+  </tbody>
+</table>
+
+<p class="small">
+  Fallback if an age band somehow does not resolve (it always should):
+  Female = 0.97, Male = 0.80.
+</p>
+
+<h3>6.4 Step 4 — Group composite risk score</h3>
+<p>The group-level score is a simple unweighted arithmetic mean across all valid census members (employees, spouses, children — all weighted equally):</p>
+
+<pre>group_risk_score = ( Σ person_factor[i] ) / N
+
+where:
+  person_factor[i] = DemographicRiskTable[ age_band(i) ][ gender(i) ]
+  N                = number of census members with valid DOB &amp; gender</pre>
+
+<p>The result is rounded to 2 decimal places before tier classification.</p>
+
+<div class="callout">
+  <strong>Worked example.</strong> Group of three: a 45-year-old female,
+  a 52-year-old male, a 38-year-old female.
+  Per-person factors: 1.03, 1.20, 0.81.
+  Composite = (1.03 + 1.20 + 0.81) / 3 = <strong>1.013</strong> &rarr;
+  rounded to <strong>1.01</strong> &rarr; <strong>Standard Risk</strong>
+  (per section 7).
+</div>
+
+<h2>7. Risk-tier classification</h2>
+<p>
+  The composite score maps to one of three tiers using the cutoffs below.
+  These cutoffs are flagged in code as <em>"DO NOT MODIFY without
+  approval"</em> — they are deliberately the actuary-controlled control
+  surface.
+</p>
+
+<table>
+  <thead>
+    <tr><th>Tier</th><th class="num">Composite score</th><th>Customer message (high level)</th></tr>
+  </thead>
+  <tbody>
+    <tr class="tier-pref">
+      <td><strong>Preferred Risk</strong></td>
+      <td class="num">&lt; 1.00</td>
+      <td>Strong fit for the Kennion (RBP / self-funded) program; expected to see the largest savings vs. fully-insured.</td>
+    </tr>
+    <tr class="tier-std">
+      <td><strong>Standard Risk</strong></td>
+      <td class="num">1.00 – 1.49</td>
+      <td>Good fit for the Kennion program; meaningful savings expected vs. fully-insured.</td>
+    </tr>
+    <tr class="tier-high">
+      <td><strong>High Risk</strong></td>
+      <td class="num">&ge; 1.50</td>
+      <td>Higher-utilization profile; the proposal narrative recommends evaluating fully-insured alongside the Kennion option and explains what factors drove the higher score.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>8. Internal audit checks (every proposal)</h2>
+<p>
+  Every time a group is analyzed, the system runs a set of self-consistency
+  checks <em>after</em> the score is computed and <em>before</em> the result
+  is shown to the customer. These exist to catch a bad upload, a partial
+  parse, or a bug in the math. Any failure is surfaced in the admin UI as a
+  hard error.
+</p>
+
+<table>
+  <thead>
+    <tr><th>Check</th><th>What it verifies</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Total Lives Match</td>
+      <td>Census row count equals (a) the sum of EE + SP + CH and (b) the total of the age-band distribution table built downstream. Catches rows silently dropped due to a bad DOB.</td>
+    </tr>
+    <tr>
+      <td>Gender Total Match</td>
+      <td>Sum of females + males equals the age-band table total. Catches rows with an unrecognised gender value.</td>
+    </tr>
+    <tr>
+      <td>Gender Breakdown Match</td>
+      <td>Female and male counts independently match between the census and the age-band distribution.</td>
+    </tr>
+    <tr>
+      <td>Risk Score Recomputation</td>
+      <td>Independently recomputes the composite score from the age-band × gender distribution and verifies it matches the stored score within 0.01.</td>
+    </tr>
+    <tr>
+      <td>Risk Tier Categorization</td>
+      <td>Verifies the assigned tier is the one the published cutoffs would yield for the stored score.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>
+  If all checks pass, the report is marked
+  <span class="mono">audit-passed</span>. The admin UI also exposes a
+  per-group "score audit" panel that re-runs the same logic on demand and
+  lets staff review the math person-by-person. There is also a short LLM-based
+  "second-opinion" review that reads the demographic distribution and the
+  computed score, and writes 2–3 sentences confirming the score is consistent
+  with the profile. That LLM review is a sanity-check overlay only — it never
+  alters the score or the tier.
+</p>
+
+<h2>9. What the customer (and Kennion staff) see</h2>
+<p>The output of the analysis surfaces in two places:</p>
+<ul>
+  <li>
+    <strong>Proposal PDF.</strong> Includes total lives, employee count,
+    dependency ratio, average employee age, age-band × gender distribution,
+    composite risk score, risk tier, and a short narrative tailored to the
+    tier (Preferred &amp; Standard emphasize Kennion-program fit; High
+    recommends comparing to fully-insured).
+  </li>
+  <li>
+    <strong>Admin dashboard.</strong> The same data plus the audit-check
+    results, the per-person factor breakdown, and the proposal-acceptance
+    state for that group.
+  </li>
+</ul>
+
+<h2>10. Where this lives in the code (for the actuary's reference)</h2>
+<p class="small">All paths relative to the Kennion repo root.</p>
+<table>
+  <thead><tr><th>Concern</th><th>File</th></tr></thead>
+  <tbody>
+    <tr><td>Demographic risk table (age × gender factors)</td><td><span class="mono">server/routes.ts</span> &mdash; <span class="mono">DEMOGRAPHIC_RISK_TABLE</span></td></tr>
+    <tr><td>Age-band assignment</td><td><span class="mono">server/routes.ts</span> &mdash; <span class="mono">getAgeBand()</span></td></tr>
+    <tr><td>Per-person factor lookup</td><td><span class="mono">server/routes.ts</span> &mdash; <span class="mono">getRiskScoreForPerson()</span></td></tr>
+    <tr><td>Group composite score &amp; tier</td><td><span class="mono">server/routes.ts</span> &mdash; <span class="mono">analyzeGroupRisk()</span></td></tr>
+    <tr><td>Tier cutoffs (Preferred / Standard / High)</td><td><span class="mono">server/routes.ts</span> &mdash; flagged "DO NOT MODIFY without approval"</td></tr>
+    <tr><td>Audit checks (5 self-consistency tests)</td><td><span class="mono">server/routes.ts</span> &mdash; risk audit validator</td></tr>
+    <tr><td>CSV template &amp; column validation</td><td><span class="mono">server/routes.ts</span> &mdash; <span class="mono">REQUIRED_COLUMNS</span>, <span class="mono">validateColumns()</span>, <span class="mono">/api/groups/template</span></td></tr>
+    <tr><td>PHI / sensitive-column scrubber</td><td><span class="mono">server/routes.ts</span> &mdash; <span class="mono">SENSITIVE_HEADER_PATTERNS</span>, <span class="mono">stripSensitiveColumns()</span></td></tr>
+    <tr><td>AI column-mapping cleaner</td><td><span class="mono">server/openai.ts</span> &mdash; <span class="mono">cleanCSVWithAI()</span></td></tr>
+    <tr><td>Database schema</td><td><span class="mono">shared/schema.ts</span> &mdash; <span class="mono">census_entries</span>, <span class="mono">groups</span>, <span class="mono">proposals</span></td></tr>
+    <tr><td>(Separate) Pricing engine — age curve, area, base PMPM, trend</td><td><span class="mono">server/rate-engine.ts</span>, <span class="mono">server/factor-tables.json</span> (synced from the actuary's <span class="mono">.xlsm</span>)</td></tr>
+  </tbody>
+</table>
+
+<h2>11. Notes &amp; known characteristics</h2>
+<ul>
+  <li>
+    <strong>Equal weighting.</strong> The composite score is an unweighted
+    average across employees, spouses, and children. It is not weighted by
+    expected member-month exposure. (Easy to change to PMPM-weighted if the
+    actuary prefers.)
+  </li>
+  <li>
+    <strong>Two distinct factor systems.</strong> The age-band × gender
+    factors in this document drive the qualification <em>tier</em>. The
+    pricing engine uses a separate, finer-grained age curve (one factor per
+    age 0–81, 6:1 slope) sourced from the actuary's Excel rater. The two are
+    intentionally decoupled — the tier is a "fit" signal, the rate is the
+    actual price.
+  </li>
+  <li>
+    <strong>Cutoffs are stable until you say otherwise.</strong> Preferred &lt;
+    1.00, Standard 1.00–1.49, High &ge; 1.50. Source-controlled in the code
+    and called out as actuary-owned.
+  </li>
+  <li>
+    <strong>How to change the table.</strong> The Demographic Risk Table is
+    the single change-point for the qualification math. Replacing the 15-row
+    table or the three cutoffs is a one-file edit and a redeploy; everything
+    downstream (audit checks, PDF, narrative) re-derives from the new
+    numbers automatically.
+  </li>
+</ul>
+
+</body>
+</html>

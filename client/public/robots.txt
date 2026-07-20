@@ -1,0 +1,31 @@
+# BenSync - robots.txt
+# The marketing pages are discoverable. Everything else is private:
+# the portal, dashboards, admin tooling, individual quote tokens, and
+# the API.
+
+User-agent: *
+Allow: /$
+Allow: /employers
+Allow: /brokers
+Allow: /members
+Allow: /whats-included
+Allow: /partner-network
+Allow: /system
+Allow: /contact
+Allow: /login
+Allow: /brand/
+Allow: /styles.css
+Allow: /sitemap.xml
+Disallow: /portal
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /auth/
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /admin
+Disallow: /admin/
+Disallow: /q/
+Disallow: /api/
+
+Sitemap: https://bensync.com/sitemap.xml
