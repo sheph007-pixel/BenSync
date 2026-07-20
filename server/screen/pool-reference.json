@@ -1,0 +1,88 @@
+{
+  "version": "1.0",
+  "built_at": "2026-05-11",
+  "captive_pool": "Kennion Benefit Advisors RBP Captive",
+  "membership": {
+    "n_members": 1905,
+    "n_groups_in_pool": 2,
+    "pool_composition": {
+      "AMERICAN EMPLOYERS ALLIANCE, INC.-EBPA": 980,
+      "ONE TRUST PLAN MASTER TRUST": 925
+    }
+  },
+  "financials": {
+    "total_paid": 12325883.32,
+    "mean_pmpy": 6470.28,
+    "median_pmpy": 789.13,
+    "p75_pmpy": 5002.75,
+    "p90_pmpy": 17227.539999999994,
+    "p95_pmpy": 30458.18000000001,
+    "p99_pmpy": 86032.72999999998,
+    "max_member_paid": 297271.76,
+    "pct_zero_claim": 0.2761
+  },
+  "demographics": {
+    "avg_age": 35.5,
+    "median_age": 37,
+    "age_distribution": {
+      "5-9": 100,
+      "55-59": 148,
+      "35-39": 171,
+      "30-34": 165,
+      "15-19": 112,
+      "40-44": 196,
+      "60-64": 135,
+      "25-29": 161,
+      "50-54": 178,
+      "10-14": 114,
+      "45-49": 155,
+      "0-4": 92,
+      "65-69": 31,
+      "70+": 12,
+      "20-24": 135
+    },
+    "gender_mix": {
+      "F": 0.4236,
+      "M": 0.5764
+    },
+    "tier_mix": {
+      "Child/Dep": 0.2698,
+      "Spouse": 0.1638,
+      "Employee": 0.5664
+    },
+    "states": {
+      "AL": 0.6667,
+      "GA": 0.0919,
+      "TX": 0.042,
+      "FL": 0.0268,
+      "TN": 0.0268,
+      "MS": 0.0168,
+      "KY": 0.0157,
+      "LA": 0.0126
+    }
+  },
+  "clinical": {
+    "avg_chronic_conditions": 0.797,
+    "avg_concurrent_risk": 0.584,
+    "avg_prospective_risk": 0.797,
+    "top_diagnoses": {
+      "Health Status/Encounters": 322,
+      "Eye/ENT Disorders": 122,
+      "Gastrointestinal Disorders": 90,
+      "Cardiac Disorders": 88,
+      "Trauma/Accidents": 86,
+      "Musculoskeletal Disorders": 73,
+      "Mental Health": 61,
+      "Infections": 56,
+      "Spine-related Disorders": 53,
+      "Pregnancy-related Disorders": 40
+    }
+  },
+  "utilization": {
+    "ip_days_per_member": 0.007,
+    "er_visits_per_member": 0.266,
+    "admissions_per_member": 0.006,
+    "office_visits_per_member": 7.673,
+    "urgent_care_per_member": 0.4
+  }
+}

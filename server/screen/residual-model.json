@@ -1,0 +1,54 @@
+{
+  "model_type": "tweedie_glm_log_link",
+  "version": "1.0",
+  "trained_at": "2026-05-11",
+  "trained_on": {
+    "n_members": 1905,
+    "n_groups": 2,
+    "groups": [
+      "AMERICAN EMPLOYERS ALLIANCE, INC.-EBPA",
+      "ONE TRUST PLAN MASTER TRUST"
+    ],
+    "total_paid": 12325883.32,
+    "mean_pmpy": 6470.28,
+    "cv_pearson_mean": 0.2135,
+    "cv_pearson_std": 0.0473
+  },
+  "feature_order": [
+    "age",
+    "age2",
+    "age3",
+    "male",
+    "spouse",
+    "child",
+    "geo_z",
+    "age_x_male"
+  ],
+  "coefficients": {
+    "age": 0.60409,
+    "age2": 0.02813,
+    "age3": -0.12864,
+    "male": -0.32446,
+    "spouse": 0.28749,
+    "child": 1.12916,
+    "geo_z": 0.11788,
+    "age_x_male": -0.04725,
+    "intercept": 8.15709
+  },
+  "block_mean_pmpy": 6470.28,
+  "feature_spec": {
+    "age": "(age - 35) / 10",
+    "age2": "((age - 35) / 10) ** 2",
+    "age3": "((age - 35) / 10) ** 3 / 6",
+    "male": "1 if Member Gender == 'M' else 0",
+    "spouse": "1 if Rel Class == 'Spouse' else 0",
+    "child": "1 if Rel Class != 'Employee' and != 'Spouse' else 0",
+    "geo_z": "PLACES composite county Z-score (ZIP-derived)",
+    "age_x_male": "((age - 35) / 10) * male"
+  },
+  "predict_formula": "exp(intercept + sum(coef * feature))",
+  "residual_bounds": {
+    "min": -0.1,
+    "max": 0.1
+  }
+}

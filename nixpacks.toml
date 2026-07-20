@@ -1,0 +1,9 @@
+[phases.setup]
+aptPkgs = [
+  "libreoffice-calc",
+  "libreoffice-script-provider-python",
+  "python3",
+  "python3-pip",
+  "python3-uno",
+  "python3-openpyxl"
+]
