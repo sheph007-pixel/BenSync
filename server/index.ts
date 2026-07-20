@@ -4,16 +4,6 @@ import { serveStatic } from "./static";
 import { serveMarketing } from "./marketing";
 import { createServer } from "http";
 
-// Never let an async failure kill the process before the server binds; a
-// broken or missing database must degrade the portal, not take down the
-// marketing site and the healthcheck with it.
-process.on("unhandledRejection", (reason) => {
-  console.error("Unhandled rejection (continuing):", reason);
-});
-process.on("uncaughtException", (err) => {
-  console.error("Uncaught exception (continuing):", err);
-});
-
 const app = express();
 app.set("trust proxy", 1);
 const httpServer = createServer(app);
@@ -26,6 +16,10 @@ declare module "http" {
 
 app.use(
   express.json({
+    // Raised from the 100kb default for the one-time data migration
+    // (proposal PDFs travel as base64 row chunks). Safe to lower again
+    // once the migration endpoints are removed.
+    limit: "64mb",
     verify: (req, _res, buf) => {
       req.rawBody = buf;
     },
@@ -89,10 +83,16 @@ app.use((req, res, next) => {
   // through to the API and the React portal.
   app.use(serveMarketing);
 
+  await registerRoutes(httpServer, app);
+
+  // Temporary: admin-only data import used by the one-time migration
+  // from the old system. Registered after registerRoutes so the session
+  // middleware it sets up applies here. Remove after the migration.
   try {
-    await registerRoutes(httpServer, app);
+    const { registerMigrateImport } = await import("./migrate-sync");
+    registerMigrateImport(app);
   } catch (err: any) {
-    console.error("Route registration failed (marketing still serves):", err?.message ?? err);
+    console.error("Migrate import registration failed (non-fatal):", err?.message ?? err);
   }
 
   const { seedDatabase } = await import("./seed");
