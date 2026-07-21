@@ -1481,6 +1481,16 @@ export async function registerRoutes(
   // DB write: validated, then handed straight to Resend → hunter@kennion.com.
   // The `website` field is a honeypot, bots fill it, humans never see it, so
   // a non-empty value means spam and we drop it while returning a clean 200.
+  // Public health probe: booleans only, never secret values. emailConfigured
+  // false explains a failing contact form (RESEND_API_KEY missing on the
+  // service) without digging through deploy logs.
+  app.get("/api/health", (_req: Request, res: Response) => {
+    res.json({
+      ok: true,
+      emailConfigured: !!process.env.RESEND_API_KEY,
+    });
+  });
+
   app.post("/api/contact", async (req: Request, res: Response) => {
     try {
       const data = contactInquirySchema.parse(req.body);
