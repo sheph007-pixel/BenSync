@@ -43,7 +43,7 @@ import {
 } from "@shared/schema";
 import ConnectPgSimple from "connect-pg-simple";
 import { log } from "./index";
-import { sendMagicLinkEmail, sendProposalAcceptanceEmail, sendApprovalRequestEmail, sendApprovalGrantedEmail, sendCensusUploadedAlertEmail, sendContactInquiryEmail } from "./email";
+import { sendMagicLinkEmail, sendProposalAcceptanceEmail, sendApprovalRequestEmail, sendApprovalGrantedEmail, sendCensusUploadedAlertEmail, sendContactInquiryEmail, getLastEmailError } from "./email";
 import { pool, testConnection } from "./db";
 import { cleanCSVWithAI, generateValidationGuidance } from "./ai-csv-cleaner";
 import { generateActuarialAnalysis, generateScoreReview } from "./ai-analysis";
@@ -1488,6 +1488,7 @@ export async function registerRoutes(
     res.json({
       ok: true,
       emailConfigured: !!process.env.RESEND_API_KEY,
+      lastEmailError: getLastEmailError(),
     });
   });
 

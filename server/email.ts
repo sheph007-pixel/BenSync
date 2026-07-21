@@ -4,6 +4,13 @@ import { log } from "./index";
 // Using verified domain site.kennion.com
 const FROM_EMAIL = "BenSync <noreply@site.kennion.com>";
 
+// Last contact-inquiry send failure, surfaced (message text only, truncated)
+// on /api/health so a broken form can be diagnosed from a browser.
+let lastEmailError: string | null = null;
+export function getLastEmailError(): string | null {
+  return lastEmailError;
+}
+
 function getResendClient() {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
@@ -444,12 +451,15 @@ export async function sendContactInquiryEmail(p: {
     });
     if (result.error) {
       log(`[EMAIL ERROR] Contact inquiry Resend error: ${JSON.stringify(result.error)}`);
+      lastEmailError = JSON.stringify(result.error).slice(0, 200);
       return false;
     }
     log(`[EMAIL SUCCESS] Contact inquiry sent to hunter@ from ${p.email} (${p.company}) (id: ${result.data?.id})`);
+    lastEmailError = null;
     return true;
   } catch (err: any) {
     log(`[EMAIL ERROR] Failed to send contact inquiry from ${p.email}: ${err.message}`);
+    lastEmailError = String(err?.message ?? err).slice(0, 200);
     return false;
   }
 }
