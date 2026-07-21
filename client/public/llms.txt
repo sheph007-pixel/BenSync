@@ -12,7 +12,7 @@
 
 ## Who it is for
 
-- Insurance brokers and consultants: BenSync works in a wholesale capacity only. It does not sell direct and does not replace the advisor, so there is no channel conflict. Brokers deliver the program white-label or co-branded.
+- Insurance brokers and consultants: BenSync works in a wholesale capacity only. It does not sell direct and does not replace the advisor, so there is no channel conflict. Brokers control the client relationship and deliver the program with BenSync support behind them.
 - Employers: access is through a trusted broker or consultant, who remains the advisor and first point of contact. A good fit is any group with 5 or more enrolled employees.
 - Members: benefits come from their employer, delivered through the employer's trusted advisor. Group-specific details arrive through each employer's own materials.
 

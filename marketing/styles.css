@@ -96,18 +96,10 @@ header nav .nl-login:hover{border-color:#0F2A47;color:#0F2A47 !important;}
 .pm-wrap::before,.pm-wrap::after{content:"";position:absolute;top:0;bottom:0;width:60px;z-index:2;pointer-events:none;}
 .pm-wrap::before{left:0;background:linear-gradient(90deg,#ffffff,rgba(255,255,255,0));}
 .pm-wrap::after{right:0;background:linear-gradient(270deg,#ffffff,rgba(255,255,255,0));}
-.pm-track{display:flex;gap:14px;width:max-content;padding:2px 0;animation:pmScroll 36s linear infinite;}
-.pm-track:hover{animation-play-state:paused;}
-@keyframes pmScroll{to{transform:translateX(calc(-50% - 7px));}}
+.pm-track{display:flex;gap:14px;width:max-content;padding:2px 0;animation:pmScroll 36s linear infinite;will-change:transform;}
+@media (hover:hover){.pm-track:hover{animation-play-state:paused;}}
+@keyframes pmScroll{to{transform:translate3d(calc(-50% - 7px),0,0);}}
 @media (prefers-reduced-motion: reduce){
   .pm-track{animation:none;}
   .pm-wrap{overflow-x:auto;}
-}
-
-/* --- no looping motion on mobile: marquee becomes a swipeable row, hero
-       tiles render static ------------------------------------------------- */
-@media (max-width:860px){
-  .pm-track{animation:none;}
-  .pm-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
-  [data-hero-item]{animation:none !important;}
 }

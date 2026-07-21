@@ -6,9 +6,8 @@
   function initHeroSweep() {
     var items = document.querySelectorAll('[data-hero-item]');
     if (!items.length) return;
-    // No looping motion on small screens or for reduced-motion users.
-    if (window.matchMedia('(max-width: 860px)').matches ||
-        window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    // Respect reduced-motion users.
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     var bill = document.getElementById('hero-bill');
     var tick = -1;
 
