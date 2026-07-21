@@ -114,13 +114,19 @@ a,button{-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
 @media (max-width:860px){
   /* 16px inputs stop iOS Safari from auto-zooming on focus. */
   input,textarea,select{font-size:16px !important;}
+  /* Mobile menu: roomy one-tap rows with hairline dividers. */
+  header nav{gap:0 !important;padding:4px 0 18px;}
+  header nav a.nl{font-size:16px;padding:14px 2px;border-bottom:1px solid rgba(15,42,71,.07);}
   /* Flatten the Who It's For dropdown inside the mobile menu: one tap, not two. */
   .nav-drop{width:100%;flex-direction:column;}
-  .nav-drop-btn{pointer-events:none;color:#7A8A99;font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:12px 4px 2px;justify-content:flex-start;}
+  .nav-drop-btn{pointer-events:none;color:#7A8A99;font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:18px 2px 4px;justify-content:flex-start;}
   .nav-drop-caret{display:none;}
   .nav-drop-menu{display:flex !important;position:static;transform:none;box-shadow:none;border:none;background:transparent;padding:0;min-width:0;flex-direction:column;}
-  .nav-drop-menu a{padding:12px 4px;border-radius:0;}
-  .nav-drop-note{border-top:none;padding:2px 4px 8px;margin-top:0;white-space:normal;}
+  .nav-drop-menu a{font-size:16px;padding:14px 2px;border-radius:0;border-bottom:1px solid rgba(15,42,71,.07);}
+  .nav-drop-note{border-top:none;padding:10px 2px 0;margin-top:0;white-space:normal;}
+  /* Menu buttons: a matched full-width pair. */
+  header nav .nl-login{justify-content:center;text-align:center;margin-top:18px;border-radius:12px;padding:14px 18px;font-size:15px;}
+  header nav .btn-green{justify-content:center;text-align:center;margin-top:10px;padding:14px 18px !important;border-radius:12px !important;font-size:15px !important;font-weight:700;}
   /* Footer links reach comfortable tap-target size. */
   footer a{display:inline-block;padding:5px 0;}
 }
