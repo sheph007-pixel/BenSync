@@ -19,9 +19,7 @@
         el.style.borderColor = active ? 'rgba(31,138,91,.45)' : 'rgba(15,42,71,.06)';
         el.style.transform = active ? 'translateY(-2px)' : 'none';
         if (label) label.style.color = active ? '#16714A' : '#16385C';
-        if (dot) dot.style.boxShadow = active
-          ? '0 0 0 4px rgba(31,138,91,.18)'
-          : '0 0 0 0 rgba(31,138,91,0)';
+        if (dot) dot.style.color = active ? '#16714A' : '#1F8A5B';
       });
       if (bill) {
         var billActive = tick === 8;

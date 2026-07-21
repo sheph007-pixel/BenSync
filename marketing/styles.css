@@ -32,6 +32,18 @@ header nav .nl-login:hover{border-color:#0F2A47;color:#0F2A47 !important;}
 .member-link:hover{background:rgba(255,255,255,.14) !important;color:#ffffff !important;}
 .ribbon-back:hover{color:#ffffff !important;}
 
+/* --- brand icon system ---------------------------------------------------- */
+.ic{width:20px;height:20px;display:block;flex:none;}
+.ic-sm{width:16px;height:16px;}
+.ic-badge{flex:none;width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;}
+.ic-badge--mint{background:#E8F3ED;color:#16714A;}
+.ic-badge--slate{background:#EDF1F6;color:#16385C;}
+.ic-badge--glass{background:rgba(255,255,255,.12);color:#7FD6A8;}
+
+/* --- hero motif illustrations --------------------------------------------- */
+.hero-motif{position:absolute;right:clamp(20px,6vw,72px);top:50%;transform:translateY(-50%);width:clamp(240px,26vw,340px);pointer-events:none;user-select:none;}
+@media (max-width:960px){.hero-motif{display:none;}}
+
 /* --- "Who It's For" nav dropdown ---------------------------------------- */
 .nav-drop{position:relative;display:flex;}
 .nav-drop-btn{display:flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;font-family:inherit;color:#47586B;font-weight:600;font-size:14px;padding:0;}

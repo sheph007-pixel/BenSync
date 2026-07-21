@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 360" fill="none">
+  <!-- BenSync brand motif: components syncing into one program -->
+  <path d="M60 300 C 130 140, 350 140, 420 300" stroke="#DCEAE2" stroke-width="2"/>
+  <path d="M100 320 C 160 190, 320 190, 380 320" stroke="#E8F3ED" stroke-width="2"/>
+  <path d="M240 84 v92" stroke="#CBE3D5" stroke-width="2" stroke-dasharray="3 7" stroke-linecap="round"/>
+  <path d="M120 130 L 214 176" stroke="#CBE3D5" stroke-width="2" stroke-dasharray="3 7" stroke-linecap="round"/>
+  <path d="M360 130 L 266 176" stroke="#CBE3D5" stroke-width="2" stroke-dasharray="3 7" stroke-linecap="round"/>
+  <path d="M96 236 L 208 202" stroke="#CBE3D5" stroke-width="2" stroke-dasharray="3 7" stroke-linecap="round"/>
+  <path d="M384 236 L 272 202" stroke="#CBE3D5" stroke-width="2" stroke-dasharray="3 7" stroke-linecap="round"/>
+  <circle cx="240" cy="64" r="20" fill="#E8F3ED"/><circle cx="240" cy="64" r="20" stroke="#BFDCCB" stroke-width="1.5"/>
+  <circle cx="240" cy="64" r="7" fill="#1F8A5B"/>
+  <circle cx="104" cy="122" r="16" fill="#F1F6F3" stroke="#D4E6DB" stroke-width="1.5"/>
+  <circle cx="104" cy="122" r="5.5" fill="#7FD6A8"/>
+  <circle cx="376" cy="122" r="16" fill="#F1F6F3" stroke="#D4E6DB" stroke-width="1.5"/>
+  <circle cx="376" cy="122" r="5.5" fill="#7FD6A8"/>
+  <circle cx="80" cy="244" r="13" fill="#F1F6F3" stroke="#D4E6DB" stroke-width="1.5"/>
+  <circle cx="80" cy="244" r="4.5" fill="#9BC9AF"/>
+  <circle cx="400" cy="244" r="13" fill="#F1F6F3" stroke="#D4E6DB" stroke-width="1.5"/>
+  <circle cx="400" cy="244" r="4.5" fill="#9BC9AF"/>
+  <rect x="196" y="176" width="88" height="56" rx="14" fill="#0F2A47"/>
+  <rect x="212" y="196" width="34" height="7" rx="3.5" fill="#7FD6A8"/>
+  <rect x="212" y="209" width="56" height="5" rx="2.5" fill="#3D5670"/>
+  <circle cx="240" cy="298" r="10" fill="#E8F3ED" stroke="#BFDCCB" stroke-width="1.5"/>
+  <path d="M236.5 298l2.4 2.4 4.6-4.8" stroke="#1F8A5B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M240 232v56" stroke="#CBE3D5" stroke-width="2" stroke-linecap="round"/>
+</svg>

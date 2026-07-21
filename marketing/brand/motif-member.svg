@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 360" fill="none">
+  <!-- BenSync member motif: app, payment card, ID card as one experience -->
+  <path d="M40 310 C 120 170, 340 170, 420 310" stroke="#E8F3ED" stroke-width="2"/>
+  <!-- phone -->
+  <rect x="176" y="48" width="108" height="216" rx="22" fill="#0F2A47"/>
+  <rect x="188" y="66" width="84" height="180" rx="12" fill="#F6F8F7"/>
+  <rect x="214" y="56" width="32" height="5" rx="2.5" fill="#3D5670"/>
+  <rect x="200" y="80" width="60" height="9" rx="4.5" fill="#0F2A47"/>
+  <rect x="200" y="96" width="42" height="6" rx="3" fill="#9AA8B5"/>
+  <rect x="200" y="114" width="60" height="34" rx="8" fill="#E8F3ED"/>
+  <path d="M212 131l4.5 4.5 8-8.5" stroke="#1F8A5B" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="200" y="156" width="60" height="10" rx="5" fill="#EDF1EE"/>
+  <rect x="200" y="172" width="60" height="10" rx="5" fill="#EDF1EE"/>
+  <rect x="200" y="188" width="44" height="10" rx="5" fill="#EDF1EE"/>
+  <rect x="200" y="212" width="60" height="22" rx="8" fill="#1F8A5B"/>
+  <rect x="216" y="220" width="28" height="6" rx="3" fill="#E8F3ED"/>
+  <!-- payment card -->
+  <g transform="rotate(-8 120 232)">
+    <rect x="52" y="196" width="136" height="86" rx="12" fill="#1F8A5B"/>
+    <rect x="52" y="212" width="136" height="14" fill="#16714A"/>
+    <rect x="66" y="240" width="26" height="18" rx="4" fill="#7FD6A8"/>
+    <rect x="66" y="266" width="72" height="7" rx="3.5" fill="#CFEBDC"/>
+  </g>
+  <!-- ID card -->
+  <g transform="rotate(7 344 232)">
+    <rect x="276" y="192" width="140" height="92" rx="12" fill="#ffffff" stroke="#D8E2DC" stroke-width="1.5"/>
+    <rect x="276" y="192" width="140" height="20" rx="12" fill="#0F2A47"/>
+    <rect x="288" y="197.5" width="52" height="8" rx="4" fill="#7FD6A8"/>
+    <circle cx="302" cy="240" r="13" fill="#E8F3ED"/>
+    <circle cx="302" cy="235.5" r="4.5" fill="#1F8A5B"/>
+    <path d="M294 247c1.5-4 4.5-6 8-6s6.5 2 8 6" stroke="#1F8A5B" stroke-width="2" stroke-linecap="round"/>
+    <rect x="322" y="228" width="76" height="7" rx="3.5" fill="#D8E2DC"/>
+    <rect x="322" y="241" width="58" height="7" rx="3.5" fill="#E8EEEA"/>
+    <rect x="322" y="254" width="66" height="7" rx="3.5" fill="#E8EEEA"/>
+  </g>
+</svg>
