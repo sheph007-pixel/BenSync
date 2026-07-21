@@ -33,5 +33,10 @@ export function serveMarketing(req: Request, res: Response, next: NextFunction) 
   }
 
   if (!fs.existsSync(target) || !fs.statSync(target).isFile()) return next();
+  // HTML must always revalidate so copy updates show up immediately after a
+  // deploy; browsers and any edge cache may only serve it after a 304 check.
+  if (target.endsWith(".html")) {
+    res.setHeader("Cache-Control", "no-cache, must-revalidate");
+  }
   res.sendFile(target);
 }
