@@ -30,6 +30,10 @@ input:focus,textarea:focus,select:focus{border-color:#1F8A5B !important;outline:
 .member-link:hover{background:rgba(255,255,255,.14) !important;color:#ffffff !important;}
 .ribbon-back:hover{color:#ffffff !important;}
 
+/* --- header tagline ------------------------------------------------------ */
+.nav-tagline{font-size:12px;font-weight:600;color:#7A8A99;line-height:1.35;max-width:200px;}
+@media (max-width:1080px){.nav-tagline{display:none;}}
+
 /* --- "Who It's For" nav dropdown ---------------------------------------- */
 .nav-drop{position:relative;display:flex;}
 .nav-drop-btn{display:flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;font-family:inherit;color:#47586B;font-weight:600;font-size:14px;padding:0;}
@@ -40,6 +44,7 @@ input:focus,textarea:focus,select:focus{border-color:#1F8A5B !important;outline:
 .nav-drop.open .nav-drop-menu{display:flex;}
 .nav-drop-menu a{padding:10px 14px;border-radius:8px;color:#0F2A47;font-size:14px;font-weight:600;}
 .nav-drop-menu a:hover{background:#F6F8F7;color:#0F2A47;}
+.nav-drop-note{padding:9px 14px 5px;font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#7A8A99;border-top:1px solid rgba(15,42,71,.08);margin-top:4px;white-space:nowrap;}
 
 /* --- mobile nav --------------------------------------------------------- */
 .nav-toggle{display:none;}

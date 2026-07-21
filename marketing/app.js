@@ -124,6 +124,7 @@
             '<input id="qm-employees" placeholder="# of employees" style="min-width:0;border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;font-family:inherit;">' +
           '</div>' +
           '<textarea id="qm-message" placeholder="What would you like help with?" rows="3" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;resize:vertical;background:#ffffff;font-family:inherit;"></textarea>' +
+          '<span style="font-size:12px;color:#7A8A99;">Good fit: groups with 5 or more enrolled employees.</span>' +
           '<input id="qm-website" tabindex="-1" autocomplete="off" style="display:none;">' +
           '<button id="qm-send" type="button" class="btn-green" style="border:none;cursor:pointer;background:#1F8A5B;color:#ffffff;border-radius:10px;padding:14px;font-family:\'Manrope\',sans-serif;font-size:14.5px;font-weight:700;">Send Request</button>' +
           '<span id="qm-error" style="display:none;font-size:12.5px;color:#B4483E;text-align:center;"></span>' +
