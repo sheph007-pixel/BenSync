@@ -16,6 +16,8 @@ input:focus,textarea:focus,select:focus{border-color:#1F8A5B !important;outline:
 /* --- hover utilities (inline styles win over plain rules, so force these) --- */
 .nl:hover{color:#0F2A47 !important;}
 .nl-login:hover{color:#1F8A5B !important;}
+header nav .nl-login{border:1.5px solid rgba(15,42,71,.18);border-radius:10px;padding:9px 16px;font-size:13.5px;}
+header nav .nl-login:hover{border-color:#0F2A47;color:#0F2A47 !important;}
 .btn-navy:hover{background:#16385C !important;color:#ffffff !important;}
 .btn-green:hover{background:#26A06C !important;color:#ffffff !important;}
 .btn-outline:hover{border-color:#0F2A47 !important;color:#0F2A47 !important;}
@@ -62,6 +64,7 @@ input:focus,textarea:focus,select:focus{border-color:#1F8A5B !important;outline:
   header nav a{padding:12px 4px;}
   header nav > span{display:none;}
   header nav .btn-navy{justify-content:center;text-align:center;margin-top:8px;}
+  header nav .nl-login{justify-content:center;text-align:center;margin-top:10px;border-top:none;}
   .nav-drop{width:100%;flex-direction:column;align-items:stretch;}
   .nav-drop-btn{padding:12px 4px;justify-content:flex-start;}
   .nav-drop-menu{position:static;transform:none;box-shadow:none;border:none;padding:0 0 0 16px;min-width:0;}

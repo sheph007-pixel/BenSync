@@ -100,11 +100,15 @@
     }
   }
 
-  // --- Site-wide quote popup: every /contact CTA opens one shared form ---
+  // --- Broker quote popup: only "Get A Quote" CTAs open it. Contact Us and
+  // other /contact links go to the general contact form, which fields
+  // brokers, employers, and members. Quotes come from brokers; employers
+  // ask their broker.
   function initQuoteModal() {
-    // The contact page keeps its own inline form.
-    if (document.getElementById('contact-form')) return;
-    var links = document.querySelectorAll('a[href="/contact"]');
+    var links = [];
+    document.querySelectorAll('a[href="/contact"]').forEach(function (a) {
+      if (a.textContent.trim() === 'Get A Quote') links.push(a);
+    });
     if (!links.length) return;
 
     var wrap = document.createElement('div');
@@ -115,19 +119,20 @@
       '<div role="dialog" aria-modal="true" aria-labelledby="qm-title" style="position:relative;max-width:470px;margin:7vh auto 24px;background:#ffffff;border-radius:18px;padding:28px;box-shadow:0 30px 70px -30px rgba(15,42,71,.5);display:flex;flex-direction:column;gap:12px;max-height:84vh;overflow:auto;box-sizing:border-box;width:calc(100% - 32px);">' +
         '<button type="button" data-qm-close aria-label="Close" style="position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:8px;border:1px solid rgba(15,42,71,.14);background:#ffffff;cursor:pointer;font-size:16px;color:#0F2A47;line-height:1;">&#10005;</button>' +
         '<span id="qm-title" style="font-family:\'Sora\',sans-serif;font-size:20px;font-weight:700;letter-spacing:-.01em;color:#0F2A47;">Get A Quote</span>' +
-        '<p style="font-size:14px;line-height:1.6;color:#47586B;margin:0;">Tell us about your group and the right person will follow up within one business day.</p>' +
+        '<p style="font-size:14px;line-height:1.6;color:#47586B;margin:0;">For brokers and consultants: tell us about your client\'s group and we will follow up with a bundled program quote.</p>' +
         '<div id="qm-form" style="display:flex;flex-direction:column;gap:10px;">' +
           '<input id="qm-name" placeholder="Your name" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;font-family:inherit;">' +
           '<input id="qm-email" type="email" placeholder="Work email" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;font-family:inherit;">' +
           '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
-            '<input id="qm-company" placeholder="Company or agency" style="min-width:0;border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;font-family:inherit;">' +
-            '<input id="qm-employees" placeholder="# of employees" style="min-width:0;border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;font-family:inherit;">' +
+            '<input id="qm-company" placeholder="Agency name" style="min-width:0;border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;font-family:inherit;">' +
+            '<input id="qm-employees" placeholder="# of enrolled employees" style="min-width:0;border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;font-family:inherit;">' +
           '</div>' +
-          '<textarea id="qm-message" placeholder="What would you like help with?" rows="3" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;resize:vertical;background:#ffffff;font-family:inherit;"></textarea>' +
+          '<textarea id="qm-message" placeholder="Anything we should know about the group?" rows="3" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;resize:vertical;background:#ffffff;font-family:inherit;"></textarea>' +
           '<span style="font-size:12px;color:#7A8A99;">Good fit: groups with 5 or more enrolled employees.</span>' +
           '<input id="qm-website" tabindex="-1" autocomplete="off" style="display:none;">' +
           '<button id="qm-send" type="button" class="btn-green" style="border:none;cursor:pointer;background:#1F8A5B;color:#ffffff;border-radius:10px;padding:14px;font-family:\'Manrope\',sans-serif;font-size:14.5px;font-weight:700;">Send Request</button>' +
           '<span id="qm-error" style="display:none;font-size:12.5px;color:#B4483E;text-align:center;"></span>' +
+          '<span style="font-size:12px;color:#7A8A99;text-align:center;">Employer or member? Start with your broker, or <a href="/contact" style="font-weight:700;">use Contact Us</a>.</span>' +
         '</div>' +
         '<div id="qm-sent" style="display:none;flex-direction:column;gap:8px;background:#E8F3ED;border:1px solid rgba(31,138,91,.3);border-radius:12px;padding:20px;">' +
           '<span style="font-family:\'Sora\',sans-serif;font-size:15.5px;font-weight:700;color:#16714A;">Request received.</span>' +
