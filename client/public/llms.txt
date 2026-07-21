@@ -19,6 +19,8 @@
 ## Integrated partners
 
 - HealthEZ: medical claims and plan administration
+- SRS (Strategic Risk Solutions): captive management for the health plan
+- Davies: actuarial services for the health plan
 - MedOne: pharmacy benefit management
 - Guardian: dental and supplemental benefit lines
 - VSP: vision coverage
