@@ -1499,7 +1499,7 @@ export async function registerRoutes(
       });
 
       if (!sent) {
-        return res.status(502).json({ message: "We couldn't send your message right now. Please email support@kennion.com." });
+        return res.status(502).json({ message: "We couldn't send your message right now. Please email support@bensync.com." });
       }
 
       res.json({ ok: true });
