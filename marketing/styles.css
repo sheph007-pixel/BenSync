@@ -90,3 +90,16 @@ header nav .nl-login:hover{border-color:#0F2A47;color:#0F2A47 !important;}
   .tsys-b-side{justify-self:stretch !important;max-width:none !important;width:100%;}
   .tsys-arrow-h{display:none;}
 }
+
+/* --- partner marquee ------------------------------------------------------ */
+.pm-wrap{position:relative;overflow:hidden;}
+.pm-wrap::before,.pm-wrap::after{content:"";position:absolute;top:0;bottom:0;width:60px;z-index:2;pointer-events:none;}
+.pm-wrap::before{left:0;background:linear-gradient(90deg,#ffffff,rgba(255,255,255,0));}
+.pm-wrap::after{right:0;background:linear-gradient(270deg,#ffffff,rgba(255,255,255,0));}
+.pm-track{display:flex;gap:14px;width:max-content;padding:2px 0;animation:pmScroll 36s linear infinite;}
+.pm-track:hover{animation-play-state:paused;}
+@keyframes pmScroll{to{transform:translateX(calc(-50% - 7px));}}
+@media (prefers-reduced-motion: reduce){
+  .pm-track{animation:none;}
+  .pm-wrap{overflow-x:auto;}
+}
