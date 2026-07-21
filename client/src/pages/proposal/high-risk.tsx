@@ -33,8 +33,8 @@ export function ProposalHighRisk() {
             </div>
             <div className="flex items-center gap-2">
               <Mail className="h-4 w-4 text-primary" />
-              <a href="mailto:hunter@kennion.com" className="font-semibold text-primary hover:underline">
-                hunter@kennion.com
+              <a href="mailto:support@bensync.com" className="font-semibold text-primary hover:underline">
+                support@bensync.com
               </a>
             </div>
           </div>

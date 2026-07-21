@@ -158,7 +158,7 @@ export function ProposalExportModal({
           <p className="text-xs italic text-muted-foreground">
             Rates are illustrative and subject to final underwriting approval.
             Questions? Contact your BenSync Advisor, Hunter Shepherd
-            (hunter@kennion.com).
+            (support@bensync.com).
           </p>
         </div>
       </DialogContent>

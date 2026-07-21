@@ -356,8 +356,8 @@ export function ProposalUpload({
             )}
             <p className="text-xs text-muted-foreground">
               Need a hand?{" "}
-              <a href="mailto:hunter@kennion.com" className="font-semibold text-primary">
-                hunter@kennion.com
+              <a href="mailto:support@bensync.com" className="font-semibold text-primary">
+                support@bensync.com
               </a>{" "}
              , send the file and we'll get it loaded.
             </p>

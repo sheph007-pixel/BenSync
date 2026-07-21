@@ -61,7 +61,7 @@ export default function PublicPlanDetailsPage() {
             </p>
             <Button
               className="mt-6"
-              onClick={() => { window.location.href = "mailto:hunter@kennion.com"; }}
+              onClick={() => { window.location.href = "mailto:support@bensync.com"; }}
             >
               Email Hunter Shepherd
             </Button>

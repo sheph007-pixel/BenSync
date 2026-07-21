@@ -23,7 +23,7 @@ export function ProposalFooter() {
             <ExternalLink className="h-3 w-3" />
           </a>
           <a
-            href="mailto:hunter@kennion.com"
+            href="mailto:support@bensync.com"
             className="font-medium hover:text-foreground"
             data-testid="link-support"
           >

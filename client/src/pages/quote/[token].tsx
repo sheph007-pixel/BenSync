@@ -48,7 +48,7 @@ export default function PublicQuotePage() {
             <Button
               className="mt-6"
               onClick={() => {
-                window.location.href = "mailto:hunter@kennion.com";
+                window.location.href = "mailto:support@bensync.com";
               }}
             >
               Email Hunter Shepherd

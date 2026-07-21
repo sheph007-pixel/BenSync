@@ -345,7 +345,7 @@ export default function RegisterPage() {
           <LifeBuoy className="h-3.5 w-3.5" />
           Need help?{" "}
           <a
-            href="https://go.kennion.com/support"
+            href="/contact"
             target="_blank"
             rel="noopener noreferrer"
             className="font-medium text-primary hover:underline"

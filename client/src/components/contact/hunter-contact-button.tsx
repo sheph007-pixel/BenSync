@@ -6,7 +6,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-const HUNTER_EMAIL = "hunter@kennion.com";
+const HUNTER_EMAIL = "support@bensync.com";
 // Phone stored as parts so it doesn't appear as plain text in the
 // shipped JS. Same anti-scrape pattern as click-to-reveal-phone.
 const HUNTER_PHONE_PARTS = ["205", "641", "0469"];
