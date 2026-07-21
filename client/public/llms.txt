@@ -1,0 +1,46 @@
+# BenSync
+
+> BenSync is the wholesale benefits program for insurance advisors. It bundles a level-funded health plan, pharmacy, dental, vision, and supplemental coverage with enrollment, billing, member support, COBRA administration, and renewals into one program that brokers deliver to employer clients under their own brand. Distributed only through select broker partners, never sold direct.
+
+## What BenSync is
+
+- One bundled employee benefits program: brokers present it, employers offer it, members use it.
+- The health plan is level funded, a type of self funding, built on reference-based pricing for clear claim costs, with predictable monthly payments.
+- Dental coverage is available fully insured or level funded. Vision and supplemental benefits are fully insured through established carriers.
+- Employers receive one consolidated bill for the entire program.
+- BenSync is built on a proven program that has served employer groups since 2013.
+
+## Who it is for
+
+- Insurance brokers and consultants: BenSync works in a wholesale capacity only. It does not sell direct and does not replace the advisor, so there is no channel conflict. Brokers deliver the program white-label or co-branded.
+- Employers: access is through a trusted broker or consultant, who remains the advisor and first point of contact. A good fit is any group with 5 or more enrolled employees.
+- Members: benefits come from their employer, delivered through the employer's trusted advisor. Group-specific details arrive through each employer's own materials.
+
+## Integrated partners
+
+- HealthEZ: medical claims and plan administration
+- MedOne: pharmacy benefit management
+- Guardian: dental and supplemental benefit lines
+- VSP: vision coverage
+- Employee Navigator: online enrollment and benefits administration
+- HealthJoy: member app and care navigation
+- Paytient: payment card for out-of-pocket healthcare costs
+- Flores: COBRA administration
+- BenSync: consolidated billing and program coordination
+
+## How brokers engage
+
+- Get appointed and send a client census; BenSync returns one bundled program quote. No carrier spreadsheeting, no piecing together vendors.
+- Enrollment, EDI feeds, billing, member support, and renewals are already built and connected.
+- Request a quote or ask a question at https://bensync.com/contact
+
+## Pages
+
+- https://bensync.com/ : overview of the program
+- https://bensync.com/whats-included : every component in the bundle
+- https://bensync.com/brokers : the broker and consultant pitch, quoting, and funding details
+- https://bensync.com/employers : what employers receive through their broker
+- https://bensync.com/members : what members receive through their employer
+- https://bensync.com/partner-network : integrated partner list
+- https://bensync.com/system : how the program layer works
+- https://bensync.com/contact : contact form for brokers, employers, and members
