@@ -30,6 +30,17 @@ input:focus,textarea:focus,select:focus{border-color:#1F8A5B !important;outline:
 .member-link:hover{background:rgba(255,255,255,.14) !important;color:#ffffff !important;}
 .ribbon-back:hover{color:#ffffff !important;}
 
+/* --- "Who It's For" nav dropdown ---------------------------------------- */
+.nav-drop{position:relative;display:flex;}
+.nav-drop-btn{display:flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;font-family:inherit;color:#47586B;font-weight:600;font-size:14px;padding:0;}
+.nav-drop-btn:hover{color:#0F2A47;}
+.nav-drop-btn[data-active="true"]{color:#0F2A47;border-bottom:2px solid #1F8A5B;padding-bottom:2px;}
+.nav-drop-caret{width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid currentColor;margin-top:1px;}
+.nav-drop-menu{display:none;position:absolute;top:calc(100% + 14px);left:50%;transform:translateX(-50%);background:#ffffff;border:1px solid rgba(15,42,71,.10);border-radius:12px;box-shadow:0 18px 40px -20px rgba(15,42,71,.3);padding:8px;min-width:170px;flex-direction:column;z-index:60;}
+.nav-drop.open .nav-drop-menu{display:flex;}
+.nav-drop-menu a{padding:10px 14px;border-radius:8px;color:#0F2A47;font-size:14px;font-weight:600;}
+.nav-drop-menu a:hover{background:#F6F8F7;color:#0F2A47;}
+
 /* --- mobile nav --------------------------------------------------------- */
 .nav-toggle{display:none;}
 
@@ -50,6 +61,9 @@ input:focus,textarea:focus,select:focus{border-color:#1F8A5B !important;outline:
   header nav a{padding:12px 4px;}
   header nav > span{display:none;}
   header nav .btn-navy{justify-content:center;text-align:center;margin-top:8px;}
+  .nav-drop{width:100%;flex-direction:column;align-items:stretch;}
+  .nav-drop-btn{padding:12px 4px;justify-content:flex-start;}
+  .nav-drop-menu{position:static;transform:none;box-shadow:none;border:none;padding:0 0 0 16px;min-width:0;}
 }
 
 /* --- system.html diagrams: collapse to a single stacked column on phones --- */

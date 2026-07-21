@@ -223,11 +223,37 @@
     });
   }
 
+  // --- "Who It's For" dropdown: click to open, outside click / Escape closes ---
+  function initNavDropdown() {
+    var drops = document.querySelectorAll('.nav-drop');
+    if (!drops.length) return;
+    drops.forEach(function (drop) {
+      var btn = drop.querySelector('.nav-drop-btn');
+      if (!btn) return;
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        drop.classList.toggle('open');
+        btn.setAttribute('aria-expanded', drop.classList.contains('open') ? 'true' : 'false');
+      });
+    });
+    document.addEventListener('click', function (e) {
+      drops.forEach(function (drop) {
+        if (!drop.contains(e.target)) drop.classList.remove('open');
+      });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        drops.forEach(function (drop) { drop.classList.remove('open'); });
+      }
+    });
+  }
+
   function init() {
     initHeroSweep();
     initContactForm();
     initQuoteModal();
     initNavToggle();
+    initNavDropdown();
   }
 
   if (document.readyState === 'loading') {
