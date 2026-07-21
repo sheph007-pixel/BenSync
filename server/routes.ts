@@ -1114,7 +1114,7 @@ export async function registerRoutes(
     res.json({
       status: "ok",
       timestamp: new Date().toISOString(),
-      emailConfigured: !!process.env.RESEND_API_KEY,
+      emailConfigured: !!(process.env.RESEND_API_KEY || process.env.Resend),
       lastEmailError: getLastEmailError(),
     });
   });

@@ -12,7 +12,8 @@ export function getLastEmailError(): string | null {
 }
 
 function getResendClient() {
-  const apiKey = process.env.RESEND_API_KEY;
+  // Accept the legacy Railway variable name "Resend" as well.
+  const apiKey = process.env.RESEND_API_KEY || process.env.Resend;
   if (!apiKey) {
     log("ERROR: RESEND_API_KEY environment variable is not set");
     throw new Error("RESEND_API_KEY not configured");
