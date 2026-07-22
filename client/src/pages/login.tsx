@@ -69,7 +69,7 @@ export default function LoginPage() {
             className="mx-auto h-7 w-auto"
           />
           <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/70">
-            Sales Portal
+            Broker Portal
           </div>
         </div>
 

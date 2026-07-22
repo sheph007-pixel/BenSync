@@ -136,7 +136,7 @@ export default function RegisterPage() {
             BenSync
           </div>
           <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/70">
-            Sales Portal
+            Broker Portal
           </div>
         </div>
 
