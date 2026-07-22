@@ -81,6 +81,19 @@ app.use((req, res, next) => {
 
   await registerRoutes(httpServer, app);
 
+  // BenSync Captive Analytics — isolated /captive module. Registered after the
+  // session middleware (set up in registerRoutes) and before the SPA catch-all,
+  // so it shares the session store but stays namespaced under captive_* tables
+  // and /api/captive/* routes. Non-fatal: a captive failure must not take down
+  // the main site.
+  try {
+    const { initCaptive, registerCaptiveRoutes } = await import("./captive/index");
+    await initCaptive();
+    registerCaptiveRoutes(app);
+  } catch (err: any) {
+    console.error("Captive module init failed (continuing to serve):", err?.message ?? err);
+  }
+
   const { seedDatabase } = await import("./seed");
   try {
     await seedDatabase();
