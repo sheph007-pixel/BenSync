@@ -153,3 +153,30 @@ a,button{-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
   [data-hero-item]{min-width:0;}
   html,body{overflow-x:clip;}
 }
+
+/* --- leading-partner assembly (partner-network) ---------------------------
+   Driven by the --p custom property (0 = scattered, 1 = assembled), set by
+   app.js from an IntersectionObserver autoplay and a scrub slider. */
+[data-assemble] .asm-chip{
+  background:#ffffff;border:1px solid rgba(15,42,71,.08);border-radius:11px;
+  padding:10px 12px;display:flex;flex-direction:column;gap:3px;min-width:0;
+  transform:translate(calc(var(--sx,0px) * (1 - var(--p,1))),calc(var(--sy,0px) * (1 - var(--p,1)))) rotate(calc(var(--sr,0) * (1 - var(--p,1)) * 1deg));
+  opacity:calc(.25 + .75 * var(--p,1));
+  will-change:transform,opacity;
+}
+[data-assemble] .asm-name{font-family:'Sora',sans-serif;font-size:12.5px;font-weight:700;color:#16385C;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+[data-assemble] .asm-role{font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#7A8A99;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+[data-assemble] .asm-broker,[data-assemble] .asm-foot{
+  opacity:clamp(0,calc((var(--p,1) - .7) / .3),1);
+  transform:translateY(calc((1 - clamp(0,calc((var(--p,1) - .7) / .3),1)) * -14px));
+  will-change:transform,opacity;
+}
+[data-assemble] .asm-foot{transform:translateY(calc((1 - clamp(0,calc((var(--p,1) - .7) / .3),1)) * 14px));}
+@media (prefers-reduced-motion: reduce){
+  [data-assemble] .asm-chip,[data-assemble] .asm-broker,[data-assemble] .asm-foot{transform:none !important;opacity:1 !important;}
+}
+@media (max-width:520px){
+  /* The compact assembly chips stay two-up even where the generic two-column
+     overflow guard collapses inline 1fr 1fr grids. */
+  .asm-grid{grid-template-columns:1fr 1fr !important;}
+}

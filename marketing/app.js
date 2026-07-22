@@ -253,12 +253,72 @@
     });
   }
 
+  // --- Leading-partner assembly (partner-network page) ---------------------
+  // Autoplays once when scrolled into view, then stays scrubbable via the
+  // range slider. All motion runs through the --p custom property in CSS.
+  function initAssembly() {
+    var stage = document.querySelector('[data-assemble]');
+    if (!stage) return;
+    var range = document.querySelector('[data-assemble-range]');
+    var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function setP(v) {
+      stage.style.setProperty('--p', String(v));
+    }
+
+    if (range) {
+      range.addEventListener('input', function () {
+        setP(range.value / 100);
+      });
+    }
+
+    var played = false;
+    function play() {
+      if (played) return;
+      played = true;
+      if (reduced) {
+        setP(1);
+        if (range) range.value = 100;
+        return;
+      }
+      var start = null;
+      var dur = 1800;
+      function step(ts) {
+        if (start === null) start = ts;
+        var t = Math.min(1, (ts - start) / dur);
+        var e = 1 - Math.pow(1 - t, 3);
+        setP(e);
+        if (range) range.value = Math.round(e * 100);
+        if (t < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+
+    if (reduced) {
+      play();
+    } else if ('IntersectionObserver' in window) {
+      setP(0);
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            play();
+            io.disconnect();
+          }
+        });
+      }, { threshold: 0.35 });
+      io.observe(stage);
+    } else {
+      play();
+    }
+  }
+
   function init() {
     initHeroSweep();
     initContactForm();
     initQuoteModal();
     initNavToggle();
     initNavDropdown();
+    initAssembly();
   }
 
   if (document.readyState === 'loading') {
