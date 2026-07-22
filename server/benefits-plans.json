@@ -6,7 +6,7 @@
       "key": "health",
       "title": "Health Plans",
       "icon": "i-medical",
-      "blurb": "Level funded health plans with reference-based pricing. No provider network restrictions: members can see any provider.",
+      "blurb": "Level funded health plans with reference-based pricing. Members can see any provider.",
       "plans": [
         {
           "name": "Deluxe Platinum",

@@ -84,5 +84,10 @@
     <symbol id="i-edi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
       <path d="M4 8.4h13.6l-3-3M20 15.6H6.4l3 3"/>
     </symbol>
+    <symbol id="i-trophy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M7.6 4h8.8v5.2a4.4 4.4 0 0 1-8.8 0V4z"/>
+      <path d="M7.6 5.6H4.8a0 0 0 0 0 0 0c0 2.6 1.2 4.2 2.9 4.6M16.4 5.6h2.8c0 2.6-1.2 4.2-2.9 4.6"/>
+      <path d="M12 13.6v3M8.8 20h6.4M10 16.6h4l.7 3.4H9.3l.7-3.4z"/>
+    </symbol>
   </defs>
 </svg>
