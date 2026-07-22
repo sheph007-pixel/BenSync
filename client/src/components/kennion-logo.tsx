@@ -1,28 +1,34 @@
 import { Link } from "wouter";
 
-// BenSync wordmark, matching the marketing site brand: "Ben" in navy,
-// "Sync" in green. Rendered as text so no remote asset is needed; swap in
-// an SVG logo here later if one is produced. File keeps its historical
-// name so the five importers stay untouched.
+// BenSync wordmark, using the official logo files served from /brand
+// (see /brand for the full asset kit). The color version shows on light
+// backgrounds and the reversed (white + mint) version in dark mode, per
+// the brand usage rules. File keeps its historical name so the five
+// importers stay untouched.
 interface KennionLogoProps {
   size?: "sm" | "md" | "lg";
   linkTo?: string;
 }
 
 const SIZES: Record<NonNullable<KennionLogoProps["size"]>, string> = {
-  sm: "text-lg",
-  md: "text-2xl",
-  lg: "text-3xl",
+  sm: "h-[18px]",
+  md: "h-6",
+  lg: "h-[30px]",
 };
 
 export function KennionLogo({ size = "md", linkTo = "/" }: KennionLogoProps) {
   const content = (
-    <span
-      className={`${SIZES[size]} font-semibold tracking-tight cursor-pointer select-none`}
-      data-testid="logo-bensync"
-    >
-      <span className="text-[#0F2A47] dark:text-white">Ben</span>
-      <span className="text-[#1F8A5B]">Sync</span>
+    <span className="inline-flex cursor-pointer select-none" data-testid="logo-bensync">
+      <img
+        src="/brand/wordmark-header.png"
+        alt="BenSync"
+        className={`${SIZES[size]} w-auto dark:hidden`}
+      />
+      <img
+        src="/brand/wordmark-header-reversed.png"
+        alt="BenSync"
+        className={`${SIZES[size]} w-auto hidden dark:block`}
+      />
     </span>
   );
 

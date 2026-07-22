@@ -63,9 +63,11 @@ export default function LoginPage() {
 
       <div className="relative mx-auto flex max-w-md flex-col items-center px-6 pt-16">
         <div className="text-center text-white">
-          <div className="text-2xl font-bold tracking-tight">
-            BenSync
-          </div>
+          <img
+            src="/brand/wordmark-header-reversed.png"
+            alt="BenSync"
+            className="mx-auto h-7 w-auto"
+          />
           <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/70">
             Sales Portal
           </div>
