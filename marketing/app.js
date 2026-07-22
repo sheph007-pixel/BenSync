@@ -62,11 +62,12 @@
     var name = form ? form.querySelector('input[placeholder="Your name"]') : null;
     var email = form ? form.querySelector('input[type="email"]') : null;
 
-    var orgP = ['Company name', 'Agency name', 'Employer name'];
+    var orgP = ['Agency name', 'Company name', 'Employer name', 'Organization name'];
     var msgP = [
-      'What would you like help with?',
       'Questions about partnering or the program?',
-      'What do you need help with?'
+      'What would you like help with?',
+      'What do you need help with?',
+      'How can we help?'
     ];
 
     if (who) {

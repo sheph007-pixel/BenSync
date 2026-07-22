@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Contact Us | BenSync</title>
-<meta name="description" content="One form for brokers, employers, and members. Tell us who you are and we will route your message to the right person. Brokers can apply to partner.">
+<meta name="description" content="One simple form for brokers, employers, and members. Tell us who you are and what you need, and your message goes straight to the BenSync team.">
 <meta name="theme-color" content="#ffffff">
 <link rel="icon" type="image/svg+xml" href="/brand/icon-b.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/brand/png/BenSync-favicon-32.png">
@@ -49,51 +49,31 @@
 
 <!-- CONTACT -->
 <section style="flex:1;display:flex;flex-direction:column;align-items:center;padding:72px clamp(20px,5vw,32px) 88px;">
-  <div style="display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;margin-bottom:40px;">
-    <h1 style="font-family:'Sora',sans-serif;font-size:clamp(28px,3.6vw,36px);line-height:1.15;letter-spacing:-.02em;margin:0;font-weight:700;">One place to reach us.</h1>
-    <p style="font-size:16px;line-height:1.6;color:#47586B;margin:0;max-width:500px;">Employer, broker, or member: contact us once and we'll route you to the right people. That's the point of one connected program.</p>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;margin-bottom:36px;">
+    <h1 style="font-family:'Sora',sans-serif;font-size:clamp(28px,3.6vw,36px);line-height:1.15;letter-spacing:-.02em;margin:0;font-weight:700;">Contact us.</h1>
+    <p style="font-size:16px;line-height:1.6;color:#47586B;margin:0;max-width:460px;">Tell us who you are and what you need. Your message goes straight to our team.</p>
   </div>
 
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:20px;max-width:940px;width:100%;align-items:start;">
-
-    <!-- One email -->
-    <div style="display:flex;flex-direction:column;gap:14px;">
-      <div style="display:flex;flex-direction:column;gap:6px;background:#ffffff;border:1px solid rgba(15,42,71,.10);border-radius:16px;padding:26px;">
-        <span style="font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#1F8A5B;">One support email</span>
-        <span style="font-family:'Sora',sans-serif;font-size:19px;font-weight:700;color:#0F2A47;">support@bensync.com</span>
-        <span style="font-size:13px;line-height:1.6;color:#47586B;">Every message is read and routed by a real person.</span>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:9px;background:#ffffff;border:1px solid rgba(15,42,71,.10);border-radius:16px;padding:22px 26px;">
-        <span style="font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#7A8A99;">In a hurry?</span>
-        <a href="/portal" style="font-size:14px;font-weight:700;">Broker login →</a>
-        <a href="/members" style="font-size:14px;font-weight:700;">For members →</a>
-        <a href="/contact" style="font-size:14px;font-weight:700;">Get Started →</a>
-      </div>
+  <div style="display:flex;flex-direction:column;gap:12px;background:#ffffff;border:1px solid rgba(15,42,71,.10);border-radius:18px;padding:28px;box-shadow:0 14px 36px -26px rgba(15,42,71,.25);max-width:520px;width:100%;box-sizing:border-box;">
+    <div id="contact-sent" style="display:none;flex-direction:column;gap:8px;background:#E8F3ED;border:1px solid rgba(31,138,91,.3);border-radius:12px;padding:20px;">
+      <span style="font-family:'Sora',sans-serif;font-size:15.5px;font-weight:700;color:#16714A;">Message received.</span>
+      <span style="font-size:13.5px;line-height:1.6;color:#3B5A4C;">Thanks for reaching out. Our team will be in touch.</span>
     </div>
-
-    <!-- One form -->
-    <div style="display:flex;flex-direction:column;gap:12px;background:#ffffff;border:1px solid rgba(15,42,71,.10);border-radius:18px;padding:28px;box-shadow:0 14px 36px -26px rgba(15,42,71,.25);">
-      <span style="font-family:'Sora',sans-serif;font-size:19px;font-weight:600;letter-spacing:-.01em;">Send us a message</span>
-      <div id="contact-sent" style="display:none;flex-direction:column;gap:8px;background:#E8F3ED;border:1px solid rgba(31,138,91,.3);border-radius:12px;padding:20px;">
-        <span style="font-family:'Sora',sans-serif;font-size:15.5px;font-weight:700;color:#16714A;">Message received.</span>
-        <span style="font-size:13.5px;line-height:1.6;color:#3B5A4C;">Thanks for reaching out. Our team will be in touch.</span>
-      </div>
-      <div id="contact-form" style="display:flex;flex-direction:column;gap:10px;">
-        <label style="display:flex;flex-direction:column;gap:5px;">
-          <span style="font-size:12.5px;font-weight:700;color:#47586B;">Who are you?</span>
-          <select id="contact-who" aria-label="Who are you" autocomplete="off" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;cursor:pointer;">
-            <option>Employer</option>
-            <option>Broker / Consultant</option>
-            <option>Member</option>
-          </select>
-        </label>
-        <input placeholder="Your name" aria-label="Your name" autocomplete="name" autocapitalize="words" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;">
-        <input type="email" placeholder="Email" aria-label="Email" autocomplete="email" inputmode="email" autocapitalize="off" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;">
-        <input id="contact-org" placeholder="Company name" aria-label="Company name" autocomplete="organization" autocapitalize="words" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;">
-        <textarea id="contact-msg" placeholder="What would you like help with?" aria-label="Message" rows="4" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;resize:vertical;background:#ffffff;"></textarea>
-        <button id="contact-send" class="btn-green" style="border:none;cursor:pointer;background:#1F8A5B;color:#ffffff;border-radius:10px;padding:14px;font-family:'Manrope',sans-serif;font-size:14.5px;font-weight:700;">Send Message</button>
-        <span style="font-size:12px;color:#7A8A99;text-align:center;">We route your message so you don't have to find the right department.</span>
-      </div>
+    <div id="contact-form" style="display:flex;flex-direction:column;gap:10px;">
+      <label style="display:flex;flex-direction:column;gap:5px;">
+        <span style="font-size:12.5px;font-weight:700;color:#47586B;">Who are you?</span>
+        <select id="contact-who" aria-label="Who are you" autocomplete="off" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;cursor:pointer;">
+          <option>Broker / Consultant</option>
+          <option>Employer</option>
+          <option>Member</option>
+          <option>Other</option>
+        </select>
+      </label>
+      <input placeholder="Your name" aria-label="Your name" autocomplete="name" autocapitalize="words" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;">
+      <input type="email" placeholder="Email" aria-label="Email" autocomplete="email" inputmode="email" autocapitalize="off" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;">
+      <input id="contact-org" placeholder="Agency name" aria-label="Organization name" autocomplete="organization" autocapitalize="words" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;">
+      <textarea id="contact-msg" placeholder="Questions about partnering or the program?" aria-label="Message" rows="4" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;resize:vertical;background:#ffffff;"></textarea>
+      <button id="contact-send" class="btn-green" style="border:none;cursor:pointer;background:#1F8A5B;color:#ffffff;border-radius:10px;padding:14px;font-family:'Manrope',sans-serif;font-size:14.5px;font-weight:700;">Send Message</button>
     </div>
   </div>
 </section>
