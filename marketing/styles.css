@@ -41,7 +41,9 @@ header nav .nl-login:hover{border-color:#0F2A47;color:#0F2A47 !important;}
 .ic-badge--glass{background:rgba(255,255,255,.12);color:#7FD6A8;}
 
 /* --- hero motif illustrations --------------------------------------------- */
-.hero-motif{position:absolute;right:clamp(20px,6vw,72px);top:50%;transform:translateY(-50%);width:clamp(240px,26vw,340px);pointer-events:none;user-select:none;}
+/* Anchor to the 1160px content column, not the viewport edge, so the motif
+   never drifts off to the far right on wide monitors. */
+.hero-motif{position:absolute;right:calc(max((100% - 1160px) / 2, 0px) + clamp(20px,5vw,32px));top:50%;transform:translateY(-50%);width:clamp(240px,26vw,340px);pointer-events:none;user-select:none;}
 @media (max-width:960px){.hero-motif{display:none;}}
 
 /* --- "Who It's For" nav dropdown ---------------------------------------- */
