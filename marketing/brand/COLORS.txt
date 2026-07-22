@@ -1,11 +1,17 @@
 BenSync Brand Colors (official)
-Navy        #0F2A47  rgb(15,42,71)    - "Ben", body text, headings
-Green       #1F8A5B  rgb(31,138,91)   - "Sync", primary buttons
-Light Green #E8F3ED  rgb(232,243,237) - badge backgrounds (e.g. "Bundled" tag)
-Dark Green  #16714A  rgb(22,113,74)   - badge text
-Mint        #7FD6A8  rgb(127,214,168) - accent on dark backgrounds
-Dark Navy   #0B2138  rgb(11,33,56)    - dark backgrounds
-White       #FFFFFF
+
+Name         HEX      RGB               CMYK (std. conversion)   Use
+Navy         #0F2A47  rgb(15,42,71)     C79 M41 Y0 K72           "Ben", body text, headings
+Green        #1F8A5B  rgb(31,138,91)    C78 M0 Y34 K46           "Sync", primary buttons
+Light Green  #E8F3ED  rgb(232,243,237)  C5 M0 Y2 K5              badge backgrounds (e.g. "Bundled" tag)
+Dark Green   #16714A  rgb(22,113,74)    C81 M0 Y35 K56           badge text
+Mint         #7FD6A8  rgb(127,214,168)  C41 M0 Y21 K16           accent on dark backgrounds
+Dark Navy    #0B2138  rgb(11,33,56)     C80 M41 Y0 K78           dark backgrounds
+White        #FFFFFF  rgb(255,255,255)  C0 M0 Y0 K0
+
+Hex/RGB are the definitive digital values. CMYK values are standard
+uncalibrated conversions for four-color process print; confirm proofs
+with your printer for critical color matching.
 
 Fonts (both free on fonts.google.com):
 Headings + logo: Sora, weight 600-700 (logo is Sora 600)
@@ -13,4 +19,12 @@ Body text + buttons: Manrope, regular
 
 LOGO = wordmark only: "Ben" Navy + "Sync" Green (White + Mint on dark).
 ICONS (favicon, app icon, avatar): "B" monogram, navy top / green bottom.
-Sync-arrows mark (brand/svg + icon-*.png) is a secondary graphic element.
+Sync-arrows mark (icon-*.svg / icon-*.png) is a secondary graphic element.
+
+FILE FORMATS
+svg/  vector masters (wordmark, monogram, sync mark) - use for print,
+      signage, embroidery digitizing, engraving, and any large format.
+      Infinitely scalable, colors embedded.
+png/  transparent raster exports for screens and documents. Wordmark is
+      4064px wide (13.5 in at 300 DPI); monogram and marks are 1024px.
+      app-icon.png and avatar-circle.png are opaque by design.
