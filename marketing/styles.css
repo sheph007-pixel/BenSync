@@ -16,7 +16,7 @@ input:focus,textarea:focus,select:focus{border-color:#1F8A5B !important;outline:
 /* --- hover utilities (inline styles win over plain rules, so force these) --- */
 .nl:hover{color:#0F2A47 !important;}
 .nl-login:hover{color:#1F8A5B !important;}
-header nav .nl-login{border:1.5px solid rgba(15,42,71,.18);border-radius:10px;padding:11px 18px;font-size:14.5px;}
+header nav .nl-login{border:1.5px solid rgba(15,42,71,.18);border-radius:10px;padding:9px 16px;font-size:13.5px;}
 header nav .nl-login:hover{border-color:#0F2A47;color:#0F2A47 !important;}
 .btn-navy:hover{background:#16385C !important;color:#ffffff !important;}
 .btn-green:hover{background:#26A06C !important;color:#ffffff !important;}
@@ -152,49 +152,4 @@ a,button{-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
 @media (max-width:860px){
   [data-hero-item]{min-width:0;}
   html,body{overflow-x:clip;}
-}
-
-/* --- brand collage system -------------------------------------------------
-   Product-UI and swag mockups in brand palette. Tiles use skeleton bars
-   instead of fabricated data. All mockups are aria-hidden decoration. */
-.clg-tile{background:#ffffff;border:1px solid rgba(15,42,71,.10);border-radius:16px;box-shadow:0 18px 44px -22px rgba(15,42,71,.28);}
-.clg-phone{background:#0B2138;border-radius:30px;padding:9px;box-shadow:0 26px 54px -24px rgba(11,33,56,.5);box-sizing:border-box;}
-.clg-phone-screen{background:#F6F8F7;border-radius:22px;overflow:hidden;}
-.clg-pay{background:linear-gradient(135deg,#16385C 0%,#0B2138 72%);border-radius:16px;color:#ffffff;box-shadow:0 22px 48px -22px rgba(11,33,56,.55);box-sizing:border-box;}
-.clg-skel{height:8px;border-radius:999px;background:rgba(15,42,71,.10);}
-.clg-skel-light{height:8px;border-radius:999px;background:rgba(255,255,255,.22);}
-.clg-row{display:flex;align-items:center;gap:8px;background:#ffffff;border:1px solid rgba(15,42,71,.07);border-radius:10px;padding:8px 10px;}
-.clg-dotset{display:flex;gap:5px;}
-.clg-dotset span{width:8px;height:8px;border-radius:50%;background:rgba(15,42,71,.14);}
-.clg-bar{height:6px;border-radius:999px;background:rgba(15,42,71,.08);overflow:hidden;}
-.clg-bar i{display:block;height:100%;width:62%;border-radius:999px;background:#1F8A5B;}
-
-/* Hero collage: program card + phone + payment card */
-.hcol{position:relative;}
-@media (min-width:701px){
-  .hcol-duo{display:contents;}
-  .hcol-card{margin:0 clamp(120px,25%,170px) 84px 0;}
-  .hcol-phone{position:absolute;top:62px;right:-14px;width:180px;transform:rotate(2deg);z-index:2;}
-  .hcol-card > div:last-child{padding-right:48px;}
-  .hcol-card #hero-bill{white-space:nowrap;}
-  .hcol-pay{position:absolute;left:22px;bottom:-4px;width:min(256px,55%);transform:rotate(-2deg);z-index:2;}
-}
-@media (max-width:700px){
-  .hcol{display:flex;flex-direction:column;gap:16px;}
-  .hcol-duo{display:flex;gap:14px;align-items:center;}
-  .hcol-phone{width:min(186px,50%);flex:none;}
-  .hcol-pay{flex:1;min-width:0;}
-}
-@media (prefers-reduced-motion: reduce){
-  .hcol-phone,.hcol-pay{transform:none;}
-}
-
-/* Collage bands on inner pages */
-.clg-band{display:flex;flex-wrap:wrap;gap:22px;align-items:stretch;justify-content:center;}
-.clg-band > *{flex:1 1 240px;max-width:340px;min-width:0;}
-@media (min-width:641px){
-  .clg-side{display:flex !important;}
-}
-@media (max-width:640px){
-  .clg-float{right:6px !important;top:-18px !important;}
 }
