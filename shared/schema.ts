@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, boolean, jsonb, real } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean, jsonb, real, serial } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -370,3 +370,36 @@ export type Proposal = typeof proposals.$inferSelect;
 
 export type RiskScreen = typeof riskScreens.$inferSelect;
 export type InsertRiskScreen = typeof riskScreens.$inferInsert;
+
+// ── BenSync Captive Analytics (isolated /captive module) ──────────────────
+// Namespaced captive_* tables. Declared here so drizzle-kit push (run with
+// --force on every deploy) treats them as MANAGED and never drops them — the
+// same reason every other table lives in this file. Nothing else in the app
+// references these; the module in server/captive/ owns them.
+export const captiveUsers = pgTable("captive_users", {
+  email: text("email").primaryKey(),
+  passwordHash: text("password_hash").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const captivePeriods = pgTable("captive_periods", {
+  id: text("id").primaryKey(),
+  label: text("label").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  data: jsonb("data").notNull(),
+  committedAt: timestamp("committed_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const captiveNotes = pgTable("captive_notes", {
+  id: serial("id").primaryKey(),
+  groupCode: text("group_code").notNull(),
+  author: text("author").notNull(),
+  body: text("body").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const captiveSettings = pgTable("captive_settings", {
+  key: text("key").primaryKey(),
+  value: jsonb("value").notNull(),
+});

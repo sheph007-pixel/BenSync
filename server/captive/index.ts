@@ -57,7 +57,6 @@ export async function initCaptive() {
       body       TEXT NOT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
-    CREATE INDEX IF NOT EXISTS captive_notes_group_idx ON captive_notes (group_code);
     CREATE TABLE IF NOT EXISTS captive_settings (
       key   TEXT PRIMARY KEY,
       value JSONB NOT NULL
