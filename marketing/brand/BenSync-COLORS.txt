@@ -19,7 +19,7 @@ Body text + buttons: Manrope, regular
 
 LOGO = wordmark only: "Ben" Navy + "Sync" Green (White + Mint on dark).
 ICONS (favicon, app icon, avatar): "B" monogram, navy top / green bottom.
-Sync-arrows mark (icon-*.svg / icon-*.png) is a secondary graphic element.
+Sync-arrows mark (BenSync-syncmark-*.svg / *.png) is a secondary graphic element.
 
 FILE FORMATS
 svg/  vector masters (wordmark, monogram, sync mark) - use for print,
