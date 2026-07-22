@@ -19,7 +19,7 @@
 ## Integrated partners
 
 - HealthEZ: medical claims and plan administration
-- SRS (Strategic Risk Solutions): captive management for the health plan. SRS is the largest independent captive manager in the world; the program's captive won the SRS Captivator Award and has a 13+ year track record. The two captives behind the health plan are licensed and regulated by the State of Vermont and the State of Alabama and audited by independent CPA firm Larson Gross.
+- SRS (Strategic Risk Solutions): captive management for the health plan. SRS is the largest independent captive manager in the world; the program's captive won the SRS Captivator Award and has operated since 2013. The two captives behind the health plan are licensed and regulated by the State of Vermont and the State of Alabama and audited by independent CPA firm Larson Gross.
 - Davies: actuarial services for the health plan
 - MedOne: pharmacy benefit management
 - Guardian: dental and supplemental benefit lines

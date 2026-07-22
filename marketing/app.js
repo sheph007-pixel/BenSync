@@ -429,7 +429,24 @@
     }
   }
 
+  // --- Dynamic years ---------------------------------------------------------
+  // Keeps age-based copy fresh forever. Elements carry the static current
+  // value as fallback text; JS recomputes from the clock:
+  //   <span data-years-since="2013">13+</span>  ->  "14+" in 2027, etc.
+  //   <span data-current-year>2026</span>       ->  the current year.
+  function initDynamicYears() {
+    var now = new Date().getFullYear();
+    document.querySelectorAll('[data-years-since]').forEach(function (el) {
+      var since = parseInt(el.getAttribute('data-years-since'), 10);
+      if (since && now > since) el.textContent = (now - since) + '+';
+    });
+    document.querySelectorAll('[data-current-year]').forEach(function (el) {
+      el.textContent = String(now);
+    });
+  }
+
   function init() {
+    initDynamicYears();
     initHeroSweep();
     initContactForm();
     initQuoteModal();
