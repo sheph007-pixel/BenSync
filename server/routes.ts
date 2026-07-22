@@ -1499,6 +1499,7 @@ export async function registerRoutes(
         name: data.name,
         company: data.company,
         email: data.email,
+        phone: data.phone ?? "",
         employees: data.employees ?? "",
         message: data.message ?? "",
       });

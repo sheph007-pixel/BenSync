@@ -326,6 +326,7 @@ export const contactInquirySchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(120),
   company: z.string().trim().min(1, "Company is required").max(160),
   email: z.string().trim().email("Valid email required").max(160),
+  phone: z.string().trim().max(40).optional().default(""),
   employees: z.string().trim().max(40).optional().default(""),
   message: z.string().trim().max(4000).optional().default(""),
   website: z.string().max(200).optional().default(""), // honeypot, real users leave this empty

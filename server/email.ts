@@ -395,11 +395,13 @@ export async function sendContactInquiryEmail(p: {
   name: string;
   company: string;
   email: string;
+  phone?: string;
   employees: string;
   message: string;
 }): Promise<boolean> {
   try {
     const client = getResendClient();
+    const phoneText = p.phone?.trim() ? p.phone.trim() : "Not provided";
     const employeesText = p.employees?.trim() ? p.employees.trim() : "Not provided";
     const messageHtml = p.message?.trim()
       ? escapeHtml(p.message.trim()).replace(/\n/g, "<br>")
@@ -421,6 +423,7 @@ export async function sendContactInquiryEmail(p: {
             <tr><td style="padding: 6px 0; color: #5b6679; width: 130px;">Name</td><td style="padding: 6px 0; font-weight: 500;">${escapeHtml(p.name)}</td></tr>
             <tr><td style="padding: 6px 0; color: #5b6679;">Company</td><td style="padding: 6px 0; font-weight: 500;">${escapeHtml(p.company)}</td></tr>
             <tr><td style="padding: 6px 0; color: #5b6679;">Email</td><td style="padding: 6px 0;"><a href="mailto:${encodeURIComponent(p.email)}" style="color: #0e4992; text-decoration: none;">${escapeHtml(p.email)}</a></td></tr>
+            <tr><td style="padding: 6px 0; color: #5b6679;">Phone</td><td style="padding: 6px 0; font-weight: 500;">${escapeHtml(phoneText)}</td></tr>
             <tr><td style="padding: 6px 0; color: #5b6679;">Employees</td><td style="padding: 6px 0; font-weight: 500;">${escapeHtml(employeesText)}</td></tr>
           </table>
 

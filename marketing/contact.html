@@ -69,11 +69,13 @@
           <option>Other</option>
         </select>
       </label>
-      <input placeholder="Your name" aria-label="Your name" autocomplete="name" autocapitalize="words" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;">
-      <input type="email" placeholder="Email" aria-label="Email" autocomplete="email" inputmode="email" autocapitalize="off" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;">
-      <input id="contact-org" placeholder="Agency name" aria-label="Organization name" autocomplete="organization" autocapitalize="words" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;">
-      <textarea id="contact-msg" placeholder="Questions about partnering or the program?" aria-label="Message" rows="4" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;resize:vertical;background:#ffffff;"></textarea>
+      <input id="contact-name" placeholder="Your name" aria-label="Your name" required autocomplete="name" autocapitalize="words" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;">
+      <input id="contact-email" type="email" placeholder="Email" aria-label="Email" required autocomplete="email" inputmode="email" autocapitalize="off" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;">
+      <input id="contact-phone" type="tel" placeholder="Phone number" aria-label="Phone number" required autocomplete="tel" inputmode="tel" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;">
+      <input id="contact-org" placeholder="Company name" aria-label="Company name" required autocomplete="organization" autocapitalize="words" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;">
+      <textarea id="contact-msg" placeholder="What can we help with?" aria-label="Message" required rows="4" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;resize:vertical;background:#ffffff;"></textarea>
       <button id="contact-send" class="btn-green" style="border:none;cursor:pointer;background:#1F8A5B;color:#ffffff;border-radius:10px;padding:14px;font-family:'Manrope',sans-serif;font-size:14.5px;font-weight:700;">Send Message</button>
+      <span id="contact-error" style="display:none;font-size:12.5px;color:#B4483E;text-align:center;">Please fill in every field.</span>
     </div>
   </div>
 </section>

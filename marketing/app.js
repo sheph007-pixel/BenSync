@@ -51,54 +51,60 @@
 
   // --- Contact page form: adapts placeholders, submits for real ---
   function initContactForm() {
+    var send = document.getElementById('contact-send');
+    if (!send) return;
     var who = document.getElementById('contact-who');
-    var org = document.getElementById('contact-org');
-    var msg = document.getElementById('contact-msg');
     var form = document.getElementById('contact-form');
     var sent = document.getElementById('contact-sent');
-    var send = document.getElementById('contact-send');
-    if (!who && !send) return;
+    var error = document.getElementById('contact-error');
+    var fields = {
+      name: document.getElementById('contact-name'),
+      email: document.getElementById('contact-email'),
+      phone: document.getElementById('contact-phone'),
+      org: document.getElementById('contact-org'),
+      msg: document.getElementById('contact-msg')
+    };
 
-    var name = form ? form.querySelector('input[placeholder="Your name"]') : null;
-    var email = form ? form.querySelector('input[type="email"]') : null;
-
-    var orgP = ['Agency name', 'Company name', 'Employer name', 'Organization name'];
-    var msgP = [
-      'Questions about partnering or the program?',
-      'What would you like help with?',
-      'What do you need help with?',
-      'How can we help?'
-    ];
-
-    if (who) {
-      who.addEventListener('change', function () {
-        var i = who.selectedIndex;
-        if (org) org.placeholder = orgP[i];
-        if (msg) msg.placeholder = msgP[i];
+    send.addEventListener('click', function (e) {
+      e.preventDefault();
+      if (error) error.style.display = 'none';
+      var missing = false;
+      ['name', 'email', 'phone', 'org', 'msg'].forEach(function (k) {
+        var el = fields[k];
+        if (!el) return;
+        var ok = el.value.trim().length > 0;
+        if (k === 'email' && ok) ok = /.+@.+\..+/.test(el.value.trim());
+        el.style.borderColor = ok ? 'rgba(15,42,71,.14)' : '#B4483E';
+        if (!ok) missing = true;
       });
-    }
-
-    if (send) {
-      send.addEventListener('click', function (e) {
-        e.preventDefault();
-        var role = who ? who.value : '';
-        var payload = {
-          name: name && name.value ? name.value : '',
-          email: email && email.value ? email.value : '',
-          company: org && org.value ? org.value : '',
-          message: ((role ? 'Role: ' + role + '. ' : '') + (msg && msg.value ? msg.value : '')).trim(),
-          website: ''
-        };
-        send.disabled = true;
-        submitInquiry(payload, function () {
-          if (form) form.style.display = 'none';
-          if (sent) sent.style.display = 'flex';
-        }, function (message) {
-          send.disabled = false;
-          window.alert(message);
-        });
+      if (missing) {
+        if (error) {
+          error.textContent = 'Please fill in every field.';
+          error.style.display = 'block';
+        }
+        return;
+      }
+      var role = who ? who.value : '';
+      var payload = {
+        name: fields.name.value.trim(),
+        email: fields.email.value.trim(),
+        phone: fields.phone.value.trim(),
+        company: fields.org.value.trim(),
+        message: ((role ? 'Role: ' + role + '. ' : '') + fields.msg.value.trim()).trim(),
+        website: ''
+      };
+      send.disabled = true;
+      submitInquiry(payload, function () {
+        if (form) form.style.display = 'none';
+        if (sent) sent.style.display = 'flex';
+      }, function (message) {
+        send.disabled = false;
+        if (error) {
+          error.textContent = message;
+          error.style.display = 'block';
+        }
       });
-    }
+    });
   }
 
   // --- Partner popup: only "Get Started" CTAs open it. Contact Us and
@@ -124,7 +130,8 @@
         '<div id="qm-form" style="display:flex;flex-direction:column;gap:10px;">' +
           '<input id="qm-name" placeholder="Your name" aria-label="Your name" autocomplete="name" autocapitalize="words" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;font-family:inherit;">' +
           '<input id="qm-email" type="email" placeholder="Work email" aria-label="Work email" autocomplete="email" inputmode="email" autocapitalize="off" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;font-family:inherit;">' +
-          '<input id="qm-company" placeholder="Agency name" aria-label="Agency name" autocomplete="organization" autocapitalize="words" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;font-family:inherit;">' +
+          '<input id="qm-phone" type="tel" placeholder="Phone number" aria-label="Phone number" autocomplete="tel" inputmode="tel" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;font-family:inherit;">' +
+          '<input id="qm-company" placeholder="Company name" aria-label="Company name" autocomplete="organization" autocapitalize="words" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;font-family:inherit;">' +
           '<textarea id="qm-message" placeholder="Message (optional)" aria-label="Message" rows="3" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;resize:vertical;background:#ffffff;font-family:inherit;"></textarea>' +
           '<input id="qm-website" tabindex="-1" autocomplete="off" style="display:none;">' +
           '<button id="qm-send" type="button" class="btn-green" style="border:none;cursor:pointer;background:#1F8A5B;color:#ffffff;border-radius:10px;padding:14px;font-family:\'Manrope\',sans-serif;font-size:14.5px;font-weight:700;">Send Request</button>' +
@@ -171,12 +178,13 @@
       var payload = {
         name: val('qm-name'),
         email: val('qm-email'),
+        phone: val('qm-phone'),
         company: val('qm-company'),
         message: val('qm-message'),
         website: val('qm-website')
       };
-      if (!payload.name || !payload.email || !payload.company) {
-        error.textContent = 'Please fill in your name, email, and company.';
+      if (!payload.name || !payload.email || !payload.phone || !payload.company) {
+        error.textContent = 'Please fill in your name, email, phone, and company.';
         error.style.display = 'block';
         return;
       }
