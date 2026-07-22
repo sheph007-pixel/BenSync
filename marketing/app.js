@@ -6,8 +6,6 @@
   function initHeroSweep() {
     var items = document.querySelectorAll('[data-hero-item]');
     if (!items.length) return;
-    // Respect reduced-motion users.
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     var bill = document.getElementById('hero-bill');
     var tick = -1;
 
@@ -269,7 +267,6 @@
     var stage = document.querySelector('[data-assemble]');
     if (!stage) return;
     var range = document.querySelector('[data-assemble-range]');
-    var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     function setP(v) {
       stage.style.setProperty('--p', String(v));
@@ -285,11 +282,6 @@
     function play() {
       if (played) return;
       played = true;
-      if (reduced) {
-        setP(1);
-        if (range) range.value = 100;
-        return;
-      }
       var start = null;
       var dur = 1800;
       function step(ts) {
@@ -303,9 +295,7 @@
       requestAnimationFrame(step);
     }
 
-    if (reduced) {
-      play();
-    } else if ('IntersectionObserver' in window) {
+    if ('IntersectionObserver' in window) {
       setP(0);
       var io = new IntersectionObserver(function (entries) {
         entries.forEach(function (entry) {

@@ -100,16 +100,15 @@ header nav .nl-login:hover{border-color:#0F2A47;color:#0F2A47 !important;}
 @media (hover:hover){.pm-track:hover{animation-play-state:paused;}}
 @keyframes pmScroll{to{transform:translate3d(calc(-50% - 7px),0,0);}}
 @media (prefers-reduced-motion: reduce){
-  .pm-track{animation:none;}
-  .pm-wrap{overflow-x:auto;}
+  /* Gentler, not frozen: the site's motion is core to the brand, so the
+     marquee keeps drifting at a slower pace instead of stopping. */
+  .pm-track{animation-duration:60s;}
 }
 
 /* --- mobile optimization -------------------------------------------------- */
 /* Touch feel: no gray tap flash, no double-tap zoom delay. */
 a,button{-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
-@media (prefers-reduced-motion: no-preference){
-  html{scroll-behavior:smooth;}
-}
+html{scroll-behavior:smooth;}
 
 @media (max-width:860px){
   /* 16px inputs stop iOS Safari from auto-zooming on focus. */
@@ -138,7 +137,7 @@ a,button{-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
   #quote-modal .qm-dialog{position:absolute !important;left:0 !important;right:0 !important;bottom:0 !important;width:100% !important;max-width:none !important;margin:0 !important;border-radius:18px 18px 0 0 !important;max-height:88vh !important;padding:24px 20px calc(20px + env(safe-area-inset-bottom)) !important;}
   #quote-modal [data-qm-close]{width:44px !important;height:44px !important;}
 }
-@media (max-width:640px) and (prefers-reduced-motion: no-preference){
+@media (max-width:640px){
   #quote-modal .qm-dialog{animation:qmUp .28s ease;}
 }
 @keyframes qmUp{from{transform:translateY(24px);opacity:.6;}to{transform:none;opacity:1;}}
@@ -172,9 +171,6 @@ a,button{-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
   will-change:transform,opacity;
 }
 [data-assemble] .asm-foot{transform:translateY(calc((1 - clamp(0,calc((var(--p,1) - .7) / .3),1)) * 14px));}
-@media (prefers-reduced-motion: reduce){
-  [data-assemble] .asm-chip,[data-assemble] .asm-broker,[data-assemble] .asm-foot{transform:none !important;opacity:1 !important;}
-}
 @media (max-width:520px){
   /* The compact assembly chips stay two-up even where the generic two-column
      overflow guard collapses inline 1fr 1fr grids. */
