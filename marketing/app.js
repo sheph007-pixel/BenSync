@@ -100,14 +100,14 @@
     }
   }
 
-  // --- Partner popup: only "Become A Partner" CTAs open it. Contact Us and
+  // --- Partner popup: only "Get Started" CTAs open it. Contact Us and
   // other /contact links go to the general contact form, which fields
   // brokers, employers, and members. The program is broker-controlled:
   // employers ask their broker, members ask HR.
   function initQuoteModal() {
     var links = [];
     document.querySelectorAll('a[href="/contact"]').forEach(function (a) {
-      if (a.textContent.trim() === 'Become A Partner') links.push(a);
+      if (a.textContent.trim() === 'Get Started') links.push(a);
     });
     if (!links.length) return;
 
@@ -118,7 +118,7 @@
       '<div data-qm-overlay style="position:absolute;inset:0;background:rgba(15,42,71,.55);"></div>' +
       '<div role="dialog" class="qm-dialog" aria-modal="true" aria-labelledby="qm-title" style="position:relative;max-width:470px;margin:7vh auto 24px;background:#ffffff;border-radius:18px;padding:28px;box-shadow:0 30px 70px -30px rgba(15,42,71,.5);display:flex;flex-direction:column;gap:12px;max-height:84vh;overflow:auto;box-sizing:border-box;width:calc(100% - 32px);">' +
         '<button type="button" data-qm-close aria-label="Close" style="position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:8px;border:1px solid rgba(15,42,71,.14);background:#ffffff;cursor:pointer;font-size:16px;color:#0F2A47;line-height:1;">&#10005;</button>' +
-        '<span id="qm-title" style="font-family:\'Sora\',sans-serif;font-size:20px;font-weight:700;letter-spacing:-.01em;color:#0F2A47;">Become A Partner</span>' +
+        '<span id="qm-title" style="font-family:\'Sora\',sans-serif;font-size:20px;font-weight:700;letter-spacing:-.01em;color:#0F2A47;">Get Started</span>' +
         '<p style="font-size:14px;line-height:1.6;color:#47586B;margin:0;">For brokers and consultants interested in offering BenSync to their clients.</p>' +
         '<div id="qm-form" style="display:flex;flex-direction:column;gap:10px;">' +
           '<input id="qm-name" placeholder="Your name" aria-label="Your name" autocomplete="name" autocapitalize="words" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;font-family:inherit;">' +

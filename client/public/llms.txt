@@ -32,9 +32,9 @@
 
 ## How brokers engage
 
-- Apply to become a partner, then send a client census; BenSync returns one bundled program quote. No carrier spreadsheeting, no piecing together vendors.
+- Get started as a broker partner, then send a client census; BenSync returns one bundled program quote. No carrier spreadsheeting, no piecing together vendors.
 - Enrollment, EDI feeds, billing, member support, and renewals are already built and connected.
-- Become a partner or ask a question at https://bensync.com/contact
+- Get started or ask a question at https://bensync.com/contact
 
 ## Pages
 
@@ -43,6 +43,6 @@
 - https://bensync.com/brokers : the broker and consultant pitch, quoting, and funding details
 - https://bensync.com/employers : what employers receive through their broker
 - https://bensync.com/members : what members receive through their employer
-- https://bensync.com/partner-network : integrated partner list
+- https://bensync.com/partner-network : program partner list
 - https://bensync.com/system : how the program layer works
 - https://bensync.com/contact : contact form for brokers, employers, and members
