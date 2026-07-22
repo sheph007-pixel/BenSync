@@ -321,6 +321,126 @@
     }
   }
 
+  // --- Benefits page gate ----------------------------------------------------
+  // The plan lineup lives server-side and is fetched only after the access
+  // code is verified, so the locked page contains no plan data at all.
+  function initBenefits() {
+    var unlock = document.getElementById('bn-unlock');
+    if (!unlock) return;
+    var codeInput = document.getElementById('bn-code');
+    var error = document.getElementById('bn-error');
+    var locked = document.getElementById('bn-locked');
+    var open = document.getElementById('bn-open');
+
+    function esc(s) {
+      return String(s).replace(/[&<>"]/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+      });
+    }
+
+    function render(data) {
+      var html = '';
+      (data.categories || []).forEach(function (cat) {
+        html += '<div style="display:flex;flex-direction:column;gap:18px;">';
+        html += '<div style="display:flex;flex-direction:column;gap:6px;">';
+        html += '<div style="display:flex;align-items:center;gap:12px;">';
+        html += '<span class="ic-badge ic-badge--mint"><svg class="ic"><use href="/brand/icons.svg#' + esc(cat.icon || 'i-medical') + '"/></svg></span>';
+        html += '<span style="font-family:\'Sora\',sans-serif;font-size:22px;font-weight:700;letter-spacing:-.015em;color:#0F2A47;">' + esc(cat.title) + '</span>';
+        html += '<span style="font-size:12px;font-weight:700;color:#16714A;background:#E8F3ED;padding:5px 11px;border-radius:999px;">' + (cat.plans || []).length + ' plans</span>';
+        html += '</div>';
+        if (cat.blurb) html += '<p style="font-size:14.5px;line-height:1.6;color:#47586B;margin:0;max-width:680px;">' + esc(cat.blurb) + '</p>';
+        html += '</div>';
+        html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(250px,100%),1fr));gap:14px;">';
+        (cat.plans || []).forEach(function (plan) {
+          html += '<div class="clg-tile" style="padding:18px 20px;display:flex;flex-direction:column;gap:10px;">';
+          html += '<span style="font-family:\'Sora\',sans-serif;font-size:15px;font-weight:700;color:#16385C;">' + esc(plan.name) + '</span>';
+          if (plan.facts && plan.facts.length) {
+            html += '<div style="display:flex;flex-direction:column;gap:6px;border-top:1px dashed rgba(15,42,71,.12);padding-top:10px;">';
+            plan.facts.forEach(function (f) {
+              html += '<div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;">';
+              html += '<span style="font-size:12px;color:#7A8A99;font-weight:600;">' + esc(f.label) + '</span>';
+              html += '<span style="font-size:12.5px;color:#0F2A47;font-weight:700;text-align:right;">' + esc(f.value) + '</span>';
+              html += '</div>';
+            });
+            html += '</div>';
+          }
+          html += '</div>';
+        });
+        html += '</div></div>';
+      });
+      if (data.note) {
+        html += '<p style="font-size:12.5px;line-height:1.6;color:#7A8A99;margin:0;max-width:680px;">' + esc(data.note) + '</p>';
+      }
+      open.innerHTML = html;
+      locked.style.display = 'none';
+      open.style.display = 'flex';
+    }
+
+    function fetchPlans(onLocked) {
+      fetch('/api/benefits/plans', { headers: { 'Accept': 'application/json' } })
+        .then(function (r) {
+          if (!r.ok) throw new Error('locked');
+          return r.json();
+        })
+        .then(render)
+        .catch(function () {
+          if (onLocked) onLocked();
+        });
+    }
+
+    // Already unlocked in this session? Show the lineup immediately.
+    fetchPlans(null);
+
+    function tryUnlock() {
+      var code = codeInput && codeInput.value ? codeInput.value.trim() : '';
+      if (error) error.style.display = 'none';
+      if (!/^\d{4}$/.test(code)) {
+        if (error) {
+          error.textContent = 'Enter the 4 digit code.';
+          error.style.display = 'block';
+        }
+        return;
+      }
+      unlock.disabled = true;
+      fetch('/api/benefits/unlock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code })
+      })
+        .then(function (r) { return r.json().then(function (b) { return { ok: r.ok, body: b }; }); })
+        .then(function (res) {
+          unlock.disabled = false;
+          if (!res.ok) {
+            if (error) {
+              error.textContent = res.body && res.body.message ? res.body.message : 'That code is not right.';
+              error.style.display = 'block';
+            }
+            return;
+          }
+          fetchPlans(function () {
+            if (error) {
+              error.textContent = 'Could not load the plan list. Please try again.';
+              error.style.display = 'block';
+            }
+          });
+        })
+        .catch(function () {
+          unlock.disabled = false;
+          if (error) {
+            error.textContent = 'Could not reach the server. Please try again.';
+            error.style.display = 'block';
+          }
+        });
+    }
+
+    unlock.addEventListener('click', tryUnlock);
+    if (codeInput) {
+      codeInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') tryUnlock();
+      });
+    }
+  }
+
   function init() {
     initHeroSweep();
     initContactForm();
@@ -328,6 +448,7 @@
     initNavToggle();
     initNavDropdown();
     initAssembly();
+    initBenefits();
   }
 
   if (document.readyState === 'loading') {

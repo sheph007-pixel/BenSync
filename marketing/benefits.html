@@ -3,8 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Contact Us | BenSync</title>
-<meta name="description" content="One simple form for brokers, employers, and members. Tell us who you are and what you need, and your message goes straight to the BenSync team.">
+<title>Employee Benefits | BenSync</title>
+<meta name="description" content="The employee benefits available through the BenSync program: health, dental, vision, and supplemental plans. Broker partners can unlock the full lineup.">
+<meta name="robots" content="noindex">
 <meta name="theme-color" content="#ffffff">
 <link rel="icon" type="image/svg+xml" href="/brand/svg/BenSync-monogram-color.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/brand/png/BenSync-favicon-32.png">
@@ -29,7 +30,7 @@
     </button>
     <nav id="site-nav" style="display:flex;flex-wrap:wrap;align-items:center;gap:12px 26px;margin-left:auto;font-size:14px;font-weight:600;">
       <a class="nl" href="/whats-included" style="color:#47586B;">The Program</a>
-      <a class="nl" href="/benefits" style="color:#47586B;">Benefits</a>
+      <a href="/benefits" style="color:#0F2A47;border-bottom:2px solid #1F8A5B;padding-bottom:2px;">Benefits</a>
       <a class="nl" href="/system" style="color:#47586B;">How It Works</a>
       <a class="nl" href="/partner-network" style="color:#47586B;">Program Partners</a>
       <div class="nav-drop">
@@ -48,37 +49,45 @@
   </div>
 </header>
 
-<!-- CONTACT -->
-<section style="flex:1;display:flex;flex-direction:column;align-items:center;padding:72px clamp(20px,5vw,32px) 88px;">
-  <div style="display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;margin-bottom:36px;">
-    <h1 style="font-family:'Sora',sans-serif;font-size:clamp(28px,3.6vw,36px);line-height:1.15;letter-spacing:-.02em;margin:0;font-weight:700;">Contact us.</h1>
-    <p style="font-size:16px;line-height:1.6;color:#47586B;margin:0;max-width:460px;">Tell us who you are and what you need. Your message goes straight to our team.</p>
+<!-- PAGE HERO -->
+<section style="background:linear-gradient(180deg,#F6F8F7 0%,#ffffff 100%);border-bottom:1px solid rgba(15,42,71,.06);">
+  <div style="max-width:1160px;margin:0 auto;padding:72px clamp(20px,5vw,32px) 56px;display:flex;flex-direction:column;gap:16px;box-sizing:border-box;">
+    <span style="font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#1F8A5B;">Employee benefits</span>
+    <h1 style="font-family:'Sora',sans-serif;font-size:clamp(30px,4.2vw,42px);line-height:1.12;letter-spacing:-.025em;margin:0;font-weight:700;max-width:720px;">Every benefit in the program.</h1>
+    <p style="font-size:16.5px;line-height:1.65;color:#47586B;margin:0;max-width:640px;text-wrap:pretty;">Health, dental, vision, and supplemental plans, ready to present to clients. The full lineup is reserved for broker partners.</p>
+  </div>
+</section>
+
+<!-- LOCKED / UNLOCKED BENEFITS -->
+<section style="flex:1;max-width:1160px;margin:0 auto;padding:56px clamp(20px,5vw,32px) 88px;width:100%;box-sizing:border-box;">
+
+  <!-- Locked state -->
+  <div id="bn-locked" style="position:relative;">
+    <div aria-hidden="true" style="filter:blur(7px);pointer-events:none;user-select:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr));gap:16px;">
+      <div class="clg-tile" style="padding:22px;display:flex;flex-direction:column;gap:12px;"><div style="display:flex;align-items:center;gap:10px;"><span class="ic-badge ic-badge--mint"><svg class="ic"><use href="/brand/icons.svg#i-medical"/></svg></span><span style="font-family:'Sora',sans-serif;font-size:15px;font-weight:700;">Health Plans</span></div><div class="clg-skel" style="width:82%;"></div><div class="clg-skel" style="width:64%;"></div><div class="clg-skel" style="width:74%;"></div><div class="clg-skel" style="width:52%;"></div></div>
+      <div class="clg-tile" style="padding:22px;display:flex;flex-direction:column;gap:12px;"><div style="display:flex;align-items:center;gap:10px;"><span class="ic-badge ic-badge--mint"><svg class="ic"><use href="/brand/icons.svg#i-dental"/></svg></span><span style="font-family:'Sora',sans-serif;font-size:15px;font-weight:700;">Dental Plans</span></div><div class="clg-skel" style="width:70%;"></div><div class="clg-skel" style="width:58%;"></div><div class="clg-skel" style="width:76%;"></div><div class="clg-skel" style="width:48%;"></div></div>
+      <div class="clg-tile" style="padding:22px;display:flex;flex-direction:column;gap:12px;"><div style="display:flex;align-items:center;gap:10px;"><span class="ic-badge ic-badge--mint"><svg class="ic"><use href="/brand/icons.svg#i-vision"/></svg></span><span style="font-family:'Sora',sans-serif;font-size:15px;font-weight:700;">Vision Plans</span></div><div class="clg-skel" style="width:66%;"></div><div class="clg-skel" style="width:78%;"></div><div class="clg-skel" style="width:54%;"></div><div class="clg-skel" style="width:70%;"></div></div>
+      <div class="clg-tile" style="padding:22px;display:flex;flex-direction:column;gap:12px;"><div style="display:flex;align-items:center;gap:10px;"><span class="ic-badge ic-badge--mint"><svg class="ic"><use href="/brand/icons.svg#i-umbrella"/></svg></span><span style="font-family:'Sora',sans-serif;font-size:15px;font-weight:700;">Supplemental</span></div><div class="clg-skel" style="width:74%;"></div><div class="clg-skel" style="width:60%;"></div><div class="clg-skel" style="width:80%;"></div><div class="clg-skel" style="width:50%;"></div></div>
+    </div>
+
+    <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;">
+      <div style="background:#ffffff;border:1px solid rgba(15,42,71,.12);border-radius:18px;padding:30px;box-shadow:0 24px 60px -24px rgba(15,42,71,.35);max-width:380px;width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:14px;text-align:center;align-items:center;">
+        <span style="width:46px;height:46px;border-radius:14px;background:#0F2A47;display:flex;align-items:center;justify-content:center;color:#7FD6A8;">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="4" y="9" width="12" height="8" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M7 9V6.5C7 4.6 8.3 3 10 3C11.7 3 13 4.6 13 6.5V9" stroke="currentColor" stroke-width="1.6"/></svg>
+        </span>
+        <span style="font-family:'Sora',sans-serif;font-size:18px;font-weight:700;color:#0F2A47;">Broker access</span>
+        <span style="font-size:13.5px;line-height:1.6;color:#47586B;">Enter the 4 digit access code to view the full benefit lineup. Ask your BenSync contact for the code.</span>
+        <div style="display:flex;gap:10px;width:100%;">
+          <input id="bn-code" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="Code" aria-label="4 digit access code" autocomplete="off" style="flex:1;min-width:0;border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:16px;letter-spacing:.4em;text-align:center;color:#0F2A47;outline:none;background:#ffffff;">
+          <button id="bn-unlock" class="btn-green" style="border:none;cursor:pointer;background:#1F8A5B;color:#ffffff;border-radius:10px;padding:12px 20px;font-family:'Manrope',sans-serif;font-size:14.5px;font-weight:700;flex:none;">Unlock</button>
+        </div>
+        <span id="bn-error" style="display:none;font-size:12.5px;color:#B4483E;"></span>
+      </div>
+    </div>
   </div>
 
-  <div style="display:flex;flex-direction:column;gap:12px;background:#ffffff;border:1px solid rgba(15,42,71,.10);border-radius:18px;padding:28px;box-shadow:0 14px 36px -26px rgba(15,42,71,.25);max-width:520px;width:100%;box-sizing:border-box;">
-    <div id="contact-sent" style="display:none;flex-direction:column;gap:8px;background:#E8F3ED;border:1px solid rgba(31,138,91,.3);border-radius:12px;padding:20px;">
-      <span style="font-family:'Sora',sans-serif;font-size:15.5px;font-weight:700;color:#16714A;">Message received.</span>
-      <span style="font-size:13.5px;line-height:1.6;color:#3B5A4C;">Thanks for reaching out. Our team will be in touch.</span>
-    </div>
-    <div id="contact-form" style="display:flex;flex-direction:column;gap:10px;">
-      <label style="display:flex;flex-direction:column;gap:5px;">
-        <span style="font-size:12.5px;font-weight:700;color:#47586B;">Who are you?</span>
-        <select id="contact-who" aria-label="Who are you" autocomplete="off" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;cursor:pointer;">
-          <option>Broker / Consultant</option>
-          <option>Employer</option>
-          <option>Member</option>
-          <option>Other</option>
-        </select>
-      </label>
-      <input id="contact-name" placeholder="Your name" aria-label="Your name" required autocomplete="name" autocapitalize="words" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;">
-      <input id="contact-email" type="email" placeholder="Email" aria-label="Email" required autocomplete="email" inputmode="email" autocapitalize="off" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;">
-      <input id="contact-phone" type="tel" placeholder="Phone number" aria-label="Phone number" required autocomplete="tel" inputmode="tel" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;">
-      <input id="contact-org" placeholder="Company name" aria-label="Company name" required autocomplete="organization" autocapitalize="words" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;">
-      <textarea id="contact-msg" placeholder="What can we help with?" aria-label="Message" required rows="4" style="border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;resize:vertical;background:#ffffff;"></textarea>
-      <button id="contact-send" class="btn-green" style="border:none;cursor:pointer;background:#1F8A5B;color:#ffffff;border-radius:10px;padding:14px;font-family:'Manrope',sans-serif;font-size:14.5px;font-weight:700;">Send Message</button>
-      <span id="contact-error" style="display:none;font-size:12.5px;color:#B4483E;text-align:center;">Please fill in every field.</span>
-    </div>
-  </div>
+  <!-- Unlocked state (filled by app.js from /api/benefits/plans) -->
+  <div id="bn-open" style="display:none;flex-direction:column;gap:44px;"></div>
 </section>
 
 <!-- FOOTER -->

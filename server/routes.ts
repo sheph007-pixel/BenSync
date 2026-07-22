@@ -98,6 +98,10 @@ declare module "express-session" {
         aiCleaned?: any;
       };
     };
+    // Soft gate for the marketing /benefits page. The 4-digit access
+    // code keeps the plan lineup out of public HTML and crawlers; it is
+    // deliberately not account-level security.
+    benefitsUnlocked?: boolean;
   }
 }
 
@@ -1512,6 +1516,34 @@ export async function registerRoutes(
     } catch (err: any) {
       log(`Contact form error: ${err.message}`);
       res.status(400).json({ message: err.message || "Failed to submit contact form" });
+    }
+  });
+
+  // Soft gate for the marketing /benefits page. The plan lineup is only
+  // returned after the access code is verified, so it never appears in
+  // public HTML or to crawlers. This is a curiosity gate, not security.
+  app.post("/api/benefits/unlock", async (req: Request, res: Response) => {
+    const expected = process.env.BENEFITS_ACCESS_CODE || "8787";
+    const code = typeof req.body?.code === "string" ? req.body.code.trim() : "";
+    // Small fixed delay blunts rapid guessing of the 4-digit space.
+    await new Promise((r) => setTimeout(r, 400));
+    if (code !== expected) {
+      return res.status(401).json({ ok: false, message: "That code is not right. Ask your BenSync contact for access." });
+    }
+    req.session.benefitsUnlocked = true;
+    res.json({ ok: true });
+  });
+
+  app.get("/api/benefits/plans", (req: Request, res: Response) => {
+    if (!req.session.benefitsUnlocked) {
+      return res.status(403).json({ message: "Locked" });
+    }
+    try {
+      const raw = fs.readFileSync(path.join(process.cwd(), "server", "benefits-plans.json"), "utf8");
+      res.json(JSON.parse(raw));
+    } catch (err: any) {
+      log(`Benefits plans read error: ${err.message}`);
+      res.status(500).json({ message: "Plan list unavailable" });
     }
   });
 

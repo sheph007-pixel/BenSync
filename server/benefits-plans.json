@@ -1,0 +1,425 @@
+{
+  "updated": "2026-07",
+  "note": "Plan lineup available through the BenSync program. Details shown are summaries; official plan documents govern.",
+  "categories": [
+    {
+      "key": "health",
+      "title": "Health Plans",
+      "icon": "i-medical",
+      "blurb": "Level funded health plans with reference-based pricing. No provider network restrictions: members can see any provider.",
+      "plans": [
+        {
+          "name": "Deluxe Platinum",
+          "facts": [
+            {
+              "label": "Deductible (Individual)",
+              "value": "$100"
+            },
+            {
+              "label": "Out-of-Pocket Max (Individual)",
+              "value": "$3,000"
+            },
+            {
+              "label": "Primary Care Visit",
+              "value": "$20 copay/visit"
+            },
+            {
+              "label": "Specialist Visit",
+              "value": "$30 copay/visit"
+            }
+          ]
+        },
+        {
+          "name": "Elite Health",
+          "facts": [
+            {
+              "label": "Deductible (Individual)",
+              "value": "$1,000"
+            },
+            {
+              "label": "Out-of-Pocket Max (Individual)",
+              "value": "$1,000"
+            },
+            {
+              "label": "Primary Care Visit",
+              "value": "No charge"
+            },
+            {
+              "label": "Specialist Visit",
+              "value": "No charge"
+            }
+          ]
+        },
+        {
+          "name": "Freedom Platinum",
+          "facts": [
+            {
+              "label": "Deductible (Individual)",
+              "value": "$100"
+            },
+            {
+              "label": "Out-of-Pocket Max (Individual)",
+              "value": "$3,000"
+            },
+            {
+              "label": "Primary Care Visit",
+              "value": "$20 copay/visit"
+            },
+            {
+              "label": "Specialist Visit",
+              "value": "$30 copay/visit"
+            }
+          ]
+        },
+        {
+          "name": "Premier Health",
+          "facts": [
+            {
+              "label": "Deductible (Individual)",
+              "value": "$3,000"
+            },
+            {
+              "label": "Out-of-Pocket Max (Individual)",
+              "value": "$3,000"
+            },
+            {
+              "label": "Primary Care Visit",
+              "value": "No charge"
+            },
+            {
+              "label": "Specialist Visit",
+              "value": "No charge"
+            }
+          ]
+        },
+        {
+          "name": "Choice Gold",
+          "facts": [
+            {
+              "label": "Deductible (Individual)",
+              "value": "$500"
+            },
+            {
+              "label": "Out-of-Pocket Max (Individual)",
+              "value": "$5,000"
+            },
+            {
+              "label": "Primary Care Visit",
+              "value": "$35 copay/visit"
+            },
+            {
+              "label": "Specialist Visit",
+              "value": "$50 copay/visit"
+            }
+          ]
+        },
+        {
+          "name": "Freedom Gold",
+          "facts": [
+            {
+              "label": "Deductible (Individual)",
+              "value": "$500"
+            },
+            {
+              "label": "Out-of-Pocket Max (Individual)",
+              "value": "$5,000"
+            },
+            {
+              "label": "Primary Care Visit",
+              "value": "$35 copay/visit"
+            },
+            {
+              "label": "Specialist Visit",
+              "value": "$50 copay/visit"
+            }
+          ]
+        },
+        {
+          "name": "Select Health",
+          "facts": [
+            {
+              "label": "Deductible (Individual)",
+              "value": "$5,000"
+            },
+            {
+              "label": "Out-of-Pocket Max (Individual)",
+              "value": "$5,000"
+            },
+            {
+              "label": "Primary Care Visit",
+              "value": "No charge"
+            },
+            {
+              "label": "Specialist Visit",
+              "value": "No charge"
+            }
+          ]
+        },
+        {
+          "name": "Basic Gold",
+          "facts": [
+            {
+              "label": "Deductible (Individual)",
+              "value": "$1,000"
+            },
+            {
+              "label": "Out-of-Pocket Max (Individual)",
+              "value": "$6,000"
+            },
+            {
+              "label": "Primary Care Visit",
+              "value": "$40 copay/visit"
+            },
+            {
+              "label": "Specialist Visit",
+              "value": "$60 copay/visit"
+            }
+          ]
+        },
+        {
+          "name": "Preferred Silver",
+          "facts": [
+            {
+              "label": "Deductible (Individual)",
+              "value": "$2,000"
+            },
+            {
+              "label": "Out-of-Pocket Max (Individual)",
+              "value": "$6,350"
+            },
+            {
+              "label": "Primary Care Visit",
+              "value": "$40 copay/visit"
+            },
+            {
+              "label": "Specialist Visit",
+              "value": "$60 copay/visit"
+            }
+          ]
+        },
+        {
+          "name": "Enhanced Silver",
+          "facts": [
+            {
+              "label": "Deductible (Individual)",
+              "value": "$3,000"
+            },
+            {
+              "label": "Out-of-Pocket Max (Individual)",
+              "value": "$7,900"
+            },
+            {
+              "label": "Primary Care Visit",
+              "value": "$40 copay/visit"
+            },
+            {
+              "label": "Specialist Visit",
+              "value": "$65 copay/visit"
+            }
+          ]
+        },
+        {
+          "name": "Freedom Silver",
+          "facts": [
+            {
+              "label": "Deductible (Individual)",
+              "value": "$2,000"
+            },
+            {
+              "label": "Out-of-Pocket Max (Individual)",
+              "value": "$6,350"
+            },
+            {
+              "label": "Primary Care Visit",
+              "value": "$40 copay/visit"
+            },
+            {
+              "label": "Specialist Visit",
+              "value": "$60 copay/visit"
+            }
+          ]
+        },
+        {
+          "name": "Core Health",
+          "facts": [
+            {
+              "label": "Deductible (Individual)",
+              "value": "$9,000"
+            },
+            {
+              "label": "Out-of-Pocket Max (Individual)",
+              "value": "$9,000"
+            },
+            {
+              "label": "Primary Care Visit",
+              "value": "No charge"
+            },
+            {
+              "label": "Specialist Visit",
+              "value": "No charge"
+            }
+          ]
+        },
+        {
+          "name": "Classic Silver",
+          "facts": [
+            {
+              "label": "Deductible (Individual)",
+              "value": "$4,000"
+            },
+            {
+              "label": "Out-of-Pocket Max (Individual)",
+              "value": "$8,150"
+            },
+            {
+              "label": "Primary Care Visit",
+              "value": "$40 copay/visit"
+            },
+            {
+              "label": "Specialist Visit",
+              "value": "$70 copay/visit"
+            }
+          ]
+        },
+        {
+          "name": "Saver HSA",
+          "facts": [
+            {
+              "label": "Deductible (Individual)",
+              "value": "$6,450"
+            },
+            {
+              "label": "Out-of-Pocket Max (Individual)",
+              "value": "$6,450"
+            },
+            {
+              "label": "Primary Care Visit",
+              "value": "No charge after deductible"
+            },
+            {
+              "label": "Specialist Visit",
+              "value": "No charge after deductible"
+            }
+          ]
+        },
+        {
+          "name": "Freedom Bronze",
+          "facts": [
+            {
+              "label": "Deductible (Individual)",
+              "value": "$8,550"
+            },
+            {
+              "label": "Out-of-Pocket Max (Individual)",
+              "value": "$8,550"
+            },
+            {
+              "label": "Primary Care Visit",
+              "value": "$35 copay/visit"
+            },
+            {
+              "label": "Specialist Visit",
+              "value": "$50 copay/visit"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "dental",
+      "title": "Dental Plans",
+      "icon": "i-dental",
+      "blurb": "Dental coverage through Guardian, available fully insured or level funded.",
+      "plans": [
+        {
+          "name": "Advantage Dental (W Ortho)",
+          "facts": []
+        },
+        {
+          "name": "Complete Dental (W Ortho)",
+          "facts": []
+        },
+        {
+          "name": "Value Dental (W Ortho)",
+          "facts": []
+        },
+        {
+          "name": "Complete Dental",
+          "facts": []
+        },
+        {
+          "name": "Value Dental",
+          "facts": []
+        },
+        {
+          "name": "Basic Dental",
+          "facts": []
+        },
+        {
+          "name": "Choice Dental",
+          "facts": []
+        }
+      ]
+    },
+    {
+      "key": "vision",
+      "title": "Vision Plans",
+      "icon": "i-vision",
+      "blurb": "Vision coverage through VSP, fully insured.",
+      "plans": [
+        {
+          "name": "Premium Vision",
+          "facts": []
+        },
+        {
+          "name": "Standard Vision",
+          "facts": []
+        },
+        {
+          "name": "Value Vision",
+          "facts": []
+        },
+        {
+          "name": "Base Vision",
+          "facts": []
+        }
+      ]
+    },
+    {
+      "key": "supplemental",
+      "title": "Supplemental Benefits",
+      "icon": "i-umbrella",
+      "blurb": "Voluntary coverage through Guardian that rounds out the package.",
+      "plans": [
+        {
+          "name": "Voluntary Life (Max $100k)",
+          "facts": []
+        },
+        {
+          "name": "Individual Life ($100k+)",
+          "facts": []
+        },
+        {
+          "name": "Accident Insurance",
+          "facts": []
+        },
+        {
+          "name": "Cancer Insurance",
+          "facts": []
+        },
+        {
+          "name": "Critical Illness Insurance",
+          "facts": []
+        },
+        {
+          "name": "Disability Insurance",
+          "facts": []
+        },
+        {
+          "name": "Hospital + Surgery Insurance (GAP)",
+          "facts": []
+        }
+      ]
+    }
+  ]
+}

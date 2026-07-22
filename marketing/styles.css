@@ -180,3 +180,8 @@ a,button{-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
      overflow guard collapses inline 1fr 1fr grids. */
   .asm-grid{grid-template-columns:1fr 1fr !important;}
 }
+@media (max-width:640px){
+  /* The unlock button sits beside the code input; exempt it from the
+     full-width section CTA rule. */
+  section #bn-unlock{width:auto;flex:none;}
+}
