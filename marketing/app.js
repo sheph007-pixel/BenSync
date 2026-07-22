@@ -356,6 +356,8 @@
         details.removeAttribute('aria-hidden');
       });
       if (gate) gate.style.display = 'none';
+      var portal = document.getElementById('bn-portal');
+      if (portal) portal.style.display = 'flex';
       if (note && data.note) {
         note.textContent = data.note;
         note.style.display = 'block';
