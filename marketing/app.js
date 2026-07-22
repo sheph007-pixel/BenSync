@@ -144,13 +144,13 @@
 
     function open() {
       wrap.style.display = 'block';
-      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
       var first = document.getElementById('qm-name');
       if (first) first.focus();
     }
     function close() {
       wrap.style.display = 'none';
-      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
     }
 
     links.forEach(function (a) {
@@ -214,7 +214,7 @@
         btn.setAttribute('aria-expanded', open ? 'true' : 'false');
         if (menuIcon) menuIcon.style.display = open ? 'none' : 'block';
         if (closeIcon) closeIcon.style.display = open ? 'block' : 'none';
-        document.body.style.overflow = open ? 'hidden' : '';
+        document.documentElement.style.overflow = open ? 'hidden' : '';
       }
 
       document.addEventListener('keydown', function (e) {
