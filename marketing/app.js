@@ -312,15 +312,16 @@
   }
 
   // --- Benefits page gate ----------------------------------------------------
-  // The plan lineup lives server-side and is fetched only after the access
-  // code is verified, so the locked page contains no plan data at all.
+  // Plan names are public on the page; the detail values live server-side
+  // and are fetched only after the access code is verified, then written
+  // into each card. Until then the detail rows are blurred placeholders.
   function initBenefits() {
     var unlock = document.getElementById('bn-unlock');
     if (!unlock) return;
     var codeInput = document.getElementById('bn-code');
     var error = document.getElementById('bn-error');
-    var locked = document.getElementById('bn-locked');
-    var open = document.getElementById('bn-open');
+    var gate = document.getElementById('bn-gate');
+    var note = document.getElementById('bn-note');
 
     function esc(s) {
       return String(s).replace(/[&<>"]/g, function (c) {
@@ -328,42 +329,37 @@
       });
     }
 
-    function render(data) {
-      var html = '';
+    function reveal(data) {
+      var byName = {};
       (data.categories || []).forEach(function (cat) {
-        html += '<div style="display:flex;flex-direction:column;gap:18px;">';
-        html += '<div style="display:flex;flex-direction:column;gap:6px;">';
-        html += '<div style="display:flex;align-items:center;gap:12px;">';
-        html += '<span class="ic-badge ic-badge--mint"><svg class="ic"><use href="/brand/icons.svg#' + esc(cat.icon || 'i-medical') + '"/></svg></span>';
-        html += '<span style="font-family:\'Sora\',sans-serif;font-size:22px;font-weight:700;letter-spacing:-.015em;color:#0F2A47;">' + esc(cat.title) + '</span>';
-        html += '<span style="font-size:12px;font-weight:700;color:#16714A;background:#E8F3ED;padding:5px 11px;border-radius:999px;">' + (cat.plans || []).length + ' plans</span>';
-        html += '</div>';
-        if (cat.blurb) html += '<p style="font-size:14.5px;line-height:1.6;color:#47586B;margin:0;max-width:680px;">' + esc(cat.blurb) + '</p>';
-        html += '</div>';
-        html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(250px,100%),1fr));gap:14px;">';
-        (cat.plans || []).forEach(function (plan) {
-          html += '<div class="clg-tile" style="padding:18px 20px;display:flex;flex-direction:column;gap:10px;">';
-          html += '<span style="font-family:\'Sora\',sans-serif;font-size:15px;font-weight:700;color:#16385C;">' + esc(plan.name) + '</span>';
-          if (plan.facts && plan.facts.length) {
-            html += '<div style="display:flex;flex-direction:column;gap:6px;border-top:1px dashed rgba(15,42,71,.12);padding-top:10px;">';
-            plan.facts.forEach(function (f) {
-              html += '<div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;">';
-              html += '<span style="font-size:12px;color:#7A8A99;font-weight:600;">' + esc(f.label) + '</span>';
-              html += '<span style="font-size:12.5px;color:#0F2A47;font-weight:700;text-align:right;">' + esc(f.value) + '</span>';
-              html += '</div>';
-            });
-            html += '</div>';
-          }
-          html += '</div>';
-        });
-        html += '</div></div>';
+        (cat.plans || []).forEach(function (p) { byName[p.name] = p; });
       });
-      if (data.note) {
-        html += '<p style="font-size:12.5px;line-height:1.6;color:#7A8A99;margin:0;max-width:680px;">' + esc(data.note) + '</p>';
+      document.querySelectorAll('[data-plan]').forEach(function (card) {
+        var plan = byName[card.getAttribute('data-plan')];
+        var details = card.querySelector('.bn-details');
+        var chip = card.querySelector('.bn-lockchip');
+        if (chip) chip.style.display = 'none';
+        if (!details) return;
+        if (plan && plan.facts && plan.facts.length) {
+          var html = '';
+          plan.facts.forEach(function (f) {
+            html += '<div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;">';
+            html += '<span style="font-size:12px;color:#7A8A99;font-weight:600;">' + esc(f.label) + '</span>';
+            html += '<span style="font-size:12.5px;color:#0F2A47;font-weight:700;text-align:right;">' + esc(f.value) + '</span>';
+            html += '</div>';
+          });
+          details.innerHTML = html;
+        } else {
+          details.innerHTML = '<a href="/portal" style="font-size:12.5px;font-weight:700;">Full summary in the broker portal &#8594;</a>';
+        }
+        details.classList.remove('bn-locked');
+        details.removeAttribute('aria-hidden');
+      });
+      if (gate) gate.style.display = 'none';
+      if (note && data.note) {
+        note.textContent = data.note;
+        note.style.display = 'block';
       }
-      open.innerHTML = html;
-      locked.style.display = 'none';
-      open.style.display = 'flex';
     }
 
     function fetchPlans(onLocked) {
@@ -372,13 +368,13 @@
           if (!r.ok) throw new Error('locked');
           return r.json();
         })
-        .then(render)
+        .then(reveal)
         .catch(function () {
           if (onLocked) onLocked();
         });
     }
 
-    // Already unlocked in this session? Show the lineup immediately.
+    // Already unlocked in this session? Reveal immediately.
     fetchPlans(null);
 
     function tryUnlock() {
@@ -409,7 +405,7 @@
           }
           fetchPlans(function () {
             if (error) {
-              error.textContent = 'Could not load the plan list. Please try again.';
+              error.textContent = 'Could not load plan details. Please try again.';
               error.style.display = 'block';
             }
           });

@@ -181,3 +181,13 @@ html{scroll-behavior:smooth;}
      full-width section CTA rule. */
   section #bn-unlock{width:auto;flex:none;}
 }
+
+/* --- shared tile + skeleton utilities -------------------------------------- */
+.clg-tile{background:#ffffff;border:1px solid rgba(15,42,71,.10);border-radius:16px;box-shadow:0 14px 34px -24px rgba(15,42,71,.25);box-sizing:border-box;}
+.clg-skel{height:8px;border-radius:999px;background:rgba(15,42,71,.10);display:inline-block;}
+
+/* --- benefits catalog gate ------------------------------------------------- */
+/* Plan names are public; the detail rows blur until the access code is
+   verified server-side (the real values are never in the page source). */
+.bn-locked{filter:blur(5px);pointer-events:none;user-select:none;}
+.bn-lockchip{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:7px;background:#EDF1F6;color:#16385C;flex:none;}
