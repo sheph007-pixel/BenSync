@@ -22,9 +22,20 @@ export const users = pgTable("users", {
   approvalToken: text("approval_token"),
   approvalTokenExpiry: timestamp("approval_token_expiry"),
   approvedAt: timestamp("approved_at"),
-  role: text("role").default("client").notNull(),
+  // Account type. 'employer' (default) and 'broker' are the two public
+  // self-signup roles; 'admin' is internal. Legacy rows may carry
+  // 'client' — treated as an employer everywhere (see isEmployerRole).
+  role: text("role").default("employer").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+// Public self-signup roles. 'admin' is never settable through registration.
+export const PUBLIC_USER_ROLES = ["employer", "broker"] as const;
+export type PublicUserRole = (typeof PUBLIC_USER_ROLES)[number];
+// Legacy 'client' rows predate the employer/broker split; treat them as employers.
+export function isEmployerRole(role: string | null | undefined): boolean {
+  return role === "employer" || role === "client";
+}
 
 export const groups = pgTable("groups", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -137,7 +148,6 @@ export const insertUserSchema = createInsertSchema(users).omit({
   approvalToken: true,
   approvalTokenExpiry: true,
   approvedAt: true,
-  role: true,
   createdAt: true,
 });
 
@@ -256,6 +266,9 @@ export const registerSchema = z.object({
     .string()
     .transform((s) => s.trim())
     .refine((s) => /^\d{5}(-\d{4})?$/.test(s), { message: "Enter a 5-digit ZIP (or ZIP+4)" }),
+  // Public role selector. Only employer/broker are accepted here; an
+  // 'admin' value in the request body is rejected by the enum.
+  role: z.enum(["employer", "broker"]).default("employer"),
 });
 
 // Required details when creating an additional group under an existing

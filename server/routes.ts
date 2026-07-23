@@ -1241,6 +1241,7 @@ export async function registerRoutes(
         phone: data.phone,
         state: data.state,
         zipCode: data.zipCode,
+        role: data.role,
         password: hashedPassword,
         verified: true,
         magicToken: null,
@@ -1263,6 +1264,7 @@ export async function registerRoutes(
           phone: data.phone,
           state: data.state,
           zipCode: data.zipCode,
+          role: data.role,
           approveUrl,
           rejectUrl,
         });

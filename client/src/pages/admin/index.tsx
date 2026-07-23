@@ -234,9 +234,17 @@ function UserCard({
             <div className="truncate text-base font-semibold" data-testid="text-user-name">
               {user.fullName || "Unknown"}
             </div>
-            {user.role === "admin" && (
+            {user.role === "admin" ? (
               <Badge variant="secondary" className="bg-blue-500/10 text-blue-700 dark:text-blue-400">
                 Admin
+              </Badge>
+            ) : user.role === "broker" ? (
+              <Badge variant="secondary" className="bg-purple-500/10 text-purple-700 dark:text-purple-400">
+                Broker
+              </Badge>
+            ) : (
+              <Badge variant="secondary" className="bg-amber-500/10 text-amber-700 dark:text-amber-400">
+                Employer
               </Badge>
             )}
             {user.verified ? (

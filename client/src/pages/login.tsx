@@ -74,6 +74,9 @@ export default function LoginPage() {
           <h1 className="text-xl font-bold tracking-tight" data-testid="text-sign-in-title">
             Sign in to your account
           </h1>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            Employers and brokers sign in here.
+          </p>
           <form onSubmit={form.handleSubmit(onSubmit)} className="mt-5 space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="email">Email</Label>

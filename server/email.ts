@@ -219,9 +219,11 @@ export async function sendApprovalRequestEmail(p: {
   phone: string;
   state: string;
   zipCode: string;
+  role?: string;
   approveUrl: string;
   rejectUrl: string;
 }): Promise<boolean> {
+  const accountType = p.role === "broker" ? "Broker" : "Employer";
   try {
     const client = getResendClient();
     const result = await client.emails.send({
@@ -237,8 +239,9 @@ export async function sendApprovalRequestEmail(p: {
           </div>
 
           <table style="width: 100%; border-collapse: collapse; font-size: 14px; line-height: 1.55;">
-            <tr><td style="padding: 6px 0; color: #5b6679; width: 130px;">Name</td><td style="padding: 6px 0; font-weight: 500;">${escapeHtml(p.prospectName)}</td></tr>
-            <tr><td style="padding: 6px 0; color: #5b6679;">Company</td><td style="padding: 6px 0; font-weight: 500;">${escapeHtml(p.companyName)}</td></tr>
+            <tr><td style="padding: 6px 0; color: #5b6679; width: 130px;">Account type</td><td style="padding: 6px 0; font-weight: 600;">${accountType}</td></tr>
+            <tr><td style="padding: 6px 0; color: #5b6679;">Name</td><td style="padding: 6px 0; font-weight: 500;">${escapeHtml(p.prospectName)}</td></tr>
+            <tr><td style="padding: 6px 0; color: #5b6679;">${accountType === "Broker" ? "Agency" : "Company"}</td><td style="padding: 6px 0; font-weight: 500;">${escapeHtml(p.companyName)}</td></tr>
             <tr><td style="padding: 6px 0; color: #5b6679;">Business email</td><td style="padding: 6px 0;"><a href="mailto:${encodeURIComponent(p.prospectEmail)}" style="color: #0e4992; text-decoration: none;">${escapeHtml(p.prospectEmail)}</a></td></tr>
             <tr><td style="padding: 6px 0; color: #5b6679;">Phone</td><td style="padding: 6px 0;"><a href="tel:${encodeURIComponent(p.phone)}" style="color: #0e4992; text-decoration: none;">${escapeHtml(p.phone)}</a></td></tr>
             <tr><td style="padding: 6px 0; color: #5b6679;">Location</td><td style="padding: 6px 0;">${escapeHtml(p.state)} &middot; ${escapeHtml(p.zipCode)}</td></tr>

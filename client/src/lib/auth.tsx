@@ -18,6 +18,7 @@ interface AuthContextType {
     companyName: string;
     state: string;
     zipCode: string;
+    role: "employer" | "broker";
   }) => Promise<{ message: string; email: string; verified?: boolean; pending?: boolean }>;
   verifyMagicLink: (token: string) => Promise<void>;
   login: (email: string, password: string) => Promise<AuthUser>;
@@ -57,6 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     companyName: string;
     state: string;
     zipCode: string;
+    role: "employer" | "broker";
   }) => {
     const res = await apiRequest("POST", "/api/auth/register", data);
     const result = await res.json();
