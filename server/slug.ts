@@ -15,6 +15,7 @@ export const RESERVED_SLUGS: ReadonlySet<string> = new Set([
   // marketing static assets
   "app", "styles", "app.js", "styles.css",
   // SPA routes (client/src/App.tsx)
+  "broker-sign-up", "broker-log-in",
   "portal", "register", "forgot-password", "reset-password", "auth",
   "dashboard", "proposals", "report", "admin", "q",
   // API + build/static prefixes

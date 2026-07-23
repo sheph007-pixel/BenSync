@@ -61,7 +61,7 @@ export default function AuthVerifyPage() {
                 <XCircle className="h-12 w-12 text-destructive mx-auto" />
                 <h1 className="text-xl font-semibold" data-testid="text-error">Sign-in failed</h1>
                 <p className="text-sm text-muted-foreground">{errorMessage}</p>
-                <Button onClick={() => navigate("/portal")} className="mt-4" data-testid="button-try-again">
+                <Button onClick={() => navigate("/broker-log-in")} className="mt-4" data-testid="button-try-again">
                   Try Again
                 </Button>
               </>

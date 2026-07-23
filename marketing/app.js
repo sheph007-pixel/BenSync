@@ -350,7 +350,7 @@
           });
           details.innerHTML = html;
         } else {
-          details.innerHTML = '<a href="/portal" style="font-size:12.5px;font-weight:700;">Full summary in the broker portal &#8594;</a>';
+          details.innerHTML = '<a href="/broker-log-in" style="font-size:12.5px;font-weight:700;">Full summary in the broker portal &#8594;</a>';
         }
         details.classList.remove('bn-locked');
         details.removeAttribute('aria-hidden');

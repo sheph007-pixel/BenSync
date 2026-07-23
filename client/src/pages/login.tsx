@@ -146,8 +146,8 @@ export default function LoginPage() {
 
           <div className="mt-4 border-t pt-3 text-center text-xs text-muted-foreground">
             New broker?{" "}
-            <Link href="/register" className="font-semibold text-primary hover:underline" data-testid="link-register">
-              Create an account
+            <Link href="/broker-sign-up" className="font-semibold text-primary hover:underline" data-testid="link-register">
+              Sign Up
             </Link>
           </div>
         </Card>

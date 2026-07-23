@@ -38,7 +38,7 @@ function ProtectedRoute({ component: Component, adminOnly }: { component: React.
   }
 
   if (!user) {
-    return <Redirect to="/portal" />;
+    return <Redirect to="/broker-log-in" />;
   }
 
   if (adminOnly && user.role !== "admin") {
@@ -71,20 +71,27 @@ function Router() {
     <Switch>
       {/* The marketing site owns "/" and "/login" on full page loads
           (served by Express from /marketing). These SPA routes only fire
-          on client-side navigation; send both to the portal sign-in. */}
+          on client-side navigation; send both to the broker sign-in. */}
       <Route path="/">
-        <Redirect to="/portal" />
+        <Redirect to="/broker-log-in" />
       </Route>
       <Route path="/login">
-        <Redirect to="/portal" />
+        <Redirect to="/broker-log-in" />
       </Route>
-      {/* Portal sign-in for admins and client accounts. */}
-      <Route path="/portal">
+      {/* Broker sign-in for admins and broker accounts. */}
+      <Route path="/broker-log-in">
         <PublicRoute component={LoginPage} />
       </Route>
-      {/* Unlisted direct-access URL; not linked from the marketing site. */}
-      <Route path="/register">
+      {/* Broker sign-up. */}
+      <Route path="/broker-sign-up">
         <PublicRoute component={RegisterPage} />
+      </Route>
+      {/* Backward-compat redirects for the old auth URLs. */}
+      <Route path="/portal">
+        <Redirect to="/broker-log-in" />
+      </Route>
+      <Route path="/register">
+        <Redirect to="/broker-sign-up" />
       </Route>
       <Route path="/forgot-password" component={ForgotPasswordPage} />
       <Route path="/reset-password" component={ResetPasswordPage} />

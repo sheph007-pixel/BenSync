@@ -64,7 +64,7 @@ export default function ResetPasswordPage() {
       });
 
       // Redirect to login after 3 seconds
-      setTimeout(() => navigate("/portal"), 3000);
+      setTimeout(() => navigate("/broker-log-in"), 3000);
     } catch (err: any) {
       toast({
         title: "Reset failed",
@@ -121,7 +121,7 @@ export default function ResetPasswordPage() {
               <p className="text-muted-foreground">
                 Your password has been reset successfully. Redirecting to login...
               </p>
-              <Link href="/portal">
+              <Link href="/broker-log-in">
                 <Button className="w-full">Go to Sign In</Button>
               </Link>
             </div>
@@ -184,7 +184,7 @@ export default function ResetPasswordPage() {
               </Card>
 
               <div className="text-center mt-6">
-                <Link href="/portal" className="text-sm text-muted-foreground hover:text-primary">
+                <Link href="/broker-log-in" className="text-sm text-muted-foreground hover:text-primary">
                   Back to Sign In
                 </Link>
               </div>

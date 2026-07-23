@@ -333,8 +333,8 @@ export default function RegisterPage() {
 
             <div className="mt-4 border-t pt-3 text-center text-xs text-muted-foreground">
               Already have an account?{" "}
-              <Link href="/portal" className="font-semibold text-primary hover:underline" data-testid="link-login">
-                Sign In
+              <Link href="/broker-log-in" className="font-semibold text-primary hover:underline" data-testid="link-login">
+                Login
               </Link>
             </div>
             <div className="mt-3 text-center text-xs text-muted-foreground">

@@ -211,7 +211,7 @@ async function processApprovalDecision(
     // Notify the prospect they can now log in. Non-fatal if mail fails.
     try {
       const baseUrl = getBaseUrl(req);
-      const loginUrl = `${baseUrl}/portal`;
+      const loginUrl = `${baseUrl}/broker-log-in`;
       await sendApprovalGrantedEmail({
         toEmail: user.email,
         fullName: user.fullName,
