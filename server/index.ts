@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { serveMarketing } from "./marketing";
+import { serveBrokerPages } from "./broker-pages";
 import { createServer } from "http";
 
 const app = express();
@@ -129,6 +130,12 @@ app.use((req, res, next) => {
     console.error("Internal Server Error:", err);
     return res.status(status).json({ message });
   });
+
+  // Dynamic per-broker branded pages (bensync.com/{slug}). Registered after
+  // marketing (reserved slugs win) and the API, but before the SPA catch-all
+  // so an unknown /{slug} isn't swallowed into the React app. Unresolved
+  // slugs call next() and fall through to the SPA NotFound.
+  serveBrokerPages(app);
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route

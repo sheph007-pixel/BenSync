@@ -22,6 +22,7 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserByMagicToken(token: string): Promise<User | undefined>;
   getUserByApprovalToken(token: string): Promise<User | undefined>;
+  getUserBySlug(slug: string): Promise<User | undefined>;
   createUser(user: Partial<InsertUser> & { fullName: string; email: string; magicToken?: string; magicTokenExpiry?: Date }): Promise<User>;
   updateUser(id: string, data: Partial<User>): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
@@ -96,6 +97,11 @@ export class DatabaseStorage implements IStorage {
 
   async getUserByApprovalToken(token: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.approvalToken, token));
+    return user;
+  }
+
+  async getUserBySlug(slug: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.slug, slug));
     return user;
   }
 
@@ -206,12 +212,14 @@ export class DatabaseStorage implements IStorage {
     contactName?: string | null;
     contactEmail?: string | null;
     contactPhone?: string | null;
-    createdByAdminId: string;
+    createdByAdminId?: string | null;
+    brokerId?: string | null;
     publicToken: string;
   }): Promise<Group> {
     const [created] = await db.insert(groups).values({
       userId: null,
-      createdByAdminId: input.createdByAdminId,
+      createdByAdminId: input.createdByAdminId ?? null,
+      brokerId: input.brokerId ?? null,
       source: "internal_sales",
       publicToken: input.publicToken,
       companyName: input.companyName,

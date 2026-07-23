@@ -42,8 +42,9 @@ import {
   contactInquirySchema,
 } from "@shared/schema";
 import ConnectPgSimple from "connect-pg-simple";
+import { generateUniqueSlug } from "./slug";
 import { log } from "./index";
-import { sendMagicLinkEmail, sendProposalAcceptanceEmail, sendApprovalRequestEmail, sendApprovalGrantedEmail, sendCensusUploadedAlertEmail, sendContactInquiryEmail, getLastEmailError } from "./email";
+import { sendMagicLinkEmail, sendProposalAcceptanceEmail, sendApprovalRequestEmail, sendApprovalGrantedEmail, sendCensusUploadedAlertEmail, sendBrokerNewSubmissionEmail, sendContactInquiryEmail, getLastEmailError } from "./email";
 import { pool, testConnection } from "./db";
 import { cleanCSVWithAI, generateValidationGuidance } from "./ai-csv-cleaner";
 import { generateActuarialAnalysis, generateScoreReview } from "./ai-analysis";
@@ -179,21 +180,43 @@ async function processApprovalDecision(
     return { ok: false, reason: "already" };
   }
 
+  // Brokers get a unique branded-page slug on approval (derived from their
+  // agency name). Assigned once; if they already have one (re-approval edge
+  // case) keep it. Employers/admins never get a slug.
+  let assignedSlug: string | null = user.slug ?? null;
+  if (decision === "approved" && user.role === "broker" && !assignedSlug) {
+    try {
+      assignedSlug = await generateUniqueSlug(
+        user.companyName || user.fullName || "broker",
+        async (candidate) => {
+          const existing = await storage.getUserBySlug(candidate);
+          return !!existing && existing.id !== user.id;
+        },
+      );
+    } catch (slugErr: any) {
+      log(`[APPROVAL] Slug generation failed for ${user.email}: ${slugErr.message}`);
+      assignedSlug = null;
+    }
+  }
+
   await storage.updateUser(user.id, {
     approvalStatus: decision,
     approvedAt: decision === "approved" ? new Date() : null,
     approvalToken: null,
     approvalTokenExpiry: null,
+    ...(assignedSlug && !user.slug ? { slug: assignedSlug } : {}),
   });
 
   if (decision === "approved") {
     // Notify the prospect they can now log in. Non-fatal if mail fails.
     try {
-      const loginUrl = `${getBaseUrl(req)}/portal`;
+      const baseUrl = getBaseUrl(req);
+      const loginUrl = `${baseUrl}/portal`;
       await sendApprovalGrantedEmail({
         toEmail: user.email,
         fullName: user.fullName,
         loginUrl,
+        brandedUrl: assignedSlug ? `${baseUrl}/${assignedSlug}` : undefined,
       });
     } catch (mailErr: any) {
       log(`[APPROVAL] Granted-email failed for ${user.email}: ${mailErr.message}`);
@@ -3383,6 +3406,7 @@ export async function registerRoutes(
   const PUBLIC_LIMITS = {
     view:   { count: 60, windowMs: 60_000 },           // 60 / minute
     accept: { count: 5,  windowMs: 60 * 60_000 },      // 5  / hour
+    submit: { count: 8,  windowMs: 60 * 60_000 },      // 8  / hour (branded-page census upload)
   } as const;
   function publicRateLimit(req: Request, kind: keyof typeof PUBLIC_LIMITS): boolean {
     const ip = (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim()
@@ -4268,6 +4292,176 @@ export async function registerRoutes(
     } catch (err: any) {
       log(`Public acceptance error: ${err?.message || err}`, "routes");
       res.status(500).json({ message: err?.message || "Failed to submit acceptance." });
+    }
+  });
+
+  // ── Broker branded-page: public employer census submission ──────────────
+  //
+  // Un-authenticated. An employer on bensync.com/{slug} uploads a census;
+  // we create an internal_sales group STAMPED WITH the broker's id (so it
+  // shows in that broker's book and nobody else's), price it, alert the
+  // broker, and hand back the publicToken. The employer is redirected to
+  // /q/:token to view/accept — no account. Mirrors the admin confirm
+  // pipeline; PHI is scrubbed at parse time via stripSensitiveColumns.
+  app.post("/api/p/:slug/submit", upload.single("file"), async (req: Request, res: Response) => {
+    try {
+      if (!publicRateLimit(req, "submit")) {
+        return res.status(429).json({ message: "Too many submissions. Please try again later." });
+      }
+      const slug = String(req.params.slug || "").trim();
+      const broker = await storage.getUserBySlug(slug);
+      if (!broker || broker.role !== "broker" || broker.approvalStatus !== "approved") {
+        return res.status(404).json({ message: "This page is not available." });
+      }
+
+      const body = req.body || {};
+      const companyName = String(body.company || "").trim();
+      const contactName = String(body.contactName || "").trim();
+      const contactEmail = String(body.contactEmail || "").trim();
+      const contactPhone = String(body.contactPhone || "").trim();
+      const state = String(body.state || "").trim().toUpperCase();
+      const zipCode = String(body.zip || "").trim();
+      if (!companyName || !contactName || !contactEmail) {
+        return res.status(400).json({ message: "Please fill in your company, name, and work email." });
+      }
+      if (!req.file) {
+        return res.status(400).json({ message: "Please attach your employee census (.csv)." });
+      }
+
+      // Parse + PHI scrub (identical to the other census parse paths).
+      const csvText = req.file.buffer.toString("utf-8");
+      const parsed = Papa.parse(csvText, {
+        header: true,
+        skipEmptyLines: true,
+        transformHeader: (h: string) => h.replace(/^﻿/, "").trim(),
+      });
+      const rawRows = parsed.data as any[];
+      if (!rawRows.length) {
+        return res.status(400).json({ message: "That CSV looks empty. Please check the file and try again." });
+      }
+      const rawHeaders = Object.keys(rawRows[0]).filter((h) => h.trim() !== "");
+      const scrubbed = stripSensitiveColumns(rawHeaders, rawRows);
+      if (scrubbed.dropped.length > 0) {
+        log(`PHI scrub (broker page /${slug}): dropped ${scrubbed.dropped.length} sensitive column(s): ${scrubbed.dropped.join(", ")}`);
+      }
+      const nonEmptyRows = scrubbed.rows.filter((row) =>
+        Object.values(row).some((v) => v != null && String(v).trim() !== "")
+      );
+      if (!nonEmptyRows.length) {
+        return res.status(400).json({ message: "That CSV has no employee rows we could read." });
+      }
+
+      // One-pass AI map + clean (auto-detects columns, returns cleanedData).
+      const ai = await cleanCSVWithAI(scrubbed.headers, nonEmptyRows);
+      const entries = ai.cleanedData.map((c: any) => ({
+        firstName: c.firstName,
+        lastName: c.lastName,
+        dateOfBirth: c.dob,
+        gender: c.gender,
+        zipCode: c.zip,
+        relationship: c.relationship,
+      }));
+      const invalid = entries.filter(
+        (e) => !e.firstName || !e.lastName || !e.dateOfBirth || !e.gender || !e.zipCode
+      );
+      if (!entries.length || invalid.length > 0) {
+        return res.status(400).json({
+          message: "We couldn't read some rows in your census. Please use first name, last name, date of birth, gender, ZIP, and relationship columns, then try again.",
+        });
+      }
+
+      const employeeCount = entries.filter((e) => e.relationship === "EE").length;
+      const spouseCount   = entries.filter((e) => e.relationship === "SP").length;
+      const childrenCount = entries.filter((e) => e.relationship === "CH").length;
+
+      const analysis = analyzeGroupRisk(entries);
+      const validation = validateCensusData(entries, analysis);
+      if (!validation.valid) {
+        return res.status(400).json({
+          message: "We couldn't validate that census. Please double-check the columns and dates, then try again.",
+        });
+      }
+
+      // Create the group stamped with the broker (internal_sales so /q/:token
+      // serves it), attach census, and set risk fields incl. riskTier (the
+      // public cockpit 404s without it).
+      const publicToken = generatePublicToken();
+      const created = await storage.createInternalSalesQuote({
+        companyName,
+        state,
+        zipCode,
+        contactName,
+        contactEmail,
+        contactPhone,
+        brokerId: broker.id,
+        publicToken,
+      });
+
+      let adminNotes = "";
+      try {
+        adminNotes = await generateActuarialAnalysis({
+          riskScore: analysis.riskScore,
+          riskTier: analysis.riskTier,
+          averageAge: analysis.averageAge,
+          employeeCount,
+          spouseCount,
+          childrenCount,
+          totalLives: entries.length,
+          maleCount: analysis.maleCount,
+          femaleCount: analysis.femaleCount,
+          characteristics: analysis.characteristics,
+          companyName: created.companyName,
+        });
+      } catch (e: any) {
+        log(`[BROKER-SUBMIT] actuarial analysis failed for ${created.id}: ${e.message}`);
+      }
+
+      await storage.updateGroup(created.id, {
+        riskScore: analysis.riskScore,
+        riskTier: analysis.riskTier,
+        averageAge: analysis.averageAge,
+        maleCount: analysis.maleCount,
+        femaleCount: analysis.femaleCount,
+        groupCharacteristics: analysis.characteristics,
+        score: analysis.characteristics.qualificationScore,
+        adminNotes,
+        employeeCount,
+        spouseCount,
+        childrenCount,
+        totalLives: entries.length,
+        status: "analyzing",
+      });
+
+      await storage.createCensusEntries(entries.map((e) => ({
+        groupId: created.id,
+        firstName: e.firstName,
+        lastName: e.lastName,
+        dateOfBirth: e.dateOfBirth,
+        gender: e.gender,
+        zipCode: e.zipCode,
+        relationship: e.relationship,
+      })));
+
+      // Alert the broker (non-fatal).
+      try {
+        await sendBrokerNewSubmissionEmail({
+          brokerEmail: broker.email,
+          brokerName: broker.fullName,
+          companyName,
+          contactName,
+          contactEmail,
+          totalLives: entries.length,
+          employees: employeeCount,
+          proposalUrl: `${getBaseUrl(req)}/q/${publicToken}`,
+        });
+      } catch (mailErr: any) {
+        log(`[BROKER-SUBMIT] broker alert email failed: ${mailErr.message}`);
+      }
+
+      res.json({ token: publicToken });
+    } catch (err: any) {
+      log(`[BROKER-SUBMIT] error: ${err?.message || err}`);
+      res.status(500).json({ message: "Something went wrong building your proposal. Please try again." });
     }
   });
 

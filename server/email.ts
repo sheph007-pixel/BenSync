@@ -277,11 +277,18 @@ export async function sendApprovalGrantedEmail(p: {
   toEmail: string;
   fullName: string;
   loginUrl: string;
+  brandedUrl?: string;
 }): Promise<boolean> {
   try {
     const client = getResendClient();
     const firstName = p.fullName ? p.fullName.split(" ")[0] : "";
     const greeting = firstName ? `Hi ${firstName},` : "Hi,";
+    const brandedBlock = p.brandedUrl
+      ? `<div style="margin: 24px 0; padding: 16px 18px; background: #f1f7f3; border: 1px solid #cfe6d9; border-radius: 8px;">
+            <p style="font-size: 13px; line-height: 1.5; color: #16714a; margin: 0 0 6px; font-weight: 600;">Your branded page is live</p>
+            <p style="font-size: 13.5px; line-height: 1.55; color: #33475c; margin: 0;">Share this link with your clients to collect census uploads and proposals: <a href="${p.brandedUrl}" style="color: #0e4992; font-weight: 600; text-decoration: none;">${escapeHtml(p.brandedUrl)}</a></p>
+          </div>`
+      : "";
     const result = await client.emails.send({
       from: FROM_EMAIL,
       to: p.toEmail,
@@ -296,6 +303,7 @@ export async function sendApprovalGrantedEmail(p: {
           <div style="text-align: center; margin: 32px 0;">
             <a href="${p.loginUrl}" style="display: inline-block; background: #0e4992; color: #ffffff; padding: 13px 28px; border-radius: 6px; text-decoration: none; font-weight: 500; font-size: 15px;">Sign In</a>
           </div>
+          ${brandedBlock}
           <p style="font-size: 13.5px; line-height: 1.55; color: #5b6679;">
             If you have questions, reply to this email and our team will get back to you.
           </p>
@@ -383,6 +391,64 @@ export async function sendCensusUploadedAlertEmail(p: {
     return true;
   } catch (err: any) {
     log(`[EMAIL ERROR] Failed to send census-uploaded alert for group ${p.groupId}: ${err.message}`);
+    return false;
+  }
+}
+
+/**
+ * Alerts a broker when an employer submits a census on the broker's branded
+ * page (bensync.com/{slug}). Sent to the broker's own email with a link to
+ * the secure proposal. Non-fatal.
+ */
+export async function sendBrokerNewSubmissionEmail(p: {
+  brokerEmail: string;
+  brokerName: string;
+  companyName: string;
+  contactName: string;
+  contactEmail: string;
+  totalLives: number;
+  employees: number;
+  proposalUrl: string;
+}): Promise<boolean> {
+  try {
+    const client = getResendClient();
+    const firstName = p.brokerName ? p.brokerName.split(" ")[0] : "";
+    const greeting = firstName ? `Hi ${firstName},` : "Hi,";
+    const result = await client.emails.send({
+      from: FROM_EMAIL,
+      to: p.brokerEmail,
+      replyTo: p.contactEmail || undefined,
+      subject: `New quote request: ${p.companyName} - ${p.totalLives} lives`,
+      html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 32px 24px; color: #0f1828;">
+          <div style="border-bottom: 1px solid #e5e7eb; padding-bottom: 16px; margin-bottom: 24px;">
+            <div style="font-family: ui-monospace, monospace; font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; color: #16714a;">BenSync &middot; New Quote Request</div>
+            <h2 style="color: #0f1828; margin: 6px 0 0; font-size: 18px; font-weight: 600;">${escapeHtml(p.companyName)}</h2>
+            <p style="color: #5b6679; font-size: 13px; margin: 4px 0 0;">An employer just submitted a census on your branded page.</p>
+          </div>
+          <p style="font-size: 15px; line-height: 1.55;">${escapeHtml(greeting)}</p>
+          <table style="width: 100%; border-collapse: collapse; font-size: 14px; line-height: 1.55;">
+            <tr><td style="padding: 6px 0; color: #5b6679; width: 130px;">Company</td><td style="padding: 6px 0; font-weight: 500;">${escapeHtml(p.companyName)}</td></tr>
+            <tr><td style="padding: 6px 0; color: #5b6679;">Contact</td><td style="padding: 6px 0; font-weight: 500;">${escapeHtml(p.contactName)}${p.contactEmail ? " &middot; " + `<a href="mailto:${encodeURIComponent(p.contactEmail)}" style="color: #0e4992; text-decoration: none;">${escapeHtml(p.contactEmail)}</a>` : ""}</td></tr>
+            <tr><td style="padding: 6px 0; color: #5b6679;">Lives</td><td style="padding: 6px 0; font-weight: 500;">${p.totalLives} total &middot; ${p.employees} enrolled</td></tr>
+          </table>
+          <div style="margin-top: 32px;">
+            <a href="${p.proposalUrl}" style="display: inline-block; background: #16714a; color: #ffffff; padding: 12px 22px; border-radius: 6px; text-decoration: none; font-weight: 500; font-size: 14px;">View the proposal</a>
+          </div>
+          <p style="margin-top: 28px; padding-top: 18px; border-top: 1px solid #e5e7eb; font-size: 11.5px; color: #5b6679; line-height: 1.5;">
+            The employer received the same secure link to view and accept. Reply to this email to reach them directly.
+          </p>
+        </div>
+      `,
+    });
+    if (result.error) {
+      log(`[EMAIL ERROR] Broker submission alert Resend error: ${JSON.stringify(result.error)}`);
+      return false;
+    }
+    log(`[EMAIL SUCCESS] Broker submission alert sent to ${p.brokerEmail} (id: ${result.data?.id})`);
+    return true;
+  } catch (err: any) {
+    log(`[EMAIL ERROR] Failed to send broker submission alert to ${p.brokerEmail}: ${err.message}`);
     return false;
   }
 }

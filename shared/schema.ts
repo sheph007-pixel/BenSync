@@ -26,6 +26,9 @@ export const users = pgTable("users", {
   // self-signup roles; 'admin' is internal. Legacy rows may carry
   // 'client' — treated as an employer everywhere (see isEmployerRole).
   role: text("role").default("employer").notNull(),
+  // Broker branded-page URL segment (bensync.com/{slug}). Assigned on
+  // approval for brokers only; NULL for employers/admins/legacy. Unique.
+  slug: text("slug").unique(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
