@@ -164,9 +164,9 @@
 
 <!-- ONE BILL -->
 <!-- PHOTO BAND (appears when files exist in /marketing/photos/) -->
-<section data-photo-band style="max-width:1240px;margin:0 auto;padding:0 clamp(20px,5vw,32px) 24px;width:100%;box-sizing:border-box;">
+<section data-photo-band style="display:none;max-width:1240px;margin:0 auto;padding:0 clamp(20px,5vw,32px) 24px;width:100%;box-sizing:border-box;">
   <div class="photo-duo">
-    <div><img class="photo-card photo-wide" src="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1600&q=70" alt="A team collaborating around a table" loading="lazy" onerror="this.parentElement.style.display='none';"></div>
+    <div style="display:none;"><img class="photo-card photo-wide" src="/photos/office-team.jpg" alt="A team at work" loading="lazy" onload="this.parentElement.style.display='';this.closest('section').style.display='';"></div>
   </div>
 </section>
 
