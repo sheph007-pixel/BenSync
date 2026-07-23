@@ -194,3 +194,19 @@ html{scroll-behavior:smooth;}
 .bn-locked{filter:blur(5px);pointer-events:none;user-select:none;}
 .bn-lockchip{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:7px;background:#EDF1F6;color:#16385C;flex:none;}
 
+
+/* --- brokers hero: the chaos box ------------------------------------------- */
+/* Each chip drifts and jostles on its own rhythm, visualizing the pile of
+   vendor tasks brokers normally juggle. Small amplitudes keep it readable. */
+.chaos-chip{display:inline-block;will-change:transform;animation:chaosDrift 5.2s ease-in-out infinite;}
+.chaos-chip:nth-child(2n){animation-duration:6.4s;animation-direction:reverse;}
+.chaos-chip:nth-child(3n){animation-duration:4.4s;animation-delay:-1.6s;}
+.chaos-chip:nth-child(4n){animation-duration:7.1s;animation-delay:-3.2s;}
+.chaos-chip:nth-child(5n){animation-delay:-2.4s;animation-direction:reverse;}
+.chaos-chip:nth-child(7n){animation-duration:5.8s;animation-delay:-4.1s;}
+@keyframes chaosDrift{
+  0%,100%{transform:translate(0,0) rotate(0deg);}
+  22%{transform:translate(4px,-5px) rotate(-1.6deg);}
+  48%{transform:translate(-5px,3px) rotate(1.2deg);}
+  74%{transform:translate(3px,5px) rotate(-1deg);}
+}
