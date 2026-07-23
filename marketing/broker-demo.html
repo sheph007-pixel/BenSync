@@ -53,7 +53,7 @@
       <h1 style="font-family:'Sora',sans-serif;font-size:clamp(30px,4vw,40px);line-height:1.14;letter-spacing:-.025em;margin:0;font-weight:700;">A complete benefits program for your growing business.</h1>
       <p style="font-size:16.5px;line-height:1.68;color:#47586B;margin:0;max-width:520px;text-wrap:pretty;">Your advisor has partnered with BenSync to offer a complete employee benefits program, including health, dental, vision, supplemental benefits, enrollment, billing, and member support.</p>
       <div style="display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin-top:4px;">
-        <a class="btn-navy" href="#request-info" style="background:#0F2A47;color:#ffffff;padding:15px 26px;border-radius:12px;font-weight:700;font-size:16px;">Request Information</a>
+        <a class="btn-navy" href="#request-info" style="background:#0F2A47;color:#ffffff;padding:15px 26px;border-radius:12px;font-weight:700;font-size:16px;">Start Your Quote</a>
         <a class="btn-outline" href="/members" style="color:#0F2A47;border:1.5px solid rgba(15,42,71,.18);padding:14px 24px;border-radius:12px;font-weight:700;font-size:16px;">Member Support</a>
       </div>
     </div>
@@ -133,20 +133,35 @@
   </div>
 </section>
 
-<!-- REQUEST INFO -->
-<section id="request-info" style="max-width:1080px;margin:0 auto;padding:72px clamp(20px,5vw,32px) 88px;width:100%;">
+<!-- REQUEST A QUOTE (live form: submissions alert the program team) -->
+<section id="request-info" style="max-width:1080px;margin:0 auto;padding:72px clamp(20px,5vw,32px) 88px;width:100%;box-sizing:border-box;">
   <div style="border:1px solid rgba(15,42,71,.10);border-radius:20px;padding:40px 44px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:48px;align-items:center;background:#ffffff;box-shadow:0 20px 48px -30px rgba(15,42,71,.25);">
     <div style="display:flex;flex-direction:column;gap:10px;">
-      <h2 style="font-family:'Sora',sans-serif;font-size:26px;letter-spacing:-.02em;margin:0;font-weight:700;">Request information</h2>
-      <p style="font-size:15px;line-height:1.65;color:#47586B;margin:0;">Tell us about your team and your advisor will follow up with program details and a quote.</p>
+      <span style="font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#1F8A5B;">Start your quote</span>
+      <h2 style="font-family:'Sora',sans-serif;font-size:26px;letter-spacing:-.02em;margin:0;font-weight:700;">Ready to see your numbers?</h2>
+      <p style="font-size:15px;line-height:1.65;color:#47586B;margin:0;">Share a few details and your advisor is alerted right away. They follow up to collect your employee census securely and run your program quote.</p>
+      <p style="font-size:13.5px;line-height:1.6;color:#7A8A99;margin:0;">Have your census handy? Great: your advisor will ask for it first.</p>
     </div>
-    <div style="display:flex;flex-direction:column;gap:10px;">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-        <input placeholder="Company name" style="min-width:0;width:100%;border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:13.5px;color:#0F2A47;outline:none;background:#ffffff;">
-        <input placeholder="# of employees" style="min-width:0;width:100%;border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:13.5px;color:#0F2A47;outline:none;background:#ffffff;">
+    <div>
+      <div id="demo-sent" style="display:none;flex-direction:column;gap:8px;background:#E8F3ED;border:1px solid rgba(31,138,91,.3);border-radius:12px;padding:20px;">
+        <span style="font-family:'Sora',sans-serif;font-size:15.5px;font-weight:700;color:#16714A;">Request received.</span>
+        <span style="font-size:13.5px;line-height:1.6;color:#3B5A4C;">Your advisor has been alerted and will follow up to collect your census and run your quote.</span>
       </div>
-      <input type="email" placeholder="Work email" style="min-width:0;width:100%;border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:13.5px;color:#0F2A47;outline:none;background:#ffffff;">
-      <button class="btn-green" style="border:none;cursor:pointer;background:#1F8A5B;color:#ffffff;border-radius:10px;padding:13px 14px;font-family:'Manrope',sans-serif;font-size:14.5px;font-weight:700;text-align:center;">Send Request</button>
+      <div id="demo-form" style="display:flex;flex-direction:column;gap:10px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <input id="demo-company" placeholder="Company name" aria-label="Company name" required autocomplete="organization" autocapitalize="words" style="min-width:0;width:100%;border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;">
+          <input id="demo-count" placeholder="# of employees" aria-label="Number of employees" required inputmode="numeric" style="min-width:0;width:100%;border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;">
+        </div>
+        <input id="demo-name" placeholder="Your name" aria-label="Your name" required autocomplete="name" autocapitalize="words" style="min-width:0;width:100%;border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <input id="demo-email" type="email" placeholder="Work email" aria-label="Work email" required autocomplete="email" inputmode="email" autocapitalize="off" style="min-width:0;width:100%;border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;">
+          <input id="demo-phone" type="tel" placeholder="Phone" aria-label="Phone number" required autocomplete="tel" inputmode="tel" style="min-width:0;width:100%;border:1.5px solid rgba(15,42,71,.14);border-radius:10px;padding:12px 14px;font-size:14px;color:#0F2A47;outline:none;background:#ffffff;">
+        </div>
+        <input id="demo-website" tabindex="-1" autocomplete="off" style="display:none;">
+        <button id="demo-send" class="btn-green" style="border:none;cursor:pointer;background:#1F8A5B;color:#ffffff;border-radius:10px;padding:14px;font-family:'Manrope',sans-serif;font-size:14.5px;font-weight:700;text-align:center;">Request My Quote</button>
+        <span id="demo-error" style="display:none;font-size:12.5px;color:#B4483E;text-align:center;"></span>
+        <span style="font-size:11.5px;color:#9AA8B5;text-align:center;">On your own branded page, this request goes straight to you.</span>
+      </div>
     </div>
   </div>
 </section>

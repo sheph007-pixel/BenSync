@@ -445,8 +445,68 @@
     });
   }
 
+  // --- Broker-demo page: live quote-request form -----------------------------
+  // The sample branded page's form really submits: the inquiry email is
+  // tagged as coming from the demo page so the team knows the source.
+  function initDemoRequest() {
+    var send = document.getElementById('demo-send');
+    if (!send) return;
+    var form = document.getElementById('demo-form');
+    var sent = document.getElementById('demo-sent');
+    var error = document.getElementById('demo-error');
+    var fields = {
+      company: document.getElementById('demo-company'),
+      count: document.getElementById('demo-count'),
+      name: document.getElementById('demo-name'),
+      email: document.getElementById('demo-email'),
+      phone: document.getElementById('demo-phone')
+    };
+
+    send.addEventListener('click', function (e) {
+      e.preventDefault();
+      if (error) error.style.display = 'none';
+      var missing = false;
+      ['company', 'count', 'name', 'email', 'phone'].forEach(function (k) {
+        var el = fields[k];
+        if (!el) return;
+        var ok = el.value.trim().length > 0;
+        if (k === 'email' && ok) ok = /.+@.+\..+/.test(el.value.trim());
+        el.style.borderColor = ok ? 'rgba(15,42,71,.14)' : '#B4483E';
+        if (!ok) missing = true;
+      });
+      if (missing) {
+        if (error) {
+          error.textContent = 'Please fill in every field.';
+          error.style.display = 'block';
+        }
+        return;
+      }
+      var hp = document.getElementById('demo-website');
+      send.disabled = true;
+      submitInquiry({
+        name: fields.name.value.trim(),
+        email: fields.email.value.trim(),
+        phone: fields.phone.value.trim(),
+        company: fields.company.value.trim(),
+        employees: fields.count.value.trim(),
+        message: 'Employer quote request submitted on the broker-branded demo page (bensync.com/youragency).',
+        website: hp && hp.value ? hp.value : ''
+      }, function () {
+        if (form) form.style.display = 'none';
+        if (sent) sent.style.display = 'flex';
+      }, function (message) {
+        send.disabled = false;
+        if (error) {
+          error.textContent = message;
+          error.style.display = 'block';
+        }
+      });
+    });
+  }
+
   function init() {
     initDynamicYears();
+    initDemoRequest();
     initHeroSweep();
     initContactForm();
     initQuoteModal();
