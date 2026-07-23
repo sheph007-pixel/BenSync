@@ -215,3 +215,10 @@ html{scroll-behavior:smooth;}
 .lead-toast{animation:leadFloat 4.6s ease-in-out infinite;will-change:transform;}
 @keyframes leadFloat{0%,100%{transform:translateY(0);}50%{transform:translateY(-7px);}}
 @media (max-width:640px){.lead-toast{right:4px !important;bottom:-16px !important;}}
+
+/* --- sample partner page: ribbon --------------------------------------------- */
+.demo-ribbon a.ribbon-back:hover{color:#ffffff;}
+@media (max-width:640px){
+  .demo-ribbon{flex-direction:column;gap:7px;text-align:center;padding:13px 16px;font-size:13px;}
+  .demo-ribbon span{max-width:32ch;}
+}
