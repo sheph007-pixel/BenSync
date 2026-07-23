@@ -68,9 +68,6 @@ export default function LoginPage() {
             alt="BenSync"
             className="mx-auto h-9 w-auto"
           />
-          <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/70">
-            Broker Portal
-          </div>
         </div>
 
         <Card className="mt-8 w-full p-7 shadow-lg" data-testid="card-sign-in">

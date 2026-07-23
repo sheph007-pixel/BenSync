@@ -132,12 +132,11 @@ export default function RegisterPage() {
 
       <div className="relative mx-auto flex max-w-md flex-col items-center px-6 pt-16 pb-12">
         <div className="text-center text-white">
-          <div className="text-2xl font-bold tracking-tight">
-            BenSync
-          </div>
-          <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/70">
-            Broker Portal
-          </div>
+          <img
+            src="/brand/wordmark-header-reversed.png"
+            alt="BenSync"
+            className="mx-auto h-9 w-auto"
+          />
         </div>
 
         {pendingApproval ? (
