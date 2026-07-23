@@ -222,3 +222,7 @@ html{scroll-behavior:smooth;}
   .demo-ribbon{flex-direction:column;gap:7px;text-align:center;padding:13px 16px;font-size:13px;}
   .demo-ribbon span{max-width:32ch;}
 }
+
+/* --- provider access map: pulsing dots --------------------------------------- */
+.map-live-g circle{animation:mapPulse 3.2s ease-in-out infinite;transform-box:fill-box;transform-origin:center;}
+@keyframes mapPulse{0%,100%{opacity:.45;transform:scale(1);}50%{opacity:1;transform:scale(1.9);}}
