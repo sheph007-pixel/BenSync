@@ -16,7 +16,7 @@ input:focus,textarea:focus,select:focus{border-color:#1F8A5B !important;outline:
 /* --- hover utilities (inline styles win over plain rules, so force these) --- */
 .nl:hover{color:#0F2A47 !important;}
 .nl-login:hover{color:#1F8A5B !important;}
-header nav .nl-login{border:1.5px solid rgba(15,42,71,.18);border-radius:10px;padding:9px 16px;font-size:13.5px;}
+header nav .nl-login{border:1.5px solid rgba(15,42,71,.18);border-radius:10px;padding:11px 18px;font-size:14.5px;}
 header nav .nl-login:hover{border-color:#0F2A47;color:#0F2A47 !important;}
 .btn-navy:hover{background:#16385C !important;color:#ffffff !important;}
 .btn-green:hover{background:#26A06C !important;color:#ffffff !important;}
@@ -43,18 +43,18 @@ header nav .nl-login:hover{border-color:#0F2A47;color:#0F2A47 !important;}
 /* --- hero motif illustrations --------------------------------------------- */
 /* Anchor to the 1160px content column, not the viewport edge, so the motif
    never drifts off to the far right on wide monitors. */
-.hero-motif{position:absolute;right:calc(max((100% - 1160px) / 2, 0px) + clamp(20px,5vw,32px));top:50%;transform:translateY(-50%);width:clamp(240px,26vw,340px);pointer-events:none;user-select:none;}
+.hero-motif{position:absolute;right:calc(max((100% - 1240px) / 2, 0px) + clamp(20px,5vw,32px));top:50%;transform:translateY(-50%);width:clamp(240px,26vw,340px);pointer-events:none;user-select:none;}
 @media (max-width:960px){.hero-motif{display:none;}}
 
 /* --- "Who It's For" nav dropdown ---------------------------------------- */
 .nav-drop{position:relative;display:flex;}
-.nav-drop-btn{display:flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;font-family:inherit;color:#47586B;font-weight:600;font-size:14px;padding:0;}
+.nav-drop-btn{display:flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;font-family:inherit;color:#47586B;font-weight:600;font-size:15px;padding:0;}
 .nav-drop-btn:hover{color:#0F2A47;}
 .nav-drop-btn[data-active="true"]{color:#0F2A47;border-bottom:2px solid #1F8A5B;padding-bottom:2px;}
 .nav-drop-caret{width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid currentColor;margin-top:1px;}
 .nav-drop-menu{display:none;position:absolute;top:calc(100% + 14px);left:50%;transform:translateX(-50%);background:#ffffff;border:1px solid rgba(15,42,71,.10);border-radius:12px;box-shadow:0 18px 40px -20px rgba(15,42,71,.3);padding:8px;min-width:170px;flex-direction:column;z-index:60;}
 .nav-drop.open .nav-drop-menu{display:flex;}
-.nav-drop-menu a{padding:10px 14px;border-radius:8px;color:#0F2A47;font-size:14px;font-weight:600;}
+.nav-drop-menu a{padding:10px 14px;border-radius:8px;color:#0F2A47;font-size:15px;font-weight:600;}
 .nav-drop-menu a:hover{background:#F6F8F7;color:#0F2A47;}
 .nav-drop-note{padding:9px 14px 5px;font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#7A8A99;border-top:1px solid rgba(15,42,71,.08);margin-top:4px;white-space:nowrap;}
 
