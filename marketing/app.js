@@ -508,12 +508,31 @@
     var bar = document.getElementById('sticky-cta');
     var heroCta = document.getElementById('hero-cta');
     if (!bar || !heroCta || !('IntersectionObserver' in window)) return;
-    var observer = new IntersectionObserver(function (entries) {
-      var visible = entries[0].isIntersecting;
-      bar.classList.toggle('is-on', !visible);
-      bar.setAttribute('aria-hidden', visible ? 'true' : 'false');
-    }, { threshold: 0 });
-    observer.observe(heroCta);
+    var heroVisible = true;
+    var endVisible = false; // final CTA band or footer in view
+    function update() {
+      var show = !heroVisible && !endVisible;
+      bar.classList.toggle('is-on', show);
+      bar.setAttribute('aria-hidden', show ? 'false' : 'true');
+    }
+    new IntersectionObserver(function (e) {
+      heroVisible = e[0].isIntersecting;
+      update();
+    }, { threshold: 0 }).observe(heroCta);
+    // Hide the sticky bar once the closing CTA / footer is on screen, so it
+    // never overlaps them at the bottom of the page.
+    var enders = ['final-cta', 'site-footer']
+      .map(function (id) { return document.getElementById(id); })
+      .filter(Boolean);
+    if (enders.length) {
+      var seen = {};
+      var endObserver = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) { seen[en.target.id] = en.isIntersecting; });
+        endVisible = enders.some(function (el) { return seen[el.id]; });
+        update();
+      }, { threshold: 0 });
+      enders.forEach(function (el) { endObserver.observe(el); });
+    }
   }
 
   function init() {
