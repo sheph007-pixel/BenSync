@@ -16,7 +16,7 @@ input:focus,textarea:focus,select:focus{border-color:#1F8A5B !important;outline:
 /* --- hover utilities (inline styles win over plain rules, so force these) --- */
 .nl:hover{color:#0F2A47 !important;}
 .nl-login:hover{color:#1F8A5B !important;}
-header nav .nl-login{border:1.5px solid rgba(15,42,71,.18);border-radius:10px;padding:11px 18px;font-size:14.5px;}
+header nav .nl-login{border:1.5px solid rgba(15,42,71,.18);border-radius:10px;padding:12px 22px;font-size:15px;}
 header nav .nl-login:hover{border-color:#0F2A47;color:#0F2A47 !important;}
 .btn-navy:hover{background:#16385C !important;color:#ffffff !important;}
 .btn-green:hover{background:#26A06C !important;color:#ffffff !important;}
@@ -126,8 +126,8 @@ html{scroll-behavior:smooth;}
   .nav-drop-menu a{font-size:16px;padding:14px 2px;border-radius:0;border-bottom:1px solid rgba(15,42,71,.07);}
   .nav-drop-note{border-top:none;padding:10px 2px 0;margin-top:0;white-space:normal;}
   /* Menu buttons: a matched full-width pair. */
-  header nav .nl-login{justify-content:center;text-align:center;margin-top:18px;border-radius:12px;padding:14px 18px;font-size:15px;}
-  header nav .btn-green{justify-content:center;text-align:center;margin-top:10px;padding:14px 18px !important;border-radius:12px !important;font-size:15px !important;font-weight:700;}
+  header nav .nl-login{justify-content:center;text-align:center;margin-top:18px;border-radius:12px;padding:16px 18px;font-size:16px;border-width:2px;}
+  header nav .btn-green{justify-content:center;text-align:center;margin-top:10px;padding:16px 18px !important;border-radius:12px !important;font-size:16px !important;font-weight:700;}
   /* Footer links reach comfortable tap-target size. */
   footer a{display:inline-block;padding:5px 0;}
 }
