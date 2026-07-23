@@ -68,6 +68,9 @@ export default function LoginPage() {
             alt="BenSync"
             className="mx-auto h-9 w-auto"
           />
+          <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/70">
+            Broker Portal
+          </div>
         </div>
 
         <Card className="mt-8 w-full p-7 shadow-lg" data-testid="card-sign-in">
@@ -75,7 +78,7 @@ export default function LoginPage() {
             Sign in to your account
           </h1>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            Employers and brokers sign in here.
+            Sign in to manage your groups and proposals.
           </p>
           <form onSubmit={form.handleSubmit(onSubmit)} className="mt-5 space-y-4">
             <div className="space-y-1.5">
@@ -140,6 +143,13 @@ export default function LoginPage() {
               )}
             </Button>
           </form>
+
+          <div className="mt-4 border-t pt-3 text-center text-xs text-muted-foreground">
+            New broker?{" "}
+            <Link href="/register" className="font-semibold text-primary hover:underline" data-testid="link-register">
+              Create an account
+            </Link>
+          </div>
         </Card>
 
         <div className="mt-6 flex items-center gap-2 text-[11px] text-muted-foreground">
