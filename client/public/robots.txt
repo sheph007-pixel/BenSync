@@ -9,13 +9,17 @@ Allow: /employers
 Allow: /brokers
 Allow: /members
 Allow: /whats-included
+Allow: /benefits
 Allow: /partner-network
 Allow: /system
 Allow: /contact
 Allow: /login
 Allow: /brand/
 Allow: /styles.css
+Allow: /app.js
+Allow: /llms.txt
 Allow: /sitemap.xml
+Disallow: /broker-demo
 Disallow: /portal
 Disallow: /register
 Disallow: /forgot-password
@@ -28,4 +32,4 @@ Disallow: /admin/
 Disallow: /q/
 Disallow: /api/
 
-Sitemap: https://bensync.com/sitemap.xml
+Sitemap: https://www.bensync.com/sitemap.xml
