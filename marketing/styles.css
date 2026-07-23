@@ -226,3 +226,9 @@ html{scroll-behavior:smooth;}
 /* --- provider access map: pulsing dots --------------------------------------- */
 .map-live-g circle{animation:mapPulse 3.2s ease-in-out infinite;transform-box:fill-box;transform-origin:center;}
 @keyframes mapPulse{0%,100%{opacity:.45;transform:scale(1);}50%{opacity:1;transform:scale(1.9);}}
+
+/* --- sample partner page: header stacks cleanly on mobile -------------------- */
+@media (max-width:640px){
+  .demo-header-inner{flex-direction:column;align-items:stretch !important;min-height:0 !important;padding-top:16px !important;padding-bottom:16px !important;gap:13px !important;}
+  .demo-header-brand{margin-left:0 !important;justify-content:space-between;border-top:1px solid rgba(15,42,71,.08);padding-top:13px;}
+}
