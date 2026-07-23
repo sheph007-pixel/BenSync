@@ -62,13 +62,6 @@ const registerFormSchema = z.object({
   role: z.enum(["employer", "broker"]),
 });
 
-function initialRoleFromUrl(): "employer" | "broker" {
-  if (typeof window === "undefined") return "employer";
-  return new URLSearchParams(window.location.search).get("as") === "broker"
-    ? "broker"
-    : "employer";
-}
-
 export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [pendingApproval, setPendingApproval] = useState(false);
@@ -88,12 +81,9 @@ export default function RegisterPage() {
       companyName: "",
       state: "",
       zipCode: "",
-      role: initialRoleFromUrl(),
+      role: "broker",
     },
   });
-
-  const role = form.watch("role");
-  const isBroker = role === "broker";
 
   async function onSubmit(data: z.infer<typeof registerFormSchema>) {
     setIsLoading(true);
@@ -173,35 +163,11 @@ export default function RegisterPage() {
           </Card>
         ) : (
           <Card className="mt-8 w-full p-6 shadow-lg" data-testid="card-create-account">
-            <div className="mb-4 grid grid-cols-2 gap-1 rounded-lg bg-muted p-1" role="tablist" aria-label="Account type">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={!isBroker}
-                onClick={() => form.setValue("role", "employer")}
-                className={`rounded-md px-3 py-2 text-sm font-semibold transition-colors ${!isBroker ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-                data-testid="toggle-role-employer"
-              >
-                I'm an Employer
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={isBroker}
-                onClick={() => form.setValue("role", "broker")}
-                className={`rounded-md px-3 py-2 text-sm font-semibold transition-colors ${isBroker ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-                data-testid="toggle-role-broker"
-              >
-                I'm a Broker
-              </button>
-            </div>
             <h1 className="text-xl font-bold tracking-tight" data-testid="text-register-title">
-              {isBroker ? "Create Your Broker Account" : "Submit Your Group"}
+              Create Your Broker Account
             </h1>
             <p className="mt-1.5 text-sm text-muted-foreground leading-[1.5]">
-              {isBroker
-                ? "Create your account to submit groups, run proposals, and manage your clients."
-                : "Once you create your account, you can upload your census and view your employee benefits proposal."}
+              Create your account to submit groups, run proposals, and manage your clients.
             </p>
 
             <form onSubmit={form.handleSubmit(onSubmit)} className="mt-5 space-y-3">
@@ -291,12 +257,12 @@ export default function RegisterPage() {
                   )}
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="companyName">{isBroker ? "Agency" : "Company"}</Label>
+                  <Label htmlFor="companyName">Agency</Label>
                   <div className="relative">
                     <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="companyName"
-                      placeholder={isBroker ? "Meridian Insurance Group" : "Acme Corp"}
+                      placeholder="Meridian Insurance Group"
                       className="pl-9"
                       {...form.register("companyName")}
                       data-testid="input-company-name"
@@ -367,6 +333,12 @@ export default function RegisterPage() {
               <Link href="/portal" className="font-semibold text-primary hover:underline" data-testid="link-login">
                 Sign In
               </Link>
+            </div>
+            <div className="mt-3 text-center text-xs text-muted-foreground">
+              BenSync is offered through select brokers. Are you an employer?{" "}
+              <a href="/brokers" className="font-semibold text-primary hover:underline" data-testid="link-employer-info">
+                Ask your broker for your link.
+              </a>
             </div>
           </Card>
         )}
