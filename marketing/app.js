@@ -504,9 +504,22 @@
     });
   }
 
+  function initStickyCta() {
+    var bar = document.getElementById('sticky-cta');
+    var heroCta = document.getElementById('hero-cta');
+    if (!bar || !heroCta || !('IntersectionObserver' in window)) return;
+    var observer = new IntersectionObserver(function (entries) {
+      var visible = entries[0].isIntersecting;
+      bar.classList.toggle('is-on', !visible);
+      bar.setAttribute('aria-hidden', visible ? 'true' : 'false');
+    }, { threshold: 0 });
+    observer.observe(heroCta);
+  }
+
   function init() {
     initDynamicYears();
     initDemoRequest();
+    initStickyCta();
     initHeroSweep();
     initContactForm();
     initQuoteModal();
