@@ -75,10 +75,10 @@ export default function LoginPage() {
 
         <Card className="mt-8 w-full p-7 shadow-lg" data-testid="card-sign-in">
           <h1 className="text-xl font-bold tracking-tight" data-testid="text-sign-in-title">
-            Sign in to your account
+            Log in to your account
           </h1>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            Sign in to manage your groups and proposals.
+            Log in to manage your groups and proposals.
           </p>
           <form onSubmit={form.handleSubmit(onSubmit)} className="mt-5 space-y-4">
             <div className="space-y-1.5">
@@ -138,7 +138,7 @@ export default function LoginPage() {
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <>
-                  Sign In <ArrowRight className="h-4 w-4" />
+                  Log In <ArrowRight className="h-4 w-4" />
                 </>
               )}
             </Button>

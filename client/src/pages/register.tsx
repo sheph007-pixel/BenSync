@@ -334,7 +334,7 @@ export default function RegisterPage() {
             <div className="mt-4 border-t pt-3 text-center text-xs text-muted-foreground">
               Already have an account?{" "}
               <Link href="/broker-log-in" className="font-semibold text-primary hover:underline" data-testid="link-login">
-                Login
+                Log In
               </Link>
             </div>
             <div className="mt-3 text-center text-xs text-muted-foreground">

@@ -122,7 +122,7 @@ export default function ResetPasswordPage() {
                 Your password has been reset successfully. Redirecting to login...
               </p>
               <Link href="/broker-log-in">
-                <Button className="w-full">Go to Sign In</Button>
+                <Button className="w-full">Go to Log In</Button>
               </Link>
             </div>
           ) : (
@@ -185,7 +185,7 @@ export default function ResetPasswordPage() {
 
               <div className="text-center mt-6">
                 <Link href="/broker-log-in" className="text-sm text-muted-foreground hover:text-primary">
-                  Back to Sign In
+                  Back to Log In
                 </Link>
               </div>
             </>
