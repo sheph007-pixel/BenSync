@@ -445,8 +445,30 @@
     });
   }
 
+  // --- Photo bands -----------------------------------------------------------
+  // Slots stay hidden until their file actually exists in /photos/. A HEAD
+  // probe decides (lazy images inside hidden containers never fire onload),
+  // and the content-type check keeps the SPA's HTML fallback from counting
+  // as a photo.
+  function initPhotoBands() {
+    document.querySelectorAll('[data-photo-band]').forEach(function (band) {
+      band.querySelectorAll('img[src^="/photos/"]').forEach(function (img) {
+        fetch(img.getAttribute('src'), { method: 'HEAD' })
+          .then(function (r) {
+            var ct = r.headers.get('content-type') || '';
+            if (r.ok && ct.indexOf('image/') === 0) {
+              img.parentElement.style.display = '';
+              band.style.display = '';
+            }
+          })
+          .catch(function () {});
+      });
+    });
+  }
+
   function init() {
     initDynamicYears();
+    initPhotoBands();
     initHeroSweep();
     initContactForm();
     initQuoteModal();

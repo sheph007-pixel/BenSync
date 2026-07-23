@@ -193,3 +193,10 @@ html{scroll-behavior:smooth;}
    verified server-side (the real values are never in the page source). */
 .bn-locked{filter:blur(5px);pointer-events:none;user-select:none;}
 .bn-lockchip{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:7px;background:#EDF1F6;color:#16385C;flex:none;}
+
+/* --- photography break-ups ------------------------------------------------- */
+/* Drop-in photo bands: each slot stays hidden until its image file exists in
+   /marketing/photos/, so missing photos never break the layout. */
+.photo-card{display:block;width:100%;border-radius:20px;border:1px solid rgba(15,42,71,.10);box-shadow:0 18px 44px -24px rgba(15,42,71,.3);object-fit:cover;background:#F6F8F7;}
+.photo-wide{aspect-ratio:16 / 10;}
+.photo-duo{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:18px;}
