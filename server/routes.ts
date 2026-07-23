@@ -1945,6 +1945,7 @@ export async function registerRoutes(
 
       const group = await storage.createGroup({
         userId: user.id,
+        brokerId: user.role === "broker" ? user.id : null,
         companyName: groupCompanyName,
         contactName: user.fullName,
         contactEmail: user.email,
@@ -2127,6 +2128,7 @@ export async function registerRoutes(
 
       const group = await storage.createGroup({
         userId: user.id,
+        brokerId: user.role === "broker" ? user.id : null,
         companyName: user.companyName || "Unnamed Company",
         contactName: user.fullName,
         contactEmail: user.email,
@@ -2189,7 +2191,9 @@ export async function registerRoutes(
 
   app.get("/api/groups", requireAuth, async (req: Request, res: Response) => {
     log(`📋 /api/groups called - Session userId: ${req.session.userId}`);
-    const userGroups = await storage.getGroupsByUserId(req.session.userId!);
+    // Includes groups the account owns (userId) and, for brokers, groups
+    // attributed to them (brokerId) via their branded page.
+    const userGroups = await storage.getGroupsVisibleToUser(req.session.userId!);
     log(`📋 Found ${userGroups.length} groups for user ${req.session.userId}`);
     log(`📋 First group userId (if any): ${userGroups[0]?.userId}`);
     res.json(userGroups);
@@ -2201,7 +2205,7 @@ export async function registerRoutes(
     if (!group) {
       return res.status(404).json({ message: "Group not found" });
     }
-    if (group.userId !== req.session.userId) {
+    if (group.userId !== req.session.userId && group.brokerId !== req.session.userId) {
       const user = await storage.getUser(req.session.userId!);
       if (!user || user.role !== "admin") {
         return res.status(403).json({ message: "Access denied" });
@@ -2220,7 +2224,7 @@ export async function registerRoutes(
       const id = req.params.id as string;
       const group = await storage.getGroup(id);
       if (!group) return res.status(404).json({ message: "Group not found" });
-      if (group.userId !== req.session.userId) {
+      if (group.userId !== req.session.userId && group.brokerId !== req.session.userId) {
         const user = await storage.getUser(req.session.userId!);
         if (!user || user.role !== "admin") {
           return res.status(403).json({ message: "Access denied" });
@@ -2249,7 +2253,7 @@ export async function registerRoutes(
     if (!group) {
       return res.status(404).json({ message: "Group not found" });
     }
-    if (group.userId !== req.session.userId) {
+    if (group.userId !== req.session.userId && group.brokerId !== req.session.userId) {
       const user = await storage.getUser(req.session.userId!);
       if (!user || user.role !== "admin") {
         return res.status(403).json({ message: "Access denied" });
@@ -2272,7 +2276,7 @@ export async function registerRoutes(
       }
       const caller = await storage.getUser(req.session.userId!);
       const isAdmin = caller?.role === "admin";
-      if (group.userId !== req.session.userId && !isAdmin) {
+      if (group.userId !== req.session.userId && group.brokerId !== req.session.userId && !isAdmin) {
         return res.status(403).json({ message: "Access denied" });
       }
       // A locked group can only be edited by admins. Owners get a
@@ -2325,7 +2329,7 @@ export async function registerRoutes(
       if (!group) return res.status(404).json({ message: "Group not found" });
       const caller = await storage.getUser(req.session.userId!);
       const isAdmin = caller?.role === "admin";
-      if (group.userId !== req.session.userId && !isAdmin) {
+      if (group.userId !== req.session.userId && group.brokerId !== req.session.userId && !isAdmin) {
         return res.status(403).json({ message: "Access denied" });
       }
       if (group.locked && !isAdmin) {
@@ -2383,7 +2387,7 @@ export async function registerRoutes(
       const id = req.params.id as string;
       const group = await storage.getGroup(id);
       if (!group) return res.status(404).json({ message: "Group not found" });
-      if (group.userId !== req.session.userId) {
+      if (group.userId !== req.session.userId && group.brokerId !== req.session.userId) {
         const user = await storage.getUser(req.session.userId!);
         if (!user || user.role !== "admin") {
           return res.status(403).json({ message: "Access denied" });
@@ -2514,7 +2518,7 @@ export async function registerRoutes(
       const id = req.params.id as string;
       const group = await storage.getGroup(id);
       if (!group) return res.status(404).json({ message: "Group not found" });
-      if (group.userId !== req.session.userId) {
+      if (group.userId !== req.session.userId && group.brokerId !== req.session.userId) {
         const user = await storage.getUser(req.session.userId!);
         if (!user || user.role !== "admin") {
           return res.status(403).json({ message: "Access denied" });
@@ -2600,7 +2604,7 @@ export async function registerRoutes(
       if (!group) {
         return res.status(404).json({ message: "Group not found" });
       }
-      if (group.userId !== req.session.userId) {
+      if (group.userId !== req.session.userId && group.brokerId !== req.session.userId) {
         return res.status(403).json({ message: "Access denied" });
       }
       await storage.deleteCensusByGroupId(id);
@@ -2934,7 +2938,7 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Group not found" });
       }
 
-      if (group.userId !== req.session.userId && req.session.role !== "admin") {
+      if (group.userId !== req.session.userId && group.brokerId !== req.session.userId && req.session.role !== "admin") {
         return res.status(403).json({ message: "Access denied" });
       }
 
@@ -2963,7 +2967,7 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Group not found" });
       }
 
-      if (group.userId !== req.session.userId && req.session.role !== "admin") {
+      if (group.userId !== req.session.userId && group.brokerId !== req.session.userId && req.session.role !== "admin") {
         return res.status(403).json({ message: "Access denied" });
       }
 
@@ -2986,7 +2990,7 @@ export async function registerRoutes(
       if (!group) {
         return res.status(404).json({ message: "Group not found" });
       }
-      if (group.userId !== req.session.userId && req.session.role !== "admin") {
+      if (group.userId !== req.session.userId && group.brokerId !== req.session.userId && req.session.role !== "admin") {
         return res.status(403).json({ message: "Access denied" });
       }
       if (group.riskTier === "high") {

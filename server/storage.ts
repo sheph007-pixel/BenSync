@@ -15,7 +15,7 @@ import {
   riskScreens,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, or } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -28,6 +28,7 @@ export interface IStorage {
   deleteUser(id: string): Promise<void>;
 
   getGroupsByUserId(userId: string): Promise<Group[]>;
+  getGroupsVisibleToUser(userId: string): Promise<Group[]>;
   getAllGroups(): Promise<Group[]>;
   getGroup(id: string): Promise<Group | undefined>;
   createGroup(group: InsertGroup): Promise<Group>;
@@ -124,6 +125,18 @@ export class DatabaseStorage implements IStorage {
       console.log(`🔍 First group details:`, { id: result[0].id, userId: result[0].userId, companyName: result[0].companyName });
     }
     return result;
+  }
+
+  // Every group an account can see in the portal: ones they own
+  // (userId) plus ones attributed to them as the broker (brokerId).
+  // For employers brokerId is null, so this reduces to the userId set;
+  // for brokers it also returns groups submitted on their branded page.
+  async getGroupsVisibleToUser(userId: string): Promise<Group[]> {
+    return db
+      .select()
+      .from(groups)
+      .where(or(eq(groups.userId, userId), eq(groups.brokerId, userId)))
+      .orderBy(desc(groups.submittedAt));
   }
 
   async getAllGroups(): Promise<Group[]> {

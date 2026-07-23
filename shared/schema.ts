@@ -47,6 +47,12 @@ export const groups = pgTable("groups", {
   // For internal_sales quotes: the admin who created the quote on
   // behalf of a prospect. NULL for self_service rows.
   createdByAdminId: varchar("created_by_admin_id").references(() => users.id),
+  // The broker (users.role='broker') this group is attributed to.
+  // Set when a broker creates the group in their dashboard, or when an
+  // employer self-submits on the broker's branded page. NULL for legacy
+  // rows and admin/internal_sales quotes. Broker dashboards are scoped
+  // to this column; a broker only ever sees groups where brokerId = them.
+  brokerId: varchar("broker_id").references(() => users.id),
   // Discriminator: 'self_service' (customer-uploaded) or
   // 'internal_sales' (sales-rep-driven). Drives admin list filtering
   // and whether a public link is minted.
