@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useLocation } from "wouter";
 import { z } from "zod";
-import { ArrowRight, Loader2, Mail, Building2, Phone, User, Lock, ShieldCheck, LifeBuoy } from "lucide-react";
+import { ArrowRight, Loader2, Mail, Building2, Phone, User, Lock, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -166,10 +166,10 @@ export default function RegisterPage() {
           </Card>
         ) : (
           <Card className="mt-8 w-full p-6 shadow-lg" data-testid="card-create-account">
-            <h1 className="text-xl font-bold tracking-tight" data-testid="text-register-title">
+            <h1 className="text-xl font-bold tracking-tight text-center" data-testid="text-register-title">
               Create Your Broker Account
             </h1>
-            <p className="mt-1.5 text-sm text-muted-foreground leading-[1.5]">
+            <p className="mt-1.5 text-sm text-muted-foreground leading-[1.5] text-center">
               Create your account to submit groups, run proposals, and manage your clients.
             </p>
 
@@ -337,12 +337,6 @@ export default function RegisterPage() {
                 Log In
               </Link>
             </div>
-            <div className="mt-3 text-center text-xs text-muted-foreground">
-              BenSync is offered through select brokers. Are you an employer?{" "}
-              <a href="/brokers" className="font-semibold text-primary hover:underline" data-testid="link-employer-info">
-                Ask your broker for your link.
-              </a>
-            </div>
           </Card>
         )}
 
@@ -350,19 +344,6 @@ export default function RegisterPage() {
         <div className="mt-6 flex items-center gap-2 text-[11px] text-muted-foreground">
           <ShieldCheck className="h-3.5 w-3.5" />
           256-bit encryption &middot; SOC 2 Type II
-        </div>
-        <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-          <LifeBuoy className="h-3.5 w-3.5" />
-          Need help?{" "}
-          <a
-            href="/contact"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-medium text-primary hover:underline"
-            data-testid="link-support"
-          >
-            Open a support ticket
-          </a>
         </div>
         <div className="mt-2 text-[10px] text-muted-foreground">
           © {new Date().getFullYear()} BenSync

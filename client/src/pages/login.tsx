@@ -74,10 +74,10 @@ export default function LoginPage() {
         </div>
 
         <Card className="mt-8 w-full p-7 shadow-lg" data-testid="card-sign-in">
-          <h1 className="text-xl font-bold tracking-tight" data-testid="text-sign-in-title">
+          <h1 className="text-xl font-bold tracking-tight text-center" data-testid="text-sign-in-title">
             Log in to your account
           </h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">
+          <p className="mt-1.5 text-sm text-muted-foreground text-center">
             Log in to manage your groups and proposals.
           </p>
           <form onSubmit={form.handleSubmit(onSubmit)} className="mt-5 space-y-4">
