@@ -75,7 +75,7 @@ export default function LoginPage() {
 
         <Card className="mt-8 w-full p-7 shadow-lg" data-testid="card-sign-in">
           <h1 className="text-xl font-bold tracking-tight text-center" data-testid="text-sign-in-title">
-            Log in to your account
+            Log In To Your Account
           </h1>
           <p className="mt-1.5 text-sm text-muted-foreground text-center">
             Log in to manage your groups and proposals.
