@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { serveMarketing } from "./marketing";
 import { serveBrokerPages } from "./broker-pages";
+import { siteGate } from "./site-gate";
 import { createServer } from "http";
 
 const app = express();
@@ -73,6 +74,12 @@ app.use((req, res, next) => {
   } catch (err: any) {
     console.error("Migrations failed (continuing to serve):", err?.message ?? err);
   }
+
+  // Site gate ("firewall"): an email + PIN lock screen in front of the ENTIRE
+  // site. Mounted first so it intercepts marketing pages, the API, broker
+  // pages, and the SPA before any of them run. Toggle from Railway with the
+  // SITE_LOCK env var (on/off); no-op and passes through when disabled.
+  app.use(siteGate);
 
   // BenSync marketing site at the root (/, /employers, /brokers, /login
   // chooser, assets). Registered before the API/session stack so public
