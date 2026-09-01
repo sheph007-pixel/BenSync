@@ -34,11 +34,9 @@ export default function Login({
             height: 56,
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between",
           }}
         >
           <img src={Logo} alt="Kennion Benefit Advisors" style={{ height: 30, display: "block" }} />
-          <span style={{ fontSize: 13, color: C.muted }}>2027 Renewal</span>
         </div>
       </div>
 
@@ -47,28 +45,15 @@ export default function Login({
           <div style={{ ...panel, padding: "28px 30px 30px" }}>
             <h1
               style={{
-                margin: "0 0 6px",
+                margin: "0 0 22px",
                 fontSize: 26,
                 fontWeight: 600,
                 color: C.ink,
                 letterSpacing: "-0.2px",
               }}
             >
-              Welcome to your 2027 renewal
+              2027 Group Health Options
             </h1>
-            <p
-              style={{
-                margin: "0 0 22px",
-                fontSize: 14,
-                lineHeight: 1.6,
-                color: C.body,
-                textWrap: "pretty",
-              }}
-            >
-              The 2026 program is not available for 2027. Enter your group access code to see the
-              plans you have today, what you and your employees pay, and the options we shopped for
-              you.
-            </p>
 
             <label
               htmlFor="access-code"
@@ -95,7 +80,7 @@ export default function Login({
                 style={{ ...textInput, flex: 1 }}
               />
               <button onClick={onSubmit} style={primaryBtn}>
-                Generate
+                Continue
               </button>
             </div>
 
@@ -126,26 +111,9 @@ export default function Login({
                 color: C.muted,
               }}
             >
-              Lost your code? Hunter Shepherd &middot;{" "}
-              <a href="mailto:hunter@kennion.com">hunter@kennion.com</a> &middot; 205-641-0469
+              Hunter Shepherd &middot; <a href="mailto:hunter@kennion.com">hunter@kennion.com</a>{" "}
+              &middot; <a href="tel:+12056410469">205-641-0469</a>
             </div>
-          </div>
-
-          <div
-            style={{
-              marginTop: 16,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "flex-end",
-              gap: 10,
-            }}
-          >
-            <span style={{ fontSize: 11, color: C.faint }}>powered by</span>
-            <img
-              src={Logo}
-              alt="Kennion Benefit Advisors"
-              style={{ height: 28, display: "block" }}
-            />
           </div>
 
           {showDemoPanel && (

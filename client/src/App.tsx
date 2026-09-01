@@ -68,6 +68,10 @@ export default function App() {
         return r.json();
       })
       .then((d: KennionData) => {
+        // The census export carries a grand-total row ("TOTAL - 69 GROUPS")
+        // alongside the real groups. It has no plans, members or rates, so it
+        // is not a client and must never be signable-into.
+        d.groups = d.groups.filter((g) => (g.plans || []).length > 0);
         d.groups.forEach((g) => {
           g.code = codeFor(g.name);
         });
