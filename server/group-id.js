@@ -70,3 +70,32 @@ export function assignCodes(names, year = 2027) {
 
 /** Default ALE bucket from headcount; a judgement call staff can override. */
 export const sizeFor = (enrolled) => (Number(enrolled) >= 51 ? "51+" : "2-50");
+
+/**
+ * Normalised company name, used to recognise the same client across sources.
+ *
+ * Employee Navigator and the census do not always spell a company identically -
+ * "Aesto Health" against "Aesto Health, LLC" - and matching on the raw string
+ * imports the second as a brand new group, leaving the first behind as a stale
+ * duplicate. Punctuation and legal-form words carry no identity, so they are
+ * dropped; everything else is kept, so two genuinely different companies never
+ * collapse into one.
+ */
+const LEGAL = new Set([
+  "llc", "lc", "inc", "incorporated", "corp", "corporation", "co", "company",
+  "companies", "ltd", "limited", "lp", "llp", "pc", "pllc", "plc", "pa",
+]);
+
+export function normalizeName(name) {
+  return String(name || "")
+    .toLowerCase()
+    // Periods and apostrophes are dropped rather than spaced, so "R.E." and
+    // "RE" agree and "Mac's" and "Macs" agree.
+    .replace(/[.'\u2019`"]/g, "")
+    .replace(/&/g, " and ")
+    .replace(/[,()\-/]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w && !LEGAL.has(w))
+    .join(" ")
+    .trim();
+}

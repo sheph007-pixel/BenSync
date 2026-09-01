@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 import crypto from "node:crypto";
 import { parseEnStream } from "./en-parse.js";
 import { createDb } from "./db.js";
-import { assignCodes, sizeFor } from "./group-id.js";
+import { assignCodes, sizeFor, normalizeName } from "./group-id.js";
 import { eligibilityOf } from "./eligibility.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -133,6 +133,14 @@ function rebuild() {
     }
   });
 
+  // Rows that are almost certainly the same client under two spellings. These
+  // predate normalised matching; flagging them lets staff archive the stale one.
+  const byNorm = new Map();
+  groups.forEach((g) => {
+    const k = normalizeName(g.name);
+    byNorm.set(k, [...(byNorm.get(k) || []), g.name]);
+  });
+
   adminGroups = groups.map((g) => ({
     name: g.name,
     code: g.code,
@@ -161,6 +169,8 @@ function rebuild() {
     carriersSeen: g.carriersSeen || [],
     corporationType: g.corporationType || null,
     situsState: g.situsState || null,
+    enName: g.enName || null,
+    duplicateOf: (byNorm.get(normalizeName(g.name)) || []).filter((n) => n !== g.name),
     editedFields: Object.keys((meta[g.name] || {}).fields || {}),
     pyStart: g.pyStart || null,
     pyEnd: g.pyEnd || null,
@@ -258,9 +268,21 @@ async function readUpload(req) {
   return parseEnStream(req);
 }
 
+/**
+ * The existing group an imported company corresponds to. Exact name first, then
+ * the normalised form, so "Aesto Health, LLC" updates "Aesto Health" instead of
+ * landing beside it as a second copy of the same client.
+ */
+function matchExisting(name) {
+  const exact = groups.find((x) => x.name === name);
+  if (exact) return exact;
+  const key = normalizeName(name);
+  return groups.find((x) => normalizeName(x.name) === key) || null;
+}
+
 const summarise = (parsed) => {
   const g = parsed.group;
-  const current = groups.find((x) => x.name === g.name) || null;
+  const current = matchExisting(g.name);
   return {
     name: g.name,
     enIdentifier: g.enIdentifier,
@@ -274,6 +296,7 @@ const summarise = (parsed) => {
     hasSplit: !!parsed.split,
     stats: parsed.stats,
     isNew: !current,
+    matchedName: current && current.name !== g.name ? current.name : null,
     current: current && {
       enrolled: current.enrolled,
       lives: current.lives,
@@ -309,14 +332,23 @@ app.post("/api/admin/import", requireStaff, async (req, res) => {
     for (const parsed of companies) {
       const g = parsed.group;
       if (wanted && !wanted.has(g.name)) continue;
+
+      const prior = matchExisting(g.name);
       // The export has the SIC code but not its description, so carry that
       // across from the census rather than losing it on import.
-      const prior = groups.find((x) => x.name === g.name);
       if (prior && prior.sicDesc && !g.sicDesc) g.sicDesc = prior.sicDesc;
-      imported.groups[g.name] = g;
-      if (parsed.split) imported.splits[g.name] = parsed.split;
+
+      // Keep the existing group's name as the key. Access codes, hand-keyed
+      // rates and ALE buckets are all filed under it, and adopting the
+      // export's spelling would orphan every one of them.
+      const key = prior ? prior.name : g.name;
+      if (prior && prior.name !== g.name) g.enName = g.name;
+      g.name = key;
+
+      imported.groups[key] = g;
+      if (parsed.split) imported.splits[key] = parsed.split;
       if (db) await db.saveGroup(g, parsed.split, req.staffEmail || null);
-      applied.push({ name: g.name, enrolled: g.enrolled, monthly: g.monthly });
+      applied.push({ name: key, enrolled: g.enrolled, monthly: g.monthly });
     }
     if (!applied.length) return res.status(400).json({ error: "Nothing selected to import." });
     saveImports();

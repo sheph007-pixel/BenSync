@@ -124,6 +124,18 @@ than being lost. Plan names have their trailing year stripped so they match the 
 
 ### What an import does and does not overwrite
 
+An imported company is matched to an existing group by name, and if that fails,
+by a **normalised** name — punctuation and legal-form words removed — so
+"Aesto Health, LLC" updates "Aesto Health" instead of landing beside it as a
+second copy of the same client. The match is verified not to merge any two of
+the 68 census groups. The existing group's name stays the key, because access
+codes, hand-keyed rates and ALE buckets are all filed under it; the export's own
+spelling is kept alongside and shown in the table.
+
+Rows that are the same client under two names — created before this matching
+existed — are flagged in the Groups table with the row they duplicate, so the
+stale one can be archived.
+
 An import **never removes a group**. Only the companies you tick are touched;
 every other group is left exactly as it was, so a partial export cannot wipe the
 roster. Staff edits live in their own tables and survive imports untouched:

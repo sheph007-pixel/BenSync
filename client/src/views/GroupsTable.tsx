@@ -24,6 +24,8 @@ export interface AdminGroup {
   eligible?: boolean;
   programs?: string[];
   carriersSeen?: string[];
+  enName?: string | null;
+  duplicateOf?: string[];
   tpa?: string;
   plans?: { plan: string; tpa: string; enrolled: number; monthly: number }[];
 }
@@ -134,6 +136,7 @@ export default function GroupsTable({ groups, token, onChanged, onOpen }: Props)
     large: live.filter((g) => g.sizeCategory === "51+").length,
     archived: groups.length - live.length,
     excluded: groups.filter((g) => !g.archived && g.eligible === false).length,
+    dupes: groups.filter((g) => !g.archived && (g.duplicateOf || []).length).length,
   };
 
   return (
@@ -234,6 +237,26 @@ export default function GroupsTable({ groups, token, onChanged, onOpen }: Props)
         <span style={{ fontSize: 12.5, color: C.faint }}>{rows.length} shown</span>
       </div>
 
+      {counts.dupes > 0 && (
+        <div
+          style={{
+            marginTop: 12,
+            padding: "10px 12px",
+            background: C.amberTint,
+            border: `1px solid ${C.amberEdge}`,
+            borderRadius: 4,
+            fontSize: 12.5,
+            color: C.amber,
+            lineHeight: 1.55,
+          }}
+        >
+          <strong>{counts.dupes} rows look like the same client under two names.</strong> These
+          were created before imports matched on a normalised name. Open each pair, decide which
+          holds the current data, and archive the other — nothing is deleted. Flagged with
+          <span style={{ color: C.red }}> ⚠ duplicate</span> below.
+        </div>
+      )}
+
       {error && (
         <div
           role="alert"
@@ -290,6 +313,16 @@ export default function GroupsTable({ groups, token, onChanged, onOpen }: Props)
                     >
                       {g.name}
                     </button>
+                    {!!g.duplicateOf?.length && (
+                      <div style={{ fontSize: 11.5, color: C.red, marginTop: 2 }}>
+                        ⚠ duplicate of {g.duplicateOf.join(", ")}
+                      </div>
+                    )}
+                    {g.enName && (
+                      <div style={{ fontSize: 11.5, color: C.ghost, marginTop: 2 }}>
+                        Employee Navigator: {g.enName}
+                      </div>
+                    )}
                     {view === "excluded" ? (
                       <div style={{ fontSize: 11.5, color: C.red, marginTop: 2 }}>
                         carriers found: {(g.carriersSeen || []).join(", ") || "none"}
