@@ -11,6 +11,7 @@ import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import crypto from "node:crypto";
 import { parseEnStream } from "./en-parse.js";
+import { createDb } from "./db.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.resolve(__dirname, "..", "dist", "public");
@@ -43,9 +44,26 @@ function loadImports() {
 }
 let imported = loadImports();
 
+/**
+ * Postgres, when DATABASE_URL is set, is the source of truth for everything a
+ * human enters: imported groups, their splits, and hand-keyed rates. The JSON
+ * file remains as the fallback for a deployment without a database.
+ */
+const db = createDb(process.env.DATABASE_URL);
+let overrides = {};
+
 function saveImports() {
+  if (db) return; // Postgres holds it; no file to write.
   fs.mkdirSync(DATA_DIR, { recursive: true });
   fs.writeFileSync(IMPORTS_FILE, JSON.stringify(imported, null, 2));
+}
+
+/** Overrides for one group, in the `group||plan||tier` shape the client uses. */
+function overridesFor(name) {
+  const out = {};
+  const prefix = name + "||";
+  for (const [k, v] of Object.entries(overrides)) if (k.startsWith(prefix)) out[k] = v;
+  return out;
 }
 
 // The census export carries a grand-total row alongside the real groups; it has
@@ -111,18 +129,19 @@ const ADMIN_CODE = String(process.env.ADMIN_CODE || "87878787").trim();
 const sessions = new Map();
 const SESSION_MS = 8 * 60 * 60 * 1000;
 
-function mintSession() {
+function mintSession(email) {
   const token = crypto.randomBytes(24).toString("hex");
-  sessions.set(token, Date.now() + SESSION_MS);
+  sessions.set(token, { exp: Date.now() + SESSION_MS, email });
   return token;
 }
 function requireStaff(req, res, next) {
   const t = (req.get("authorization") || "").replace(/^Bearer /i, "").trim();
-  const exp = sessions.get(t);
-  if (!exp || exp < Date.now()) {
+  const s = sessions.get(t);
+  if (!s || s.exp < Date.now()) {
     sessions.delete(t);
     return res.status(401).json({ error: "sign in again" });
   }
+  req.staffEmail = s.email;
   next();
 }
 
@@ -146,8 +165,10 @@ app.post("/api/signin", (req, res) => {
     }
     return res.json({
       kind: "admin",
-      token: mintSession(),
-      durable: DURABLE,
+      token: mintSession(email),
+      durable: !!db || DURABLE,
+      storage: db ? "postgres" : DURABLE ? "volume" : "ephemeral",
+      overrides,
       meta: data.meta,
       groups: adminGroups,
       planDesigns: data.planDesigns,
@@ -170,6 +191,7 @@ app.post("/api/signin", (req, res) => {
     uhc: data.uhc,
     // Only this group's contribution split, when Employee Navigator has one.
     splits: splitFor(g.name) ? { [g.name]: splitFor(g.name) } : {},
+    overrides: overridesFor(g.name),
   });
 });
 
@@ -233,8 +255,10 @@ app.post("/api/admin/import", requireStaff, async (req, res) => {
     for (const parsed of companies) {
       const g = parsed.group;
       if (wanted && !wanted.has(g.name)) continue;
+      g.code = codeFor(g.name);
       imported.groups[g.name] = g;
       if (parsed.split) imported.splits[g.name] = parsed.split;
+      if (db) await db.saveGroup(g, parsed.split, req.staffEmail || null);
       applied.push({ name: g.name, enrolled: g.enrolled, monthly: g.monthly });
     }
     if (!applied.length) return res.status(400).json({ error: "Nothing selected to import." });
@@ -242,7 +266,8 @@ app.post("/api/admin/import", requireStaff, async (req, res) => {
     rebuild();
     res.json({
       ok: true,
-      durable: DURABLE,
+      durable: !!db || DURABLE,
+      storage: db ? "postgres" : DURABLE ? "volume" : "ephemeral",
       applied,
       skipped: failures,
       groups: adminGroups,
@@ -250,6 +275,27 @@ app.post("/api/admin/import", requireStaff, async (req, res) => {
   } catch (e) {
     res.status(400).json({ error: e.message });
   }
+});
+
+/** Persist one hand-keyed rate. Shared across the team, not per-browser. */
+app.post("/api/admin/override", requireStaff, express.json({ limit: "16kb" }), async (req, res) => {
+  const { group, plan, censusTier, rate } = req.body || {};
+  if (!group || !plan || !censusTier) {
+    return res.status(400).json({ error: "group, plan and censusTier are required" });
+  }
+  const key = `${group}||${plan}||${censusTier}`;
+  const clean = rate === "" || rate == null ? null : Number(String(rate).replace(/[^0-9.]/g, ""));
+  if (clean != null && !isFinite(clean)) return res.status(400).json({ error: "rate must be a number" });
+
+  if (clean == null) delete overrides[key];
+  else overrides[key] = String(clean);
+
+  try {
+    if (db) await db.setOverride(group, plan, censusTier, clean, req.staffEmail || null);
+  } catch (e) {
+    return res.status(500).json({ error: "Could not save: " + e.message });
+  }
+  res.json({ ok: true, key, rate: clean });
 });
 
 app.use(
@@ -275,12 +321,31 @@ app.use((err, req, res, next) => {
 });
 
 const port = Number(process.env.PORT) || 5000;
-rebuild();
+async function boot() {
+  if (db) {
+    try {
+      await db.init();
+      const state = await db.load();
+      imported = { groups: state.groups, splits: state.splits };
+      overrides = state.overrides;
+      const st = await db.stats();
+      console.log(`postgres connected — ${st.groups} imported groups, ${st.overrides} rate overrides`);
+    } catch (e) {
+      // A database that is configured but unreachable must not take the site
+      // down; fall back to the shipped census and say so loudly.
+      console.error("postgres unavailable, serving the shipped census only:", e.message);
+    }
+  }
+  rebuild();
+}
+
+await boot();
 
 app.listen(port, "0.0.0.0", () => {
   const n = Object.keys(imported.groups || {}).length;
+  const store = db ? "postgres" : DURABLE ? "volume" : "ephemeral disk";
   console.log(
-    `Kennion renewal portal listening on :${port} — ${groups.length} groups` +
-      (n ? `, ${n} imported (${DURABLE ? "durable" : "ephemeral: set DATA_DIR to a volume"})` : ""),
+    `Kennion renewal portal listening on :${port} — ${groups.length} groups, ` +
+      `${n} imported, storage: ${store}`,
   );
 });

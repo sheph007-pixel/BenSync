@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   TIERS,
   fmtDate,
@@ -25,7 +25,6 @@ import BreakdownModal from "@/views/BreakdownModal";
 const EE_PCT = 80;
 const DEP_PCT = 32;
 
-const OVERRIDES_KEY = "kennion.rateOverrides";
 
 export default function App() {
   const [data, setData] = useState<KennionData | null>(null);
@@ -39,6 +38,9 @@ export default function App() {
   const [staffCode, setStaffCode] = useState("");
   const [staffError, setStaffError] = useState(false);
   const [token, setToken] = useState("");
+  const tokenRef = useRef("");
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [storage, setStorage] = useState("");
   const [durable, setDurable] = useState(false);
 
   const [tab, setTab] = useState<"current" | "2027">("current");
@@ -59,13 +61,6 @@ export default function App() {
   const [gapsOnly, setGapsOnly] = useState(false);
   const [overrides, setOverrides] = useState<Overrides>({});
 
-  useEffect(() => {
-    try {
-      setOverrides(JSON.parse(window.localStorage.getItem(OVERRIDES_KEY) || "{}") || {});
-    } catch {
-      setOverrides({});
-    }
-  }, []);
 
   /**
    * Sign in against the server. The census is not public, so a code buys
@@ -91,7 +86,10 @@ export default function App() {
       const p = await r.json();
       if (p.kind === "admin") {
         setToken(p.token || "");
+        tokenRef.current = p.token || "";
         setDurable(!!p.durable);
+        setStorage(p.storage || "");
+        setOverrides(p.overrides || {});
         setData({
           meta: p.meta,
           groups: p.groups,
@@ -101,6 +99,7 @@ export default function App() {
         } as KennionData);
         setAdmin(true);
       } else {
+        setOverrides(p.overrides || {});
         setData({
           meta: p.meta,
           groups: [p.group],
@@ -117,20 +116,29 @@ export default function App() {
     }
   }, []);
 
+  /**
+   * Hand-keyed rates are saved on the server, so they are shared with everyone
+   * at Kennion rather than living in whichever browser typed them. The field
+   * updates immediately and the write follows; a failed write is surfaced
+   * rather than silently dropped.
+   */
   const setOverride = useCallback(
     (group: string, plan: string, census: string, raw: string) => {
+      const k = ovKey(group, plan, census);
       setOverrides((prev) => {
         const next = { ...prev };
-        const k = ovKey(group, plan, census);
         if (raw.trim() === "") delete next[k];
         else next[k] = raw;
-        try {
-          window.localStorage.setItem(OVERRIDES_KEY, JSON.stringify(next));
-        } catch {
-          /* private browsing — edits stay in memory for this session */
-        }
         return next;
       });
+      setSaveState("saving");
+      void fetch("/api/admin/override", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${tokenRef.current}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ group, plan, censusTier: census, rate: raw.trim() }),
+      })
+        .then((r) => setSaveState(r.ok ? "saved" : "error"))
+        .catch(() => setSaveState("error"));
     },
     [],
   );
@@ -274,6 +282,8 @@ export default function App() {
         data={data}
         token={token}
         durable={durable}
+        storage={storage}
+        saveState={saveState}
         onImported={(gs) =>
           setData((d) => (d ? ({ ...d, groups: gs } as KennionData) : d))
         }

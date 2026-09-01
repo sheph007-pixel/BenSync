@@ -26,10 +26,11 @@ interface Preview {
 interface Props {
   token: string;
   durable: boolean;
+  storage: string;
   onImported: (groups: unknown[]) => void;
 }
 
-export default function ImportPanel({ token, durable, onImported }: Props) {
+export default function ImportPanel({ token, durable, storage, onImported }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState("");
@@ -147,17 +148,24 @@ export default function ImportPanel({ token, durable, onImported }: Props) {
         until you confirm.
       </div>
 
-      {!durable &&
-        banner(
-          C.amberTint,
-          C.amberEdge,
-          C.amber,
-          <>
-            Imports are held on the server's disk, which Railway replaces on every deploy — so they
-            will be lost at the next one. Mount a Railway volume and set <code>DATA_DIR</code> to it
-            to make them permanent.
-          </>,
-        )}
+      {storage === "postgres"
+        ? banner(
+            C.greenTint,
+            C.greenEdge,
+            C.green,
+            <>Imports are stored in Postgres, so they survive deploys and are shared across the team.</>,
+          )
+        : !durable &&
+          banner(
+            C.amberTint,
+            C.amberEdge,
+            C.amber,
+            <>
+              No database is connected, so imports are held on the server's disk, which Railway
+              replaces on every deploy. Set <code>DATABASE_URL</code> (or <code>DATA_DIR</code> to a
+              mounted volume) to make them permanent.
+            </>,
+          )}
 
       <div style={{ marginTop: 14, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
         <input

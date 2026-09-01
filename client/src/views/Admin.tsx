@@ -15,6 +15,8 @@ interface Props {
   data: KennionData;
   token: string;
   durable: boolean;
+  storage: string;
+  saveState: "idle" | "saving" | "saved" | "error";
   onImported: (groups: unknown[]) => void;
   overrides: Overrides;
   query: string;
@@ -44,6 +46,8 @@ export default function Admin({
   data,
   token,
   durable,
+  storage,
+  saveState,
   onImported,
   overrides,
   query,
@@ -195,7 +199,7 @@ export default function Admin({
     {
       label: "Entered by hand",
       value: String(stats.nManual),
-      note: stats.nManual ? "saved in this browser" : "none yet",
+      note: stats.nManual ? (storage === "postgres" ? "saved to the database" : "saved on the server") : "none yet",
     },
     {
       label: "Still calculated",
@@ -275,8 +279,11 @@ export default function Admin({
             >
               Every tier rate Kennion has on file. Rates billed through Employee Navigator are
               locked in black. Empty boxes show the schedule-calculated rate in grey — type over any
-              of them to enter the real rate from the carrier sheet. Edits save in this browser and
-              flow straight into the client-facing pages.
+              of them to enter the real rate from the carrier sheet. Edits are saved
+              {storage === "postgres"
+                ? " to the database and shared with everyone at Kennion"
+                : " on the server"}
+              , and flow straight into the client-facing pages.
             </div>
           </div>
           <button
@@ -296,7 +303,7 @@ export default function Admin({
           </button>
         </div>
 
-        <ImportPanel token={token} durable={durable} onImported={onImported} />
+        <ImportPanel token={token} durable={durable} storage={storage} onImported={onImported} />
 
         <div
           style={{
@@ -355,8 +362,21 @@ export default function Admin({
           <button onClick={onToggleGaps} style={chip(gapsOnly)}>
             Needs a real rate
           </button>
-          <span style={{ fontSize: 12.5, color: C.faint, marginLeft: "auto" }}>
-            {rows.length} of {all.length} plans
+          <span
+            style={{
+              fontSize: 12.5,
+              marginLeft: "auto",
+              color:
+                saveState === "error" ? C.red : saveState === "saved" ? C.green : C.faint,
+            }}
+          >
+            {saveState === "saving"
+              ? "Saving…"
+              : saveState === "saved"
+                ? "Saved"
+                : saveState === "error"
+                  ? "Not saved — sign in again"
+                  : `${rows.length} of ${all.length} plans`}
           </span>
         </div>
 
