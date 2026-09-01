@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   TIERS,
-  codeFor,
   fmtDate,
   ovKey,
   planRows,
@@ -26,17 +25,14 @@ const EE_PCT = 80;
 const DEP_PCT = 32;
 
 const OVERRIDES_KEY = "kennion.rateOverrides";
-const ADMIN_CODE = "KEN-ADMIN";
-/** Demo access codes are for internal review; off by default in production. */
-const SHOW_DEMO_CODES = import.meta.env.DEV;
 
 export default function App() {
   const [data, setData] = useState<KennionData | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [code, setCode] = useState<string | null>(null);
   const [codeInput, setCodeInput] = useState("");
   const [codeError, setCodeError] = useState(false);
-  const [showDemo, setShowDemo] = useState(false);
 
   const [tab, setTab] = useState<"current" | "2027">("current");
   const [modalPlan, setModalPlan] = useState<string | null>(null);
@@ -62,22 +58,52 @@ export default function App() {
     } catch {
       setOverrides({});
     }
-    fetch("/data/kennion.json")
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json();
-      })
-      .then((d: KennionData) => {
-        // The census export carries a grand-total row ("TOTAL - 69 GROUPS")
-        // alongside the real groups. It has no plans, members or rates, so it
-        // is not a client and must never be signable-into.
-        d.groups = d.groups.filter((g) => (g.plans || []).length > 0);
-        d.groups.forEach((g) => {
-          g.code = codeFor(g.name);
-        });
-        setData(d);
-      })
-      .catch(() => setLoadError(true));
+  }, []);
+
+  /**
+   * Sign in against the server. The census is not public, so a code buys
+   * exactly one group's data (or, for the admin code, a PII-free rate table).
+   */
+  const signIn = useCallback(async (raw: string) => {
+    const code = raw.trim().toUpperCase();
+    if (!code) return;
+    setBusy(true);
+    setCodeError(false);
+    try {
+      const r = await fetch("/api/signin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      });
+      if (!r.ok) {
+        setCodeError(true);
+        return;
+      }
+      const p = await r.json();
+      if (p.kind === "admin") {
+        setData({
+          meta: p.meta,
+          groups: p.groups,
+          planDesigns: p.planDesigns,
+          uhc: { detail: {}, summary: {}, menu: [], mapping: [] },
+          splits: {},
+        } as KennionData);
+        setAdmin(true);
+      } else {
+        setData({
+          meta: p.meta,
+          groups: [p.group],
+          planDesigns: p.planDesigns,
+          uhc: p.uhc,
+          splits: p.splits,
+        } as KennionData);
+        setCode(p.group.code);
+      }
+    } catch {
+      setLoadError(true);
+    } finally {
+      setBusy(false);
+    }
   }, []);
 
   const setOverride = useCallback(
@@ -122,23 +148,10 @@ export default function App() {
     [rows],
   );
 
-  const submit = () => {
-    const entered = codeInput.trim().toUpperCase();
-    if (entered === ADMIN_CODE) {
-      setAdmin(true);
-      setCodeError(false);
-      return;
-    }
-    const hit = data?.groups.find((x) => x.code === entered);
-    if (hit) {
-      setCode(entered);
-      setCodeError(false);
-    } else {
-      setCodeError(true);
-    }
-  };
+  const submit = () => void signIn(codeInput);
 
   const signOut = () => {
+    setData(null);
     setCode(null);
     setCodeInput("");
     setTab("current");
@@ -203,21 +216,20 @@ export default function App() {
     );
   }
 
-  if (!data) {
+  // No session yet: there is nothing to load until a code is entered, because
+  // the census is only handed out per-group in exchange for one.
+  if (!data || (!admin && !g)) {
     return (
-      <div
-        style={{
-          position: "fixed",
-          inset: 0,
-          display: "grid",
-          placeItems: "center",
-          background: C.page,
-          fontSize: 13.5,
-          color: C.muted,
+      <Login
+        codeInput={codeInput}
+        codeError={codeError}
+        busy={busy}
+        onCode={(v) => {
+          setCodeInput(v);
+          setCodeError(false);
         }}
-      >
-        Loading your renewal data…
-      </div>
+        onSubmit={submit}
+      />
     );
   }
 
@@ -239,28 +251,9 @@ export default function App() {
     );
   }
 
-  if (!g) {
-    return (
-      <Login
-        codeInput={codeInput}
-        codeError={codeError}
-        showDemo={showDemo}
-        showDemoPanel={SHOW_DEMO_CODES}
-        demoGroups={data.groups.slice(0, 6)}
-        onCode={(v) => {
-          setCodeInput(v);
-          setCodeError(false);
-        }}
-        onSubmit={submit}
-        onToggleDemo={() => setShowDemo((v) => !v)}
-        onPickDemo={(c) => {
-          setCode(c);
-          setCodeInput(c);
-          setCodeError(false);
-        }}
-      />
-    );
-  }
+  // Narrowing for TypeScript: a non-admin session always has a group, because
+  // the guard above returns the sign-in screen otherwise.
+  if (!g) return null;
 
   const tabBase = {
     background: "none",
@@ -326,19 +319,6 @@ export default function App() {
             </button>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <button
-              onClick={() => setAdmin(true)}
-              style={{
-                background: "none",
-                border: "none",
-                fontSize: 13.5,
-                color: C.muted,
-                cursor: "pointer",
-                padding: 0,
-              }}
-            >
-              Rate Admin
-            </button>
             <button
               onClick={signOut}
               style={{

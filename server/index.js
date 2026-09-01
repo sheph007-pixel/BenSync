@@ -1,6 +1,9 @@
-// Static server for the Kennion 2027 renewal portal.
-// The portal is a single-page app; everything it needs (group data, logo)
-// ships as static assets under dist/public.
+// Server for the Kennion 2027 renewal portal.
+//
+// The census carries employee names, ages, ZIPs and premiums for 1,318 people,
+// so it is never served as a static file. It is loaded here and handed out one
+// group at a time, only in exchange for that group's access code. Rate
+// Administration gets a separate, PII-free projection.
 import express from "express";
 import compression from "compression";
 import path from "node:path";
@@ -16,26 +19,91 @@ if (!fs.existsSync(indexHtml)) {
   process.exit(1);
 }
 
+const data = JSON.parse(fs.readFileSync(path.join(__dirname, "data", "kennion.json"), "utf8"));
+
+// The census export carries a grand-total row alongside the real groups; it has
+// no plans, members or rates and is not a client.
+const groups = data.groups.filter((g) => (g.plans || []).length > 0);
+
+/**
+ * Group access code.
+ *
+ * Interim scheme, pending the Employee Navigator Company Identifiers: derived
+ * from the group name. Once the identifier list arrives this becomes a lookup
+ * of the identifier and nothing else in the app has to change, because codes
+ * are resolved here and never shipped to the browser.
+ */
+function codeFor(name) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 100000;
+  const letters = name.replace(/[^A-Za-z]/g, "").toUpperCase().slice(0, 4).padEnd(4, "X");
+  return "KEN-" + letters + "-" + String(h).padStart(5, "0").slice(0, 4);
+}
+
+const ADMIN_CODE = (process.env.ADMIN_CODE || "KEN-ADMIN").toUpperCase();
+const byCode = new Map();
+groups.forEach((g) => {
+  g.code = codeFor(g.name);
+  byCode.set(g.code, g);
+});
+
+/** Rate administration needs names, plans and rates — never member records. */
+const adminGroups = groups.map((g) => ({
+  name: g.name,
+  code: g.code,
+  tpa: g.tpa,
+  enrolled: g.enrolled,
+  lives: g.lives,
+  plans: g.plans,
+  rates: g.rates,
+}));
+
 const app = express();
 app.disable("x-powered-by");
 app.use(compression());
-
-// Hashed bundles are immutable; the data file and index are not.
-app.use(
-  "/assets",
-  express.static(path.join(publicDir, "assets"), {
-    maxAge: "1y",
-    immutable: true,
-  }),
-);
-app.use(express.static(publicDir, { index: false, maxAge: "1h" }));
+app.use(express.json({ limit: "256kb" }));
 
 app.get("/healthz", (_req, res) => res.type("text/plain").send("ok"));
 
-// SPA fallback — the portal owns every route.
+app.post("/api/signin", (req, res) => {
+  const code = String((req.body && req.body.code) || "").trim().toUpperCase();
+  if (!code) return res.status(400).json({ error: "code required" });
+
+  if (code === ADMIN_CODE) {
+    return res.json({
+      kind: "admin",
+      meta: data.meta,
+      groups: adminGroups,
+      planDesigns: data.planDesigns,
+    });
+  }
+
+  const g = byCode.get(code);
+  if (!g) return res.status(404).json({ error: "no such group" });
+
+  return res.json({
+    kind: "group",
+    meta: data.meta,
+    group: g,
+    planDesigns: data.planDesigns,
+    // Carrier menu and quoted rates: no personal data, and the 2027 pricing
+    // needs the reference rows to scale un-quoted plans.
+    uhc: data.uhc,
+    // Only this group's contribution split, when Employee Navigator has one.
+    splits: data.splits[g.name] ? { [g.name]: data.splits[g.name] } : {},
+  });
+});
+
+app.use(
+  "/assets",
+  express.static(path.join(publicDir, "assets"), { maxAge: "1y", immutable: true }),
+);
+app.use(express.static(publicDir, { index: false, maxAge: "1h" }));
+
+// SPA fallback — the portal owns every non-API route.
 app.use((_req, res) => res.sendFile(indexHtml));
 
 const port = Number(process.env.PORT) || 5000;
 app.listen(port, "0.0.0.0", () => {
-  console.log(`Kennion renewal portal listening on :${port}`);
+  console.log(`Kennion renewal portal listening on :${port} — ${groups.length} groups`);
 });
