@@ -9,9 +9,13 @@ import {
 } from "@/lib/model";
 import { C, chip, Logo, num, panel, pill, textInput, th } from "@/lib/ui";
 import Footer from "@/views/Footer";
+import ImportPanel from "@/views/ImportPanel";
 
 interface Props {
   data: KennionData;
+  token: string;
+  durable: boolean;
+  onImported: (groups: unknown[]) => void;
   overrides: Overrides;
   query: string;
   tpa: string;
@@ -38,6 +42,9 @@ const cellBase = {
 
 export default function Admin({
   data,
+  token,
+  durable,
+  onImported,
   overrides,
   query,
   tpa,
@@ -288,6 +295,8 @@ export default function Admin({
             Export rates
           </button>
         </div>
+
+        <ImportPanel token={token} durable={durable} onImported={onImported} />
 
         <div
           style={{

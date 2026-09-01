@@ -38,6 +38,8 @@ export default function App() {
   const [email, setEmail] = useState("");
   const [staffCode, setStaffCode] = useState("");
   const [staffError, setStaffError] = useState(false);
+  const [token, setToken] = useState("");
+  const [durable, setDurable] = useState(false);
 
   const [tab, setTab] = useState<"current" | "2027">("current");
   const [modalPlan, setModalPlan] = useState<string | null>(null);
@@ -88,6 +90,8 @@ export default function App() {
       }
       const p = await r.json();
       if (p.kind === "admin") {
+        setToken(p.token || "");
+        setDurable(!!p.durable);
         setData({
           meta: p.meta,
           groups: p.groups,
@@ -164,6 +168,7 @@ export default function App() {
     setEmail("");
     setStaffCode("");
     setStaffError(false);
+    setToken("");
     setCode(null);
     setCodeInput("");
     setTab("current");
@@ -267,6 +272,11 @@ export default function App() {
     return (
       <Admin
         data={data}
+        token={token}
+        durable={durable}
+        onImported={(gs) =>
+          setData((d) => (d ? ({ ...d, groups: gs } as KennionData) : d))
+        }
         overrides={overrides}
         query={adminQuery}
         tpa={adminTpa}
