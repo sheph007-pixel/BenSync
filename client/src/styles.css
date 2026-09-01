@@ -1,0 +1,56 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+body {
+  background: #eef1f2;
+  color: #333333;
+  font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+* {
+  box-sizing: border-box;
+}
+a {
+  color: #2166cd;
+  text-decoration: none;
+}
+a:hover {
+  color: #17479a;
+  text-decoration: underline;
+}
+input,
+button,
+select,
+textarea {
+  font-family: inherit;
+}
+.printonly {
+  display: none;
+}
+
+@media print {
+  @page {
+    margin: 0.45in;
+  }
+  body {
+    background: #fff;
+  }
+  .noprint {
+    display: none !important;
+  }
+  .panel {
+    break-inside: avoid;
+    box-shadow: none !important;
+    border: 1px solid #cfd6da !important;
+    overflow: visible !important;
+  }
+  .panel table {
+    min-width: 0 !important;
+    font-size: 9px !important;
+  }
+  .printonly {
+    display: block !important;
+  }
+}

@@ -1,185 +1,482 @@
-import { Switch, Route } from "wouter";
-import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider, useAuth } from "@/lib/auth";
-import { ThemeProvider } from "@/components/theme-provider";
-import RegisterPage from "@/pages/register";
-import LoginPage from "@/pages/login";
-import ForgotPasswordPage from "@/pages/forgot-password";
-import ResetPasswordPage from "@/pages/reset-password";
-import AuthVerifyPage from "@/pages/auth-verify";
-import DashboardPage from "@/pages/dashboard";
-import GroupsPage from "@/pages/groups";
-import PlanDetailsPage from "@/pages/plan-details";
-import ReplaceCensusPage from "@/pages/proposal/replace-census";
-import AdminHome from "@/pages/admin";
-import AdminGroupViewPage from "@/pages/admin/group-view";
-import AdminTemplatesPage from "@/pages/admin/templates";
-import AdminQuotesPage from "@/pages/admin/quotes/index";
-import AdminQuoteWizardPage from "@/pages/admin/quotes/new";
-import AdminQuotesBulkPage from "@/pages/admin/quotes/bulk";
-import PublicQuotePage from "@/pages/quote/[token]";
-import PublicPlanDetailsPage from "@/pages/quote/plan-details";
-import NotFound from "@/pages/not-found";
-import { Loader2 } from "lucide-react";
-import { Redirect } from "wouter";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  TIERS,
+  codeFor,
+  fmtDate,
+  ovKey,
+  planRows,
+  rateFor,
+  type Freq,
+  type KennionData,
+  type Overrides,
+} from "@/lib/model";
+import { C, Logo, panel, smallPrimaryBtn } from "@/lib/ui";
+import Login from "@/views/Login";
+import Admin from "@/views/Admin";
+import Current from "@/views/Current";
+import Options, { type SortKey } from "@/views/Options";
+import BreakdownModal from "@/views/BreakdownModal";
 
-function ProtectedRoute({ component: Component, adminOnly }: { component: React.ComponentType; adminOnly?: boolean }) {
-  const { user, isLoading } = useAuth();
+/**
+ * Placeholder employer-contribution percentages, used only for groups whose
+ * Employee Navigator export has not been loaded. Where EN data exists the real
+ * split is used and these are ignored entirely.
+ */
+const EE_PCT = 80;
+const DEP_PCT = 32;
 
-  if (isLoading) {
+const OVERRIDES_KEY = "kennion.rateOverrides";
+const ADMIN_CODE = "KEN-ADMIN";
+/** Demo access codes are for internal review; off by default in production. */
+const SHOW_DEMO_CODES = import.meta.env.DEV;
+
+export default function App() {
+  const [data, setData] = useState<KennionData | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  const [code, setCode] = useState<string | null>(null);
+  const [codeInput, setCodeInput] = useState("");
+  const [codeError, setCodeError] = useState(false);
+  const [showDemo, setShowDemo] = useState(false);
+
+  const [tab, setTab] = useState<"current" | "2027">("current");
+  const [modalPlan, setModalPlan] = useState<string | null>(null);
+  const [freq, setFreq] = useState<Freq["key"]>("M");
+
+  const [sort, setSort] = useState<SortKey>("monthly");
+  const [dir, setDir] = useState(1);
+  const [gridQuery, setGridQuery] = useState("");
+  const [carriers, setCarriers] = useState<Record<string, boolean>>({});
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [note, setNote] = useState("");
+  const [sent, setSent] = useState(false);
+
+  const [admin, setAdmin] = useState(false);
+  const [adminQuery, setAdminQuery] = useState("");
+  const [adminTpa, setAdminTpa] = useState("All");
+  const [gapsOnly, setGapsOnly] = useState(false);
+  const [overrides, setOverrides] = useState<Overrides>({});
+
+  useEffect(() => {
+    try {
+      setOverrides(JSON.parse(window.localStorage.getItem(OVERRIDES_KEY) || "{}") || {});
+    } catch {
+      setOverrides({});
+    }
+    fetch("/data/kennion.json")
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((d: KennionData) => {
+        d.groups.forEach((g) => {
+          g.code = codeFor(g.name);
+        });
+        setData(d);
+      })
+      .catch(() => setLoadError(true));
+  }, []);
+
+  const setOverride = useCallback(
+    (group: string, plan: string, census: string, raw: string) => {
+      setOverrides((prev) => {
+        const next = { ...prev };
+        const k = ovKey(group, plan, census);
+        if (raw.trim() === "") delete next[k];
+        else next[k] = raw;
+        try {
+          window.localStorage.setItem(OVERRIDES_KEY, JSON.stringify(next));
+        } catch {
+          /* private browsing — edits stay in memory for this session */
+        }
+        return next;
+      });
+    },
+    [],
+  );
+
+  const g = useMemo(
+    () => (data && code ? data.groups.find((x) => x.code === code) || null : null),
+    [data, code],
+  );
+
+  const rows = useMemo(
+    () => (data && g ? planRows(data, overrides, g, EE_PCT, DEP_PCT) : []),
+    [data, overrides, g],
+  );
+
+  const totals = useMemo(
+    () =>
+      rows.reduce(
+        (a, r) => ({
+          er: a.er + r.er,
+          ee: a.ee + r.ee,
+          total: a.total + r.total,
+          enrolled: a.enrolled + (r.p.enrolled || 0),
+        }),
+        { er: 0, ee: 0, total: 0, enrolled: 0 },
+      ),
+    [rows],
+  );
+
+  const submit = () => {
+    const entered = codeInput.trim().toUpperCase();
+    if (entered === ADMIN_CODE) {
+      setAdmin(true);
+      setCodeError(false);
+      return;
+    }
+    const hit = data?.groups.find((x) => x.code === entered);
+    if (hit) {
+      setCode(entered);
+      setCodeError(false);
+    } else {
+      setCodeError(true);
+    }
+  };
+
+  const signOut = () => {
+    setCode(null);
+    setCodeInput("");
+    setTab("current");
+    setModalPlan(null);
+    setAdmin(false);
+  };
+
+  const toggleSelected = (plan: string) => {
+    setSelected((prev) => ({ ...prev, [plan]: !prev[plan] }));
+    setSent(false);
+  };
+
+  const exportRates = () => {
+    if (!data) return;
+    const out: Record<string, Record<string, Record<string, unknown>>> = {};
+    data.groups.forEach((grp) => {
+      (grp.plans || []).forEach((p) => {
+        TIERS.forEach((t) => {
+          const r = rateFor(overrides, grp, p.plan, t.key);
+          if (r.rate == null) return;
+          out[grp.name] = out[grp.name] || {};
+          out[grp.name][p.plan] = out[grp.name][p.plan] || {};
+          out[grp.name][p.plan][t.census] = {
+            rate: r.rate,
+            source: r.manual ? "manual" : r.derived ? "calculated" : "billed",
+          };
+        });
+      });
+    });
+    const blob = new Blob(
+      [JSON.stringify({ generated: new Date().toISOString(), rates: out }, null, 2)],
+      { type: "application/json" },
+    );
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "kennion-2026-rates.json";
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  };
+
+  if (loadError) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "grid",
+          placeItems: "center",
+          padding: 20,
+          textAlign: "center",
+        }}
+      >
+        <div style={{ ...panel, padding: "26px 30px", maxWidth: 460 }}>
+          <div style={{ fontSize: 17, fontWeight: 600, color: C.ink }}>
+            We couldn't load your renewal data
+          </div>
+          <p style={{ fontSize: 13.5, lineHeight: 1.6, color: C.body }}>
+            Please refresh the page. If it keeps happening, call Hunter Shepherd at 205-641-0469 or
+            email <a href="mailto:hunter@kennion.com">hunter@kennion.com</a>.
+          </p>
+        </div>
       </div>
     );
   }
 
-  if (!user) {
-    return <Redirect to="/broker-log-in" />;
-  }
-
-  if (adminOnly && user.role !== "admin") {
-    return <Redirect to="/dashboard" />;
-  }
-
-  return <Component />;
-}
-
-function PublicRoute({ component: Component }: { component: React.ComponentType }) {
-  const { user, isLoading } = useAuth();
-
-  if (isLoading) {
+  if (!data) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          display: "grid",
+          placeItems: "center",
+          background: C.page,
+          fontSize: 13.5,
+          color: C.muted,
+        }}
+      >
+        Loading your renewal data…
       </div>
     );
   }
 
-  if (user) {
-    return <Redirect to={user.role === "admin" ? "/admin" : "/dashboard"} />;
+  if (admin) {
+    return (
+      <Admin
+        data={data}
+        overrides={overrides}
+        query={adminQuery}
+        tpa={adminTpa}
+        gapsOnly={gapsOnly}
+        onQuery={setAdminQuery}
+        onTpa={setAdminTpa}
+        onToggleGaps={() => setGapsOnly((v) => !v)}
+        onSetOverride={setOverride}
+        onExport={exportRates}
+        onExit={signOut}
+      />
+    );
   }
 
-  return <Component />;
-}
+  if (!g) {
+    return (
+      <Login
+        codeInput={codeInput}
+        codeError={codeError}
+        showDemo={showDemo}
+        showDemoPanel={SHOW_DEMO_CODES}
+        demoGroups={data.groups.slice(0, 6)}
+        onCode={(v) => {
+          setCodeInput(v);
+          setCodeError(false);
+        }}
+        onSubmit={submit}
+        onToggleDemo={() => setShowDemo((v) => !v)}
+        onPickDemo={(c) => {
+          setCode(c);
+          setCodeInput(c);
+          setCodeError(false);
+        }}
+      />
+    );
+  }
 
-function Router() {
+  const tabBase = {
+    background: "none",
+    border: "none",
+    borderBottom: "3px solid transparent",
+    padding: "0 15px",
+    fontSize: 13.5,
+    color: C.body,
+    cursor: "pointer",
+  };
+  const tabOn = {
+    ...tabBase,
+    borderBottom: `3px solid ${C.orange}`,
+    fontWeight: 600,
+    color: C.ink,
+  };
+
+  const subline =
+    tab === "2027"
+      ? "Effective 01/01/2027"
+      : `Dates ${fmtDate(g.pyStart)} - ${fmtDate(g.pyEnd)}`;
+
+  const printLine =
+    (tab === "current"
+      ? `Current group health plans and cost, plan year ${fmtDate(g.pyStart)} – ${fmtDate(g.pyEnd)}`
+      : "2027 renewal options, effective January 1, 2027") +
+    ` · data as of 7/31/2026 · printed ${new Date().toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    })}`;
+
   return (
-    <Switch>
-      {/* The marketing site owns "/" and "/login" on full page loads
-          (served by Express from /marketing). These SPA routes only fire
-          on client-side navigation; send both to the broker sign-in. */}
-      <Route path="/">
-        <Redirect to="/broker-log-in" />
-      </Route>
-      <Route path="/login">
-        <Redirect to="/broker-log-in" />
-      </Route>
-      {/* Broker sign-in for admins and broker accounts. */}
-      <Route path="/broker-log-in">
-        <PublicRoute component={LoginPage} />
-      </Route>
-      {/* Broker sign-up. */}
-      <Route path="/broker-sign-up">
-        <PublicRoute component={RegisterPage} />
-      </Route>
-      {/* Backward-compat redirects for the old auth URLs. */}
-      <Route path="/portal">
-        <Redirect to="/broker-log-in" />
-      </Route>
-      <Route path="/register">
-        <Redirect to="/broker-sign-up" />
-      </Route>
-      <Route path="/forgot-password" component={ForgotPasswordPage} />
-      <Route path="/reset-password" component={ResetPasswordPage} />
-      <Route path="/auth/verify" component={AuthVerifyPage} />
-      <Route path="/dashboard">
-        <ProtectedRoute component={DashboardPage} />
-      </Route>
-      <Route path="/dashboard/new">
-        <ProtectedRoute component={DashboardPage} />
-      </Route>
-      <Route path="/dashboard/groups">
-        <ProtectedRoute component={GroupsPage} />
-      </Route>
-      <Route path="/dashboard/:groupId/plan-details">
-        <ProtectedRoute component={PlanDetailsPage} />
-      </Route>
-      <Route path="/dashboard/:groupId/replace-census">
-        <ProtectedRoute component={ReplaceCensusPage} />
-      </Route>
-      <Route path="/dashboard/:groupId">
-        <ProtectedRoute component={DashboardPage} />
-      </Route>
-      {/* Legacy customer routes fold into /dashboard. */}
-      <Route path="/proposals">
-        <Redirect to="/dashboard" />
-      </Route>
-      <Route path="/report/:id">
-        <Redirect to="/dashboard" />
-      </Route>
-      {/* Admin is now a single unified list + customer-view-as-admin. */}
-      <Route path="/admin">
-        <ProtectedRoute component={AdminHome} adminOnly />
-      </Route>
-      <Route path="/admin/groups/:groupId/plan-details">
-        <ProtectedRoute component={PlanDetailsPage} adminOnly />
-      </Route>
-      <Route path="/admin/groups/:groupId">
-        <ProtectedRoute component={AdminGroupViewPage} adminOnly />
-      </Route>
-      <Route path="/admin/templates">
-        <ProtectedRoute component={AdminTemplatesPage} adminOnly />
-      </Route>
-      <Route path="/admin/quotes/new">
-        <ProtectedRoute component={AdminQuoteWizardPage} adminOnly />
-      </Route>
-      <Route path="/admin/quotes/bulk">
-        <ProtectedRoute component={AdminQuotesBulkPage} adminOnly />
-      </Route>
-      <Route path="/admin/quotes">
-        <ProtectedRoute component={AdminQuotesPage} adminOnly />
-      </Route>
-      {/* Public share link, logged out, token-gated, no PHI. */}
-      <Route path="/q/:token/plan-details" component={PublicPlanDetailsPage} />
-      <Route path="/q/:token" component={PublicQuotePage} />
-      {/* Legacy admin deep links redirect to the unified admin home. */}
-      <Route path="/admin/dashboard">
-        <Redirect to="/admin" />
-      </Route>
-      <Route path="/admin/groups">
-        <Redirect to="/admin" />
-      </Route>
-      <Route path="/admin/users">
-        <Redirect to="/admin" />
-      </Route>
-      <Route path="/admin/generator">
-        <Redirect to="/admin" />
-      </Route>
-      <Route path="/admin/settings">
-        <Redirect to="/admin" />
-      </Route>
-      <Route component={NotFound} />
-    </Switch>
+    <div>
+      <div
+        className="noprint"
+        style={{ background: "#fff", borderBottom: `1px solid ${C.border}`, padding: "0 22px" }}
+      >
+        <div
+          style={{
+            maxWidth: 1400,
+            margin: "0 auto",
+            height: 48,
+            display: "flex",
+            alignItems: "stretch",
+            justifyContent: "space-between",
+            gap: 24,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center" }}>
+            <img
+              src={Logo}
+              alt="Kennion Benefit Advisors"
+              style={{ height: 28, display: "block" }}
+            />
+          </div>
+          <div style={{ display: "flex", alignItems: "stretch", gap: 2 }}>
+            <button onClick={() => setTab("current")} style={tab === "current" ? tabOn : tabBase}>
+              Current Medical Plan(s)
+            </button>
+            <button onClick={() => setTab("2027")} style={tab === "2027" ? tabOn : tabBase}>
+              2027 Medical Plan Options
+            </button>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <button
+              onClick={() => setAdmin(true)}
+              style={{
+                background: "none",
+                border: "none",
+                fontSize: 13.5,
+                color: C.muted,
+                cursor: "pointer",
+                padding: 0,
+              }}
+            >
+              Rate Admin
+            </button>
+            <button
+              onClick={signOut}
+              style={{
+                background: "none",
+                border: "none",
+                fontSize: 13.5,
+                color: C.blue,
+                cursor: "pointer",
+                padding: 0,
+              }}
+            >
+              Exit
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 1400, margin: "0 auto", padding: "20px 22px 60px" }}>
+        <div
+          className="printonly"
+          style={{
+            marginBottom: 14,
+            paddingBottom: 8,
+            borderBottom: "1px solid #cfd6da",
+            fontSize: 11,
+            color: C.muted,
+          }}
+        >
+          Kennion Benefit Advisors &middot; {g.name} &middot; {printLine}
+        </div>
+
+        <div
+          className="panel"
+          style={{
+            ...panel,
+            padding: "20px 22px",
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: 20,
+          }}
+        >
+          <div style={{ maxWidth: 820 }}>
+            <h1
+              style={{
+                margin: 0,
+                fontSize: 23,
+                fontWeight: 600,
+                color: C.ink,
+                letterSpacing: "-0.2px",
+              }}
+            >
+              {g.name}
+            </h1>
+            <div style={{ marginTop: 8, fontSize: 13, color: C.muted, lineHeight: 1.65 }}>
+              {subline}
+            </div>
+          </div>
+          <div className="noprint" style={{ display: "flex", gap: 8 }}>
+            <button onClick={() => window.print()} style={smallPrimaryBtn}>
+              Print
+            </button>
+          </div>
+        </div>
+
+        {tab === "current" ? (
+          <Current
+            data={data}
+            overrides={overrides}
+            g={g}
+            rows={rows}
+            totals={totals}
+            eePct={EE_PCT}
+            depPct={DEP_PCT}
+            onOpenPlan={setModalPlan}
+          />
+        ) : (
+          <Options
+            data={data}
+            g={g}
+            rows={rows}
+            totals={totals}
+            sort={sort}
+            dir={dir}
+            gridQuery={gridQuery}
+            carriers={carriers}
+            selected={selected}
+            note={note}
+            sent={sent}
+            onSort={(k) => {
+              setDir((d) => (sort === k ? -d : 1));
+              setSort(k);
+            }}
+            onGridQuery={setGridQuery}
+            onToggleCarrier={(c) => setCarriers((prev) => ({ ...prev, [c]: !prev[c] }))}
+            onToggleSelected={toggleSelected}
+            onNote={(v) => {
+              setNote(v);
+              setSent(false);
+            }}
+            onSend={() => setSent(true)}
+          />
+        )}
+
+        <div
+          className="noprint"
+          style={{
+            marginTop: 26,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 9,
+          }}
+        >
+          <span style={{ fontSize: 11, color: C.ghost }}>powered by</span>
+          <img
+            src={Logo}
+            alt="Kennion Benefit Advisors"
+            style={{ height: 24, display: "block" }}
+          />
+        </div>
+      </div>
+
+      {modalPlan && (
+        <BreakdownModal
+          data={data}
+          overrides={overrides}
+          g={g}
+          row={rows.find((r) => r.p.plan === modalPlan)}
+          plan={modalPlan}
+          freq={freq}
+          eePct={EE_PCT}
+          depPct={DEP_PCT}
+          onFreq={setFreq}
+          onClose={() => {
+            setModalPlan(null);
+            setFreq("M");
+          }}
+          onPrint={() => window.print()}
+        />
+      )}
+    </div>
   );
 }
-
-function App() {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <TooltipProvider>
-          <AuthProvider>
-            <Router />
-          </AuthProvider>
-          <Toaster />
-        </TooltipProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
-  );
-}
-
-export default App;

@@ -1,12 +1,8 @@
-node_modules
-dist
+node_modules/
+dist/
 .env
+.env.local
+*.log
 .DS_Store
-server/public
-vite.config.ts.*
-*.tar.gz
-uploads/__pycache__/
-__pycache__/
-*.pyc
-# Assembled at build time from rater-parts/ (see script/assemble-rater.mjs)
-Kennion Actuarial Rater.xlsm
+tsconfig.tsbuildinfo
+*.tsbuildinfo
