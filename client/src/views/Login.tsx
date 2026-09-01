@@ -74,15 +74,28 @@ export default function Login({
               <div style={{ ...panel, padding: "28px 30px 30px" }}>
                 <h1
                   style={{
-                    margin: "0 0 22px",
+                    margin: "0 0 6px",
                     fontSize: 26,
-                    fontWeight: 600,
+                    fontWeight: 700,
                     color: C.ink,
-                    letterSpacing: "-0.2px",
+                    letterSpacing: "-0.3px",
+                    textAlign: "center",
+                    textWrap: "balance",
                   }}
                 >
-                  2027 Group Health Options
+                  2027 Employee Benefits Program
                 </h1>
+                <div
+                  style={{
+                    margin: "0 0 24px",
+                    fontSize: 13.5,
+                    color: C.muted,
+                    textAlign: "center",
+                    textWrap: "balance",
+                  }}
+                >
+                  Health + Dental + Vision + Supplemental
+                </div>
 
                 <label htmlFor="access-code" style={labelStyle}>
                   Group access code
@@ -133,12 +146,13 @@ export default function Login({
                     background: "none",
                     border: "none",
                     padding: "6px 4px",
-                    fontSize: 13,
-                    color: C.muted,
+                    fontSize: 12,
+                    color: C.faint,
+                    textDecoration: "underline",
                     cursor: "pointer",
                   }}
                 >
-                  Kennion staff sign in
+                  Admin
                 </button>
               </div>
             </>
