@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   TIERS,
   factorsHold,
@@ -18,7 +18,8 @@ interface Props {
   durable: boolean;
   storage: string;
   saveState: "idle" | "saving" | "saved" | "error";
-  onImported: (groups: unknown[]) => void;
+  onImported: (groups: unknown[], imports?: ImportRecord[]) => void;
+  imports: ImportRecord[];
   overrides: Overrides;
   query: string;
   tpa: string;
@@ -43,6 +44,14 @@ const cellBase = {
   ...num,
 };
 
+export interface ImportRecord {
+  filename: string | null;
+  uploaded_at: string;
+  uploaded_by: string | null;
+  companies_found: number;
+  companies_applied: number;
+}
+
 export default function Admin({
   data,
   token,
@@ -50,6 +59,7 @@ export default function Admin({
   storage,
   saveState,
   onImported,
+  imports,
   overrides,
   query,
   tpa,
@@ -178,6 +188,8 @@ export default function Admin({
     };
   }, [data, overrides]);
 
+  const [tab, setTab] = useState<"groups" | "rates" | "import">("groups");
+
   const q = query.trim().toLowerCase();
   const rows = all.filter(
     (r) =>
@@ -243,9 +255,36 @@ export default function Admin({
             Exit
           </button>
         </div>
+
+        <div style={{ maxWidth: 1680, margin: "0 auto", display: "flex", gap: 2 }}>
+          {([
+            ["groups", "Groups"],
+            ["rates", "Plans & Rates"],
+            ["import", "Import"],
+          ] as const).map(([k, label]) => (
+            <button
+              key={k}
+              onClick={() => setTab(k)}
+              style={{
+                background: "none",
+                border: "none",
+                borderBottom: `3px solid ${tab === k ? C.orange : "transparent"}`,
+                padding: "0 15px 11px",
+                fontSize: 13.5,
+                fontWeight: tab === k ? 600 : 400,
+                color: tab === k ? C.ink : C.body,
+                cursor: "pointer",
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div style={{ maxWidth: 1680, margin: "0 auto", padding: "20px 22px 60px" }}>
+        {tab === "rates" && (
+        <>
         <div
           style={{
             ...panel,
@@ -304,13 +343,6 @@ export default function Admin({
           </button>
         </div>
 
-        <ImportPanel token={token} durable={durable} storage={storage} onImported={onImported} />
-
-        <GroupsTable
-          groups={data.groups as unknown as AdminGroup[]}
-          token={token}
-          onChanged={(gs) => onImported(gs as unknown[])}
-        />
 
         <div
           style={{
@@ -487,6 +519,104 @@ export default function Admin({
           tiers are billed; the three that do not are flagged <strong>Off schedule</strong> and
           should be keyed by hand from the rate sheet.
         </div>
+        </>
+        )}
+
+        {tab === "groups" && (
+          <GroupsTable
+            groups={data.groups as unknown as AdminGroup[]}
+            token={token}
+            onChanged={(gs) => onImported(gs as unknown[])}
+          />
+        )}
+
+        {tab === "import" && (
+          <>
+            <ImportPanel
+              token={token}
+              durable={durable}
+              storage={storage}
+              onImported={(gs, ims) => onImported(gs, ims as ImportRecord[] | undefined)}
+            />
+
+            <div style={{ ...panel, marginTop: 16, padding: "20px 22px" }}>
+              <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600, color: C.ink }}>
+                Import history
+              </h2>
+              {!imports?.length ? (
+                <div style={{ marginTop: 10, fontSize: 13, color: C.faint }}>
+                  Nothing imported yet. The portal is serving the shipped census.
+                </div>
+              ) : (
+                <table
+                  style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginTop: 12 }}
+                >
+                  <thead>
+                    <tr>
+                      <th style={{ ...th, textAlign: "left" }}>File</th>
+                      <th style={{ ...th, textAlign: "left" }}>When</th>
+                      <th style={{ ...th, textAlign: "left" }}>By</th>
+                      <th style={{ ...th, textAlign: "right" }}>Found</th>
+                      <th style={{ ...th, textAlign: "right" }}>Imported</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {imports.map((im, i) => (
+                      <tr key={i}>
+                        <td
+                          style={{
+                            padding: "8px 8px 8px 0",
+                            borderBottom: `1px solid ${C.hairline}`,
+                            color: C.ink,
+                            overflowWrap: "anywhere",
+                          }}
+                        >
+                          {im.filename || "(unnamed)"}
+                        </td>
+                        <td
+                          style={{
+                            padding: 8,
+                            borderBottom: `1px solid ${C.hairline}`,
+                            color: C.body,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {new Date(im.uploaded_at).toLocaleString()}
+                        </td>
+                        <td style={{ padding: 8, borderBottom: `1px solid ${C.hairline}`, color: C.body }}>
+                          {im.uploaded_by || "—"}
+                        </td>
+                        <td
+                          style={{
+                            padding: 8,
+                            borderBottom: `1px solid ${C.hairline}`,
+                            textAlign: "right",
+                            color: C.body,
+                            ...num,
+                          }}
+                        >
+                          {im.companies_found}
+                        </td>
+                        <td
+                          style={{
+                            padding: "8px 0 8px 8px",
+                            borderBottom: `1px solid ${C.hairline}`,
+                            textAlign: "right",
+                            color: C.ink,
+                            fontWeight: 600,
+                            ...num,
+                          }}
+                        >
+                          {im.companies_applied}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       <Footer />

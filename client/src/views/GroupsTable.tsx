@@ -19,6 +19,7 @@ export interface AdminGroup {
   enrolled: number;
   lives: number;
   imported?: boolean;
+  importedAt?: string | null;
 }
 
 interface Props {
@@ -162,6 +163,7 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
               <th style={th}>Contact</th>
               <th style={{ ...th, textAlign: "right", width: 84 }}>Enrolled</th>
               <th style={{ ...th, width: 150 }}>Size</th>
+              <th style={{ ...th, width: 128 }}>Data from</th>
             </tr>
           </thead>
           <tbody>
@@ -281,6 +283,21 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
                     </div>
                     {!g.sizeIsSet && (
                       <div style={{ fontSize: 10.5, color: C.ghost, marginTop: 2 }}>from headcount</div>
+                    )}
+                  </td>
+                  <td style={{ ...td, whiteSpace: "nowrap" }}>
+                    {g.importedAt ? (
+                      <>
+                        <span style={{ color: C.green, fontSize: 12.5 }}>XML import</span>
+                        <div style={{ fontSize: 11.5, color: C.ghost }}>
+                          {new Date(g.importedAt).toLocaleDateString()}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <span style={{ color: C.faint, fontSize: 12.5 }}>Census</span>
+                        <div style={{ fontSize: 11.5, color: C.ghost }}>7/31/2026</div>
+                      </>
                     )}
                   </td>
                 </tr>

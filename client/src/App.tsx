@@ -12,7 +12,7 @@ import {
 import { C, Logo, panel, smallPrimaryBtn } from "@/lib/ui";
 import Login from "@/views/Login";
 import Footer from "@/views/Footer";
-import Admin from "@/views/Admin";
+import Admin, { type ImportRecord } from "@/views/Admin";
 import Current from "@/views/Current";
 import Options, { type SortKey } from "@/views/Options";
 import BreakdownModal from "@/views/BreakdownModal";
@@ -41,6 +41,7 @@ export default function App() {
   const tokenRef = useRef("");
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [storage, setStorage] = useState("");
+  const [imports, setImports] = useState<ImportRecord[]>([]);
   const [durable, setDurable] = useState(false);
 
   const [tab, setTab] = useState<"current" | "2027">("current");
@@ -90,6 +91,7 @@ export default function App() {
         setDurable(!!p.durable);
         setStorage(p.storage || "");
         setOverrides(p.overrides || {});
+        setImports(p.imports || []);
         setData({
           meta: p.meta,
           groups: p.groups,
@@ -284,9 +286,11 @@ export default function App() {
         durable={durable}
         storage={storage}
         saveState={saveState}
-        onImported={(gs) =>
-          setData((d) => (d ? ({ ...d, groups: gs } as KennionData) : d))
-        }
+        imports={imports}
+        onImported={(gs, ims) => {
+          setData((d) => (d ? ({ ...d, groups: gs } as KennionData) : d));
+          if (ims) setImports(ims);
+        }}
         overrides={overrides}
         query={adminQuery}
         tpa={adminTpa}

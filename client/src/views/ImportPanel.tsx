@@ -27,7 +27,7 @@ interface Props {
   token: string;
   durable: boolean;
   storage: string;
-  onImported: (groups: unknown[]) => void;
+  onImported: (groups: unknown[], imports?: unknown[]) => void;
 }
 
 export default function ImportPanel({ token, durable, storage, onImported }: Props) {
@@ -98,8 +98,11 @@ export default function ImportPanel({ token, durable, storage, onImported }: Pro
     setBusy(`Importing ${names.length} group${names.length > 1 ? "s" : ""}…`);
     setError("");
     try {
-      const j = await send(`/api/admin/import?only=${encodeURIComponent(names.join("\n"))}`);
-      onImported(j.groups);
+      const j = await send(
+        `/api/admin/import?only=${encodeURIComponent(names.join("\n"))}` +
+          `&filename=${encodeURIComponent(file?.name || "")}`,
+      );
+      onImported(j.groups, j.imports);
       const n = j.applied.length;
       setDone(
         `Imported ${n} group${n > 1 ? "s" : ""} — ` +

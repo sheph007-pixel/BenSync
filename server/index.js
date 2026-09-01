@@ -54,6 +54,9 @@ const db = createDb(process.env.DATABASE_URL);
 let overrides = {};
 /** Staff-set company IDs and ALE buckets, keyed by group name. */
 let meta = {};
+/** When each group's data last came in from an export. */
+let importedAt = {};
+let recentImports = [];
 
 function saveImports() {
   if (db) return; // Postgres holds it; no file to write.
@@ -135,6 +138,7 @@ function rebuild() {
     plans: g.plans,
     rates: g.rates,
     imported: !!(imported.groups || {})[g.name],
+    importedAt: importedAt[g.name] || null,
   }));
 }
 
@@ -192,6 +196,7 @@ app.post("/api/signin", (req, res) => {
       durable: !!db || DURABLE,
       storage: db ? "postgres" : DURABLE ? "volume" : "ephemeral",
       overrides,
+      imports: recentImports,
       meta: data.meta,
       groups: adminGroups,
       planDesigns: data.planDesigns,
@@ -289,11 +294,27 @@ app.post("/api/admin/import", requireStaff, async (req, res) => {
     }
     if (!applied.length) return res.status(400).json({ error: "Nothing selected to import." });
     saveImports();
+
+    if (db) {
+      const at = await db.logImport(
+        String(req.query.filename || "").slice(0, 200) || null,
+        req.staffEmail || null,
+        companies.length,
+        applied.length,
+        applied.map((a) => a.name),
+      );
+      applied.forEach((a) => {
+        importedAt[a.name] = at;
+      });
+      recentImports = await db.recentImports();
+    }
     rebuild();
+
     res.json({
       ok: true,
       durable: !!db || DURABLE,
       storage: db ? "postgres" : DURABLE ? "volume" : "ephemeral",
+      imports: recentImports,
       applied,
       skipped: failures,
       groups: adminGroups,
@@ -385,6 +406,8 @@ async function boot() {
       imported = { groups: state.groups, splits: state.splits };
       overrides = state.overrides;
       meta = state.meta || {};
+      importedAt = state.importedAt || {};
+      recentImports = await db.recentImports();
       const st = await db.stats();
       console.log(`postgres connected — ${st.groups} imported groups, ${st.overrides} rate overrides`);
     } catch (e) {

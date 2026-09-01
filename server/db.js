@@ -41,6 +41,18 @@ CREATE TABLE IF NOT EXISTS kennion.group_meta (
   updated_by     text
 );
 
+-- One row per upload, so the admin screen can say when data last came in and
+-- from which file.
+CREATE TABLE IF NOT EXISTS kennion.imports (
+  id            bigserial PRIMARY KEY,
+  filename      text,
+  uploaded_at   timestamptz NOT NULL DEFAULT now(),
+  uploaded_by   text,
+  companies_found   integer,
+  companies_applied integer,
+  applied_names text[]
+);
+
 CREATE TABLE IF NOT EXISTS kennion.rate_overrides (
   group_name   text NOT NULL,
   plan         text NOT NULL,
@@ -78,7 +90,7 @@ export function createDb(url) {
       const groups = {};
       const splits = {};
       const { rows } = await pool.query(
-        "SELECT name, payload, split FROM kennion.groups ORDER BY name",
+        "SELECT name, payload, split, imported_at FROM kennion.groups ORDER BY name",
       );
       for (const r of rows) {
         groups[r.name] = r.payload;
@@ -100,7 +112,10 @@ export function createDb(url) {
       for (const r of ov.rows) {
         overrides[`${r.group_name}||${r.plan}||${r.census_tier}`] = String(r.rate);
       }
-      return { groups, splits, overrides, meta };
+      const importedAt = {};
+      for (const r of rows) importedAt[r.name] = r.imported_at;
+
+      return { groups, splits, overrides, meta, importedAt };
     },
 
     /** One imported group. Re-importing the same group replaces it. */
@@ -146,6 +161,26 @@ export function createDb(url) {
            rate = EXCLUDED.rate, updated_at = now(), updated_by = EXCLUDED.updated_by`,
         [groupName, plan, censusTier, rate, by || null],
       );
+    },
+
+    async logImport(filename, by, found, applied, names) {
+      const { rows } = await pool.query(
+        `INSERT INTO kennion.imports
+           (filename, uploaded_by, companies_found, companies_applied, applied_names)
+         VALUES ($1,$2,$3,$4,$5) RETURNING uploaded_at`,
+        [filename || null, by || null, found, applied, names || []],
+      );
+      return rows[0].uploaded_at;
+    },
+
+    /** Most recent uploads, newest first, for the import history panel. */
+    async recentImports(limit = 8) {
+      const { rows } = await pool.query(
+        `SELECT filename, uploaded_at, uploaded_by, companies_found, companies_applied
+           FROM kennion.imports ORDER BY uploaded_at DESC LIMIT $1`,
+        [limit],
+      );
+      return rows;
     },
 
     async stats() {

@@ -17,7 +17,10 @@ Both sections print to a clean report, and every page carries the carrier
 disclaimer footer — including in print.
 
 Kennion staff reach **Rate Administration** through the small "Admin" link under
-the sign-in card, with an email and code.
+the sign-in card, with an email and code. It has three tabs: **Groups** (the
+roster, access codes, addresses and ALE buckets), **Plans & Rates** (every
+group × plan × tier rate), and **Import** (upload an export, with the history of
+what came in when).
 
 ## Access codes and group size
 
@@ -92,6 +95,22 @@ state, corporation type and the named contacts. The one thing it lacks is the
 SIC *description*, which is carried across from the census on import rather
 than being lost. Plan names have their trailing year stripped so they match the census.
 
+### What an import does and does not overwrite
+
+An import **never removes a group**. Only the companies you tick are touched;
+every other group is left exactly as it was, so a partial export cannot wipe the
+roster. Staff edits live in their own tables and survive imports untouched:
+hand-assigned access codes, ALE buckets and hand-keyed rates all persist.
+
+Within a group that you do import, the enrollment **is replaced** rather than
+merged, and that is deliberate. An export is a snapshot: if someone terminated
+since the last one, merging would leave them enrolled forever and every total
+would drift upward. Replacing the group means its census matches the export you
+just uploaded.
+
+The Groups table shows, per group, whether its data came from an XML import and
+when, or is still the shipped census.
+
 Nothing is saved until you confirm. The preview lists every company found with
 its EN identifier, enrolled count, monthly premium and whether actual splits
 were found, each against what that group currently has — so a newer export that
@@ -110,6 +129,7 @@ human enters:
 | `kennion.groups` | one row per imported group — EN identifier, access code, full payload and contribution split, with `imported_at` / `imported_by` |
 | `kennion.group_meta` | staff-assigned access code and ALE bucket per group |
 | `kennion.rate_overrides` | hand-keyed rates by group + plan + tier, with `updated_at` / `updated_by` |
+| `kennion.imports` | one row per upload — filename, when, by whom, companies found and applied |
 
 Everything lives in a dedicated `kennion` schema. The database may already carry
 tables from a previous application — a `public.groups` from the old platform is
