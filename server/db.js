@@ -37,9 +37,15 @@ CREATE TABLE IF NOT EXISTS kennion.group_meta (
   group_name     text PRIMARY KEY,
   company_id     text UNIQUE,
   size_category  text CHECK (size_category IN ('2-50','51+')),
+  archived       boolean NOT NULL DEFAULT false,
+  -- Hand-edited company details, layered over whatever the export supplied so
+  -- a correction is not undone by the next import.
+  fields         jsonb NOT NULL DEFAULT '{}'::jsonb,
   updated_at     timestamptz NOT NULL DEFAULT now(),
   updated_by     text
 );
+ALTER TABLE kennion.group_meta ADD COLUMN IF NOT EXISTS archived boolean NOT NULL DEFAULT false;
+ALTER TABLE kennion.group_meta ADD COLUMN IF NOT EXISTS fields jsonb NOT NULL DEFAULT '{}'::jsonb;
 
 -- One row per upload, so the admin screen can say when data last came in and
 -- from which file.
@@ -99,10 +105,15 @@ export function createDb(url) {
 
       const meta = {};
       const mrows = await pool.query(
-        "SELECT group_name, company_id, size_category FROM kennion.group_meta",
+        "SELECT group_name, company_id, size_category, archived, fields FROM kennion.group_meta",
       );
       for (const r of mrows.rows) {
-        meta[r.group_name] = { companyId: r.company_id, sizeCategory: r.size_category };
+        meta[r.group_name] = {
+          companyId: r.company_id,
+          sizeCategory: r.size_category,
+          archived: r.archived,
+          fields: r.fields || {},
+        };
       }
 
       const overrides = {};
@@ -134,15 +145,28 @@ export function createDb(url) {
       );
     },
 
-    /** Staff edit to a group's code or ALE bucket. */
+    /** Staff edit to a group's code, ALE bucket, or archived state. */
     async setMeta(groupName, field, value, by) {
-      const col = field === "companyId" ? "company_id" : "size_category";
+      const col =
+        field === "companyId" ? "company_id" : field === "archived" ? "archived" : "size_category";
       await pool.query(
         `INSERT INTO kennion.group_meta (group_name, ${col}, updated_by)
          VALUES ($1,$2,$3)
          ON CONFLICT (group_name) DO UPDATE SET
            ${col} = EXCLUDED.${col}, updated_at = now(), updated_by = EXCLUDED.updated_by`,
-        [groupName, value || null, by || null],
+        [groupName, field === "archived" ? !!value : value || null, by || null],
+      );
+    },
+
+    /** One hand-edited company detail, merged into the fields object. */
+    async setField(groupName, key, value, by) {
+      await pool.query(
+        `INSERT INTO kennion.group_meta (group_name, fields, updated_by)
+         VALUES ($1, jsonb_build_object($2::text, $3::text), $4)
+         ON CONFLICT (group_name) DO UPDATE SET
+           fields = kennion.group_meta.fields || jsonb_build_object($2::text, $3::text),
+           updated_at = now(), updated_by = EXCLUDED.updated_by`,
+        [groupName, key, value == null || value === "" ? null : String(value), by || null],
       );
     },
 

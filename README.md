@@ -22,6 +22,16 @@ roster, access codes, addresses and ALE buckets), **Plans & Rates** (every
 group × plan × tier rate), and **Import** (upload an export, with the history of
 what came in when).
 
+Clicking a company name opens its own page: access code, ALE bucket, every
+company detail as an editable field, contacts, plans in force, and where the
+data came from. Edits are stored separately from the imported payload and
+override it, so a correction is not undone by the next export. The company name
+is deliberately **not** editable — it is the key an import matches on, so
+renaming would orphan the group.
+
+A group can be **archived**: it drops out of the list and its access code is
+refused at sign-in, but nothing is deleted and it can be restored at any time.
+
 ## Access codes and group size
 
 A group's code is four letters from its company name plus the plan year —

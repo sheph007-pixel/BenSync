@@ -20,12 +20,16 @@ export interface AdminGroup {
   lives: number;
   imported?: boolean;
   importedAt?: string | null;
+  archived?: boolean;
+  tpa?: string;
+  plans?: { plan: string; tpa: string; enrolled: number; monthly: number }[];
 }
 
 interface Props {
   groups: AdminGroup[];
   token: string;
   onChanged: (groups: AdminGroup[]) => void;
+  onOpen: (name: string) => void;
 }
 
 const th = {
@@ -38,9 +42,10 @@ const th = {
 };
 const td = { padding: "8px 10px", borderBottom: `1px solid ${C.hairline}`, color: C.ink };
 
-export default function GroupsTable({ groups, token, onChanged }: Props) {
+export default function GroupsTable({ groups, token, onChanged, onOpen }: Props) {
   const [query, setQuery] = useState("");
   const [size, setSize] = useState<"All" | "2-50" | "51+">("All");
+  const [showArchived, setShowArchived] = useState(false);
   const [editing, setEditing] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const [saved, setSaved] = useState("");
@@ -66,6 +71,7 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
   const q = query.trim().toLowerCase();
   const rows = groups.filter(
     (g) =>
+      (showArchived ? !!g.archived : !g.archived) &&
       (size === "All" || g.sizeCategory === size) &&
       (!q ||
         `${g.name} ${g.code} ${g.city ?? ""} ${g.state ?? ""} ${g.zip ?? ""} ${g.sic ?? ""} ${g.taxId ?? ""} ${(g.contacts ?? []).map((c) => `${c.name} ${c.email}`).join(" ")}`
@@ -73,9 +79,11 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
           .includes(q)),
   );
 
+  const live = groups.filter((g) => !g.archived);
   const counts = {
-    small: groups.filter((g) => g.sizeCategory === "2-50").length,
-    large: groups.filter((g) => g.sizeCategory === "51+").length,
+    small: live.filter((g) => g.sizeCategory === "2-50").length,
+    large: live.filter((g) => g.sizeCategory === "51+").length,
+    archived: groups.length - live.length,
   };
 
   return (
@@ -83,7 +91,8 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: 12 }}>
         <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600, color: C.ink }}>Groups</h2>
         <span style={{ fontSize: 12.5, color: C.faint }}>
-          {groups.length} groups · {counts.small} at 2-50 · {counts.large} at 51+ (ALE)
+          {live.length} groups · {counts.small} at 2-50 · {counts.large} at 51+ (ALE)
+          {counts.archived > 0 && ` · ${counts.archived} archived`}
         </span>
       </div>
       <div style={{ marginTop: 8, fontSize: 13, color: C.muted, lineHeight: 1.65, maxWidth: 880 }}>
@@ -128,6 +137,22 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
             </button>
           ))}
         </div>
+        {counts.archived > 0 && (
+          <button
+            onClick={() => setShowArchived((v) => !v)}
+            style={{
+              padding: "7px 13px",
+              fontSize: 13,
+              borderRadius: 4,
+              cursor: "pointer",
+              ...(showArchived
+                ? { color: "#fff", background: C.amber, border: `1px solid ${C.amber}`, fontWeight: 500 }
+                : { color: C.body, background: "#fff", border: `1px solid ${C.inputEdge}` }),
+            }}
+          >
+            {showArchived ? "Viewing archived" : `Archived (${counts.archived})`}
+          </button>
+        )}
         <span style={{ fontSize: 12.5, color: C.faint }}>{rows.length} shown</span>
       </div>
 
@@ -173,7 +198,20 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
               return (
                 <tr key={g.name}>
                   <td style={{ ...td, lineHeight: 1.4 }}>
-                    {g.name}
+                    <button
+                      onClick={() => onOpen(g.name)}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        padding: 0,
+                        font: "inherit",
+                        color: C.blue,
+                        cursor: "pointer",
+                        textAlign: "left",
+                      }}
+                    >
+                      {g.name}
+                    </button>
                     {g.sicDesc && (
                       <div style={{ fontSize: 11.5, color: C.ghost }}>{g.sicDesc}</div>
                     )}

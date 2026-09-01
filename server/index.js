@@ -108,13 +108,22 @@ function rebuild() {
   byCode = new Map();
   groups.forEach((g) => {
     const m = meta[g.name] || {};
+    // Hand-edited details win over whatever the export supplied, so a
+    // correction survives the next import.
+    Object.entries(m.fields || {}).forEach(([k, v]) => {
+      if (v != null && v !== "") g[k] = v;
+    });
+    g.archived = !!m.archived;
     let code = m.companyId || derived.get(g.name);
     // A derived code must not shadow one a human assigned to another group.
     if (!m.companyId && claimed.has(code)) code = code.slice(0, 3) + "9" + code.slice(4);
     g.code = code;
     g.sizeCategory = m.sizeCategory || sizeFor(g.enrolled);
-    byCode.set(code.toUpperCase(), g);
-    byCode.set(legacyCodeFor(g.name).toUpperCase(), g);
+    // An archived group keeps its row for staff but can no longer sign in.
+    if (!g.archived) {
+      byCode.set(code.toUpperCase(), g);
+      byCode.set(legacyCodeFor(g.name).toUpperCase(), g);
+    }
   });
 
   adminGroups = groups.map((g) => ({
@@ -139,6 +148,13 @@ function rebuild() {
     rates: g.rates,
     imported: !!(imported.groups || {})[g.name],
     importedAt: importedAt[g.name] || null,
+    archived: !!g.archived,
+    corporationType: g.corporationType || null,
+    situsState: g.situsState || null,
+    editedFields: Object.keys((meta[g.name] || {}).fields || {}),
+    pyStart: g.pyStart || null,
+    pyEnd: g.pyEnd || null,
+    members: undefined,
   }));
 }
 
@@ -325,11 +341,46 @@ app.post("/api/admin/import", requireStaff, async (req, res) => {
 });
 
 /** Set a group's access code or ALE bucket. */
+/** Company details a human may correct. Name is excluded on purpose: it is the
+ *  key an import matches on, so renaming would orphan the group. */
+const EDITABLE_FIELDS = new Set([
+  "address1", "city", "state", "zip", "sic", "sicDesc",
+  "taxId", "phone", "corporationType", "situsState",
+]);
+
 app.post("/api/admin/group-meta", requireStaff, express.json({ limit: "16kb" }), async (req, res) => {
   const { group, field, value } = req.body || {};
-  if (!group || !["companyId", "sizeCategory"].includes(field)) {
+  const isCompanyField = EDITABLE_FIELDS.has(field);
+  if (!group || !(["companyId", "sizeCategory", "archived"].includes(field) || isCompanyField)) {
     return res.status(400).json({ error: "group and a valid field are required" });
   }
+  if (!groups.some((g) => g.name === group)) {
+    return res.status(404).json({ error: "no such group" });
+  }
+
+  if (isCompanyField) {
+    const v = value == null ? null : String(value).trim();
+    meta[group] = { ...(meta[group] || {}), fields: { ...((meta[group] || {}).fields || {}), [field]: v } };
+    try {
+      if (db) await db.setField(group, field, v, req.staffEmail || null);
+    } catch (e) {
+      return res.status(500).json({ error: "Could not save: " + e.message });
+    }
+    rebuild();
+    return res.json({ ok: true, groups: adminGroups });
+  }
+
+  if (field === "archived") {
+    meta[group] = { ...(meta[group] || {}), archived: !!value };
+    try {
+      if (db) await db.setMeta(group, "archived", !!value, req.staffEmail || null);
+    } catch (e) {
+      return res.status(500).json({ error: "Could not save: " + e.message });
+    }
+    rebuild();
+    return res.json({ ok: true, groups: adminGroups });
+  }
+
   let clean = value == null || value === "" ? null : String(value).trim();
 
   if (field === "companyId" && clean) {

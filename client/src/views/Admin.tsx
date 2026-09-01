@@ -11,6 +11,7 @@ import { C, chip, Logo, num, panel, pill, textInput, th } from "@/lib/ui";
 import Footer from "@/views/Footer";
 import ImportPanel from "@/views/ImportPanel";
 import GroupsTable, { type AdminGroup } from "@/views/GroupsTable";
+import GroupDetail from "@/views/GroupDetail";
 
 interface Props {
   data: KennionData;
@@ -189,6 +190,7 @@ export default function Admin({
   }, [data, overrides]);
 
   const [tab, setTab] = useState<"groups" | "rates" | "import">("groups");
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
 
   const q = query.trim().toLowerCase();
   const rows = all.filter(
@@ -522,13 +524,27 @@ export default function Admin({
         </>
         )}
 
-        {tab === "groups" && (
-          <GroupsTable
-            groups={data.groups as unknown as AdminGroup[]}
-            token={token}
-            onChanged={(gs) => onImported(gs as unknown[])}
-          />
-        )}
+        {tab === "groups" &&
+          (openGroup ? (
+            (() => {
+              const g = (data.groups as unknown as AdminGroup[]).find((x) => x.name === openGroup);
+              return g ? (
+                <GroupDetail
+                  group={g}
+                  token={token}
+                  onChanged={(gs) => onImported(gs as unknown[])}
+                  onBack={() => setOpenGroup(null)}
+                />
+              ) : null;
+            })()
+          ) : (
+            <GroupsTable
+              groups={data.groups as unknown as AdminGroup[]}
+              token={token}
+              onChanged={(gs) => onImported(gs as unknown[])}
+              onOpen={setOpenGroup}
+            />
+          ))}
 
         {tab === "import" && (
           <>
