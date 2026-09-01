@@ -21,6 +21,9 @@ export interface AdminGroup {
   imported?: boolean;
   importedAt?: string | null;
   archived?: boolean;
+  eligible?: boolean;
+  programs?: string[];
+  carriersSeen?: string[];
   tpa?: string;
   plans?: { plan: string; tpa: string; enrolled: number; monthly: number }[];
 }
@@ -31,6 +34,10 @@ interface Props {
   onChanged: (groups: AdminGroup[]) => void;
   onOpen: (name: string) => void;
 }
+
+type SortKey =
+  | "name" | "code" | "address1" | "city" | "state" | "zip" | "sic"
+  | "taxId" | "contact" | "enrolled" | "sizeCategory" | "importedAt";
 
 const th = {
   textAlign: "left" as const,
@@ -46,6 +53,9 @@ export default function GroupsTable({ groups, token, onChanged, onOpen }: Props)
   const [query, setQuery] = useState("");
   const [size, setSize] = useState<"All" | "2-50" | "51+">("All");
   const [showArchived, setShowArchived] = useState(false);
+  const [view, setView] = useState<"live" | "excluded">("live");
+  const [sort, setSort] = useState<SortKey>("name");
+  const [dir, setDir] = useState(1);
   const [editing, setEditing] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const [saved, setSaved] = useState("");
@@ -69,9 +79,10 @@ export default function GroupsTable({ groups, token, onChanged, onOpen }: Props)
   }
 
   const q = query.trim().toLowerCase();
-  const rows = groups.filter(
+  const filtered = groups.filter(
     (g) =>
       (showArchived ? !!g.archived : !g.archived) &&
+      (view === "excluded" ? g.eligible === false : g.eligible !== false) &&
       (size === "All" || g.sizeCategory === size) &&
       (!q ||
         `${g.name} ${g.code} ${g.city ?? ""} ${g.state ?? ""} ${g.zip ?? ""} ${g.sic ?? ""} ${g.taxId ?? ""} ${(g.contacts ?? []).map((c) => `${c.name} ${c.email}`).join(" ")}`
@@ -79,11 +90,50 @@ export default function GroupsTable({ groups, token, onChanged, onOpen }: Props)
           .includes(q)),
   );
 
-  const live = groups.filter((g) => !g.archived);
+  const sortVal = (g: AdminGroup): string | number => {
+    if (sort === "enrolled") return g.enrolled ?? 0;
+    if (sort === "importedAt") return g.importedAt ? Date.parse(g.importedAt) : 0;
+    if (sort === "contact") return (g.contacts?.[0]?.name || "").toLowerCase();
+    const v = (g as unknown as Record<string, unknown>)[sort];
+    return String(v ?? "").toLowerCase();
+  };
+  const rows = [...filtered].sort((a, b) => {
+    const va = sortVal(a);
+    const vb = sortVal(b);
+    if (va === vb) return a.name.localeCompare(b.name);
+    // Blanks sort last regardless of direction, so an empty column does not
+    // bury the rows that actually have values.
+    if (va === "" ) return 1;
+    if (vb === "") return -1;
+    return (va > vb ? 1 : -1) * dir;
+  });
+
+  const sortBy = (k: SortKey) => {
+    setDir((d) => (sort === k ? -d : 1));
+    setSort(k);
+  };
+  const H = ({ k, label, align, width }: { k: SortKey; label: string; align?: "right"; width?: number }) => (
+    <th
+      onClick={() => sortBy(k)}
+      style={{
+        ...th,
+        width,
+        textAlign: align || "left",
+        cursor: "pointer",
+        userSelect: "none",
+      }}
+    >
+      {label}
+      <span style={{ color: sort === k ? C.blue : "transparent" }}>{dir > 0 ? " ▲" : " ▼"}</span>
+    </th>
+  );
+
+  const live = groups.filter((g) => !g.archived && g.eligible !== false);
   const counts = {
     small: live.filter((g) => g.sizeCategory === "2-50").length,
     large: live.filter((g) => g.sizeCategory === "51+").length,
     archived: groups.length - live.length,
+    excluded: groups.filter((g) => !g.archived && g.eligible === false).length,
   };
 
   return (
@@ -96,9 +146,21 @@ export default function GroupsTable({ groups, token, onChanged, onOpen }: Props)
         </span>
       </div>
       <div style={{ marginTop: 8, fontSize: 13, color: C.muted, lineHeight: 1.65, maxWidth: 880 }}>
-        Every group and the code it signs in with. Codes are generated from the company name —
-        four letters plus the plan year — and can be typed over. Size defaults from enrolled
-        headcount; set it explicitly where the ALE determination differs.
+        {view === "excluded" ? (
+          <>
+            These groups have no enrolled medical plan with EBPA, HealthEZ or BCBS of Alabama, so
+            they are not in the 2027 portal and their access codes are refused. The carriers found
+            on each are listed — if one of those <em>is</em> a program carrier under a name the
+            rule does not recognise, say so and it will be matched.
+          </>
+        ) : (
+          <>
+            Every group and the code it signs in with. Codes are generated from the company name —
+            four letters plus the plan year — and can be typed over. Size defaults from enrolled
+            headcount; set it explicitly where the ALE determination differs. Click a company to
+            open its page.
+          </>
+        )}
       </div>
 
       <div style={{ marginTop: 14, display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
@@ -137,6 +199,22 @@ export default function GroupsTable({ groups, token, onChanged, onOpen }: Props)
             </button>
           ))}
         </div>
+        {counts.excluded > 0 && (
+          <button
+            onClick={() => setView((v) => (v === "live" ? "excluded" : "live"))}
+            style={{
+              padding: "7px 13px",
+              fontSize: 13,
+              borderRadius: 4,
+              cursor: "pointer",
+              ...(view === "excluded"
+                ? { color: "#fff", background: C.red, border: `1px solid ${C.red}`, fontWeight: 500 }
+                : { color: C.body, background: "#fff", border: `1px solid ${C.inputEdge}` }),
+            }}
+          >
+            {view === "excluded" ? "Viewing not in program" : `Not in program (${counts.excluded})`}
+          </button>
+        )}
         {counts.archived > 0 && (
           <button
             onClick={() => setShowArchived((v) => !v)}
@@ -177,18 +255,18 @@ export default function GroupsTable({ groups, token, onChanged, onOpen }: Props)
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 1040 }}>
           <thead>
             <tr>
-              <th style={th}>Company</th>
-              <th style={{ ...th, width: 132 }}>Company ID</th>
-              <th style={th}>Address</th>
-              <th style={th}>City</th>
-              <th style={{ ...th, width: 56 }}>State</th>
-              <th style={{ ...th, width: 78 }}>ZIP</th>
-              <th style={{ ...th, width: 74 }}>SIC</th>
-              <th style={{ ...th, width: 104 }}>EIN</th>
-              <th style={th}>Contact</th>
-              <th style={{ ...th, textAlign: "right", width: 84 }}>Enrolled</th>
-              <th style={{ ...th, width: 150 }}>Size</th>
-              <th style={{ ...th, width: 128 }}>Data from</th>
+              <H k="name" label="Company" />
+              <H k="code" label="Company ID" width={132} />
+              <H k="address1" label="Address" />
+              <H k="city" label="City" />
+              <H k="state" label="State" width={62} />
+              <H k="zip" label="ZIP" width={84} />
+              <H k="sic" label="SIC" width={80} />
+              <H k="taxId" label="EIN" width={110} />
+              <H k="contact" label="Contact" />
+              <H k="enrolled" label="Enrolled" align="right" width={92} />
+              <H k="sizeCategory" label="Size" width={150} />
+              <H k="importedAt" label="Data from" width={132} />
             </tr>
           </thead>
           <tbody>
@@ -212,8 +290,15 @@ export default function GroupsTable({ groups, token, onChanged, onOpen }: Props)
                     >
                       {g.name}
                     </button>
-                    {g.sicDesc && (
-                      <div style={{ fontSize: 11.5, color: C.ghost }}>{g.sicDesc}</div>
+                    {view === "excluded" ? (
+                      <div style={{ fontSize: 11.5, color: C.red, marginTop: 2 }}>
+                        carriers found: {(g.carriersSeen || []).join(", ") || "none"}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 11.5, color: C.ghost }}>
+                        {(g.programs || []).join(" · ")}
+                        {g.sicDesc ? `${g.programs?.length ? " · " : ""}${g.sicDesc}` : ""}
+                      </div>
                     )}
                   </td>
                   <td style={{ ...td, padding: "5px 8px" }}>

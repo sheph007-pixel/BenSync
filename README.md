@@ -50,6 +50,23 @@ Each group is also categorised **2-50** or **51+ (ALE)**. It defaults from
 enrolled headcount and can be set explicitly, since ALE status is a legal
 determination rather than something an enrollment count settles.
 
+## Who is in the portal
+
+The 2027 program covers **EBPA, HealthEZ and BCBS of Alabama**. A group is in
+the portal only if it has at least one medical plan from one of those with
+someone actually enrolled — a plan on the books with nobody on it does not
+count. Anything else is refused at sign-in.
+
+Carrier names arrive as free text from the Employee Navigator plan catalog, so
+matching is tolerant: EBPA, HealthEZ in any spacing, and Blue Cross / Blue
+Shield / BCBS / the Alabama "Blue Secure" and "Blue Choice" product families,
+matched against the plan's TPA *and* its name.
+
+An unmatched group is never silently dropped. It stays in Rate Administration
+behind a **"Not in program"** filter, listing the carriers actually found on it,
+so a program carrier under an unrecognised name is visible and can be added to
+the rule.
+
 ## Privacy
 
 The census carries names, ages, genders, ZIPs and premiums for over 1,300

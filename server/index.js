@@ -13,6 +13,7 @@ import crypto from "node:crypto";
 import { parseEnStream } from "./en-parse.js";
 import { createDb } from "./db.js";
 import { assignCodes, sizeFor } from "./group-id.js";
+import { eligibilityOf } from "./eligibility.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.resolve(__dirname, "..", "dist", "public");
@@ -114,13 +115,19 @@ function rebuild() {
       if (v != null && v !== "") g[k] = v;
     });
     g.archived = !!m.archived;
+    // Program eligibility: EBPA, HealthEZ or BCBS of Alabama, with enrollment.
+    const el = eligibilityOf(g);
+    g.eligible = el.eligible;
+    g.programs = el.programs;
+    g.carriersSeen = el.carriers;
     let code = m.companyId || derived.get(g.name);
     // A derived code must not shadow one a human assigned to another group.
     if (!m.companyId && claimed.has(code)) code = code.slice(0, 3) + "9" + code.slice(4);
     g.code = code;
     g.sizeCategory = m.sizeCategory || sizeFor(g.enrolled);
-    // An archived group keeps its row for staff but can no longer sign in.
-    if (!g.archived) {
+    // Archived, or not on a program carrier: the row stays for staff, but the
+    // code is refused at sign-in.
+    if (!g.archived && g.eligible) {
       byCode.set(code.toUpperCase(), g);
       byCode.set(legacyCodeFor(g.name).toUpperCase(), g);
     }
@@ -149,6 +156,9 @@ function rebuild() {
     imported: !!(imported.groups || {})[g.name],
     importedAt: importedAt[g.name] || null,
     archived: !!g.archived,
+    eligible: !!g.eligible,
+    programs: g.programs || [],
+    carriersSeen: g.carriersSeen || [],
     corporationType: g.corporationType || null,
     situsState: g.situsState || null,
     editedFields: Object.keys((meta[g.name] || {}).fields || {}),
