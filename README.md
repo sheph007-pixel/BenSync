@@ -62,6 +62,11 @@ matching is tolerant: EBPA, HealthEZ in any spacing, and Blue Cross / Blue
 Shield / BCBS / the Alabama "Blue Secure" and "Blue Choice" product families,
 matched against the plan's TPA *and* its name.
 
+One roster rule applies across the whole admin: a group that is archived, or
+not on a program carrier, is not in the portal and is not rate-administered
+either. It is excluded from Plans & Rates, from the group counts, and from the
+rates export, so the tabs cannot disagree about how many groups there are.
+
 An unmatched group is never silently dropped. It stays in Rate Administration
 behind a **"Not in program"** filter, listing the carriers actually found on it,
 so a program carrier under an unrecognised name is visible and can be added to

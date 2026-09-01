@@ -72,6 +72,22 @@ export default function Admin({
   onExport,
   onExit,
 }: Props) {
+  /**
+   * One roster rule for the whole admin: a group that is archived, or not on a
+   * program carrier, is not in the portal — so it is not rate-administered
+   * either. Plans & Rates used to iterate every group and disagreed with the
+   * Groups tab's count.
+   */
+  const activeGroups = useMemo(
+    () =>
+      data.groups.filter(
+        (g) =>
+          !(g as unknown as { archived?: boolean }).archived &&
+          (g as unknown as { eligible?: boolean }).eligible !== false,
+      ),
+    [data.groups],
+  );
+
   const { all, stats } = useMemo(() => {
     let nBilled = 0;
     let nManual = 0;
@@ -80,7 +96,7 @@ export default function Admin({
     let nOff = 0;
     let totalCells = 0;
 
-    const all = data.groups.flatMap((g) =>
+    const all = activeGroups.flatMap((g) =>
       (g.plans || []).map((p) => {
         const billedMap = (g.rates || {})[p.plan] || {};
         const billedCount = TIERS.filter((t) => billedMap[t.census] != null).length;
@@ -187,7 +203,7 @@ export default function Admin({
       all,
       stats: { nBilled, nManual, nCalc, nNone, nOff, totalCells },
     };
-  }, [data, overrides]);
+  }, [activeGroups, overrides]);
 
   const [tab, setTab] = useState<"groups" | "rates" | "import">("groups");
   const [openGroup, setOpenGroup] = useState<string | null>(null);
@@ -203,7 +219,7 @@ export default function Admin({
   const kpis = [
     {
       label: "Groups",
-      value: String(data.groups.length),
+      value: String(activeGroups.length),
       note: `${all.length} plans in force`,
     },
     {

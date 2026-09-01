@@ -194,7 +194,14 @@ export default function App() {
   const exportRates = () => {
     if (!data) return;
     const out: Record<string, Record<string, Record<string, unknown>>> = {};
-    data.groups.forEach((grp) => {
+    // Same roster rule as the screen: archived and not-in-program groups are
+    // not in the portal, so they are not in the export either.
+    const active = data.groups.filter(
+      (g) =>
+        !(g as unknown as { archived?: boolean }).archived &&
+        (g as unknown as { eligible?: boolean }).eligible !== false,
+    );
+    active.forEach((grp) => {
       (grp.plans || []).forEach((p) => {
         TIERS.forEach((t) => {
           const r = rateFor(overrides, grp, p.plan, t.key);
