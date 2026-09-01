@@ -86,8 +86,11 @@ The parser takes **active medical enrollments only** — `Benefit=Medical`,
 `EmploymentStatus=Active`, and no `EndDate` — and reads `CoverageLevel` as the
 tier, `PlanCost` as the billed rate, and `EmployeeCost`/`EmployerCost` as the
 actual split. Dependent ages come from the nested `<Dependent>` records; the
-carrier and the company address come from the `<Plans>` catalog and `<Company>`
-record. Plan names have their trailing year stripped so they match the census.
+carrier comes from the `<Plans>` catalog. The `<Company>` record supplies the
+full group identity — address, city, state, ZIP, SIC code, EIN, phone, situs
+state, corporation type and the named contacts. The one thing it lacks is the
+SIC *description*, which is carried across from the census on import rather
+than being lost. Plan names have their trailing year stripped so they match the census.
 
 Nothing is saved until you confirm. The preview lists every company found with
 its EN identifier, enrolled count, monthly premium and whether actual splits

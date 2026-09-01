@@ -126,6 +126,9 @@ function rebuild() {
     zip: g.zip || null,
     sic: g.sic || null,
     sicDesc: g.sicDesc || null,
+    taxId: g.taxId || null,
+    phone: g.phone || null,
+    contacts: g.contacts || [],
     tpa: g.tpa,
     enrolled: g.enrolled,
     lives: g.lives,
@@ -275,6 +278,10 @@ app.post("/api/admin/import", requireStaff, async (req, res) => {
     for (const parsed of companies) {
       const g = parsed.group;
       if (wanted && !wanted.has(g.name)) continue;
+      // The export has the SIC code but not its description, so carry that
+      // across from the census rather than losing it on import.
+      const prior = groups.find((x) => x.name === g.name);
+      if (prior && prior.sicDesc && !g.sicDesc) g.sicDesc = prior.sicDesc;
       imported.groups[g.name] = g;
       if (parsed.split) imported.splits[g.name] = parsed.split;
       if (db) await db.saveGroup(g, parsed.split, req.staffEmail || null);

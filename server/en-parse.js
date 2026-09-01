@@ -57,7 +57,11 @@ export function parseEmployeeNavigatorXml(xml) {
     throw new Error("This does not look like an Employee Navigator XML export.");
   }
 
-  const companyBlock = (blocks(xml, "Company")[0] || xml).slice(0, 4000);
+  // The company header runs up to the plan catalog; slicing to a fixed length
+// used to cut the contact block off on companies with several contacts.
+const wholeCompany = blocks(xml, "Company")[0] || xml;
+const headEnd = wholeCompany.indexOf("<Classes>");
+const companyBlock = wholeCompany.slice(0, headEnd > 0 ? headEnd : 8000);
   const identifier = text(companyBlock, "Identifier");
   const name = text(companyBlock, "Name") || identifier;
   if (!name) throw new Error("No company name found in the export.");
@@ -75,6 +79,16 @@ export function parseEmployeeNavigatorXml(xml) {
       if (pn && carrier) planCarrier.set(pn, carrier);
     }
   }
+
+  // Company contacts sit above the employee records; take them before the
+  // employee scan so a group's own people are never mistaken for them.
+  const contacts = blocks(companyBlock, "Contact")
+    .map((c) => ({
+      name: text(c, "Name"),
+      phone: text(c, "Phone"),
+      email: text(c, "Email"),
+    }))
+    .filter((c) => c.name || c.email);
 
   const employees = blocks(xml, "Employee");
   const members = [];
@@ -198,6 +212,11 @@ export function parseEmployeeNavigatorXml(xml) {
       address1: text(companyBlock, "Address1"),
       city: text(companyBlock, "City"),
       zip: (text(companyBlock, "ZIP") || "").split("-")[0] || null,
+      taxId: text(companyBlock, "TaxID"),
+      phone: text(companyBlock, "VoiceNumber"),
+      situsState: text(companyBlock, "SitusState"),
+      corporationType: text(companyBlock, "CorporationType"),
+      contacts,
       state: text(companyBlock, "State") || text(companyBlock, "SitusState"),
       sic: text(companyBlock, "SICCode"),
       pyStart: day(pyStart),

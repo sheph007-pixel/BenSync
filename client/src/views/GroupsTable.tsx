@@ -13,6 +13,9 @@ export interface AdminGroup {
   zip: string | null;
   sic: string | null;
   sicDesc: string | null;
+  taxId?: string | null;
+  phone?: string | null;
+  contacts?: { name: string | null; email: string | null; phone: string | null }[];
   enrolled: number;
   lives: number;
   imported?: boolean;
@@ -64,7 +67,7 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
     (g) =>
       (size === "All" || g.sizeCategory === size) &&
       (!q ||
-        `${g.name} ${g.code} ${g.city ?? ""} ${g.state ?? ""} ${g.zip ?? ""} ${g.sic ?? ""}`
+        `${g.name} ${g.code} ${g.city ?? ""} ${g.state ?? ""} ${g.zip ?? ""} ${g.sic ?? ""} ${g.taxId ?? ""} ${(g.contacts ?? []).map((c) => `${c.name} ${c.email}`).join(" ")}`
           .toLowerCase()
           .includes(q)),
   );
@@ -155,6 +158,8 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
               <th style={{ ...th, width: 56 }}>State</th>
               <th style={{ ...th, width: 78 }}>ZIP</th>
               <th style={{ ...th, width: 74 }}>SIC</th>
+              <th style={{ ...th, width: 104 }}>EIN</th>
+              <th style={th}>Contact</th>
               <th style={{ ...th, textAlign: "right", width: 84 }}>Enrolled</th>
               <th style={{ ...th, width: 150 }}>Size</th>
             </tr>
@@ -211,6 +216,35 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
                   </td>
                   <td style={{ ...td, color: g.sic ? C.ink : C.ghost, fontVariantNumeric: "tabular-nums" }}>
                     {g.sic || "—"}
+                  </td>
+                  <td
+                    style={{
+                      ...td,
+                      color: g.taxId ? C.ink : C.ghost,
+                      fontVariantNumeric: "tabular-nums",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {g.taxId || "—"}
+                  </td>
+                  <td style={{ ...td, lineHeight: 1.4 }}>
+                    {g.contacts && g.contacts.length ? (
+                      <>
+                        {g.contacts[0].name}
+                        {g.contacts[0].email && (
+                          <div style={{ fontSize: 11.5 }}>
+                            <a href={`mailto:${g.contacts[0].email}`}>{g.contacts[0].email}</a>
+                          </div>
+                        )}
+                        {g.contacts.length > 1 && (
+                          <div style={{ fontSize: 11, color: C.ghost }}>
+                            +{g.contacts.length - 1} more
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <span style={{ color: C.ghost }}>—</span>
+                    )}
                   </td>
                   <td style={{ ...td, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
                     {g.enrolled}
