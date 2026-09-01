@@ -11,6 +11,7 @@ import {
 } from "@/lib/model";
 import { C, Logo, panel, smallPrimaryBtn } from "@/lib/ui";
 import Login from "@/views/Login";
+import Footer from "@/views/Footer";
 import Admin from "@/views/Admin";
 import Current from "@/views/Current";
 import Options, { type SortKey } from "@/views/Options";
@@ -33,6 +34,10 @@ export default function App() {
   const [code, setCode] = useState<string | null>(null);
   const [codeInput, setCodeInput] = useState("");
   const [codeError, setCodeError] = useState(false);
+  const [mode, setMode] = useState<"group" | "staff">("group");
+  const [email, setEmail] = useState("");
+  const [staffCode, setStaffCode] = useState("");
+  const [staffError, setStaffError] = useState(false);
 
   const [tab, setTab] = useState<"current" | "2027">("current");
   const [modalPlan, setModalPlan] = useState<string | null>(null);
@@ -64,19 +69,21 @@ export default function App() {
    * Sign in against the server. The census is not public, so a code buys
    * exactly one group's data (or, for the admin code, a PII-free rate table).
    */
-  const signIn = useCallback(async (raw: string) => {
-    const code = raw.trim().toUpperCase();
-    if (!code) return;
+  const signIn = useCallback(async (payload: { code: string; email?: string }) => {
+    const staff = payload.email != null;
+    if (!payload.code.trim() && !staff) return;
     setBusy(true);
     setCodeError(false);
+    setStaffError(false);
     try {
       const r = await fetch("/api/signin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code }),
+        body: JSON.stringify(payload),
       });
       if (!r.ok) {
-        setCodeError(true);
+        if (staff) setStaffError(true);
+        else setCodeError(true);
         return;
       }
       const p = await r.json();
@@ -148,10 +155,15 @@ export default function App() {
     [rows],
   );
 
-  const submit = () => void signIn(codeInput);
+  const submit = () => void signIn({ code: codeInput });
+  const staffSubmit = () => void signIn({ email, code: staffCode });
 
   const signOut = () => {
     setData(null);
+    setMode("group");
+    setEmail("");
+    setStaffCode("");
+    setStaffError(false);
     setCode(null);
     setCodeInput("");
     setTab("current");
@@ -221,14 +233,32 @@ export default function App() {
   if (!data || (!admin && !g)) {
     return (
       <Login
+        mode={mode}
         codeInput={codeInput}
+        email={email}
+        staffCode={staffCode}
         codeError={codeError}
+        staffError={staffError}
         busy={busy}
         onCode={(v) => {
           setCodeInput(v);
           setCodeError(false);
         }}
+        onEmail={(v) => {
+          setEmail(v);
+          setStaffError(false);
+        }}
+        onStaffCode={(v) => {
+          setStaffCode(v);
+          setStaffError(false);
+        }}
         onSubmit={submit}
+        onStaffSubmit={staffSubmit}
+        onMode={(m) => {
+          setMode(m);
+          setCodeError(false);
+          setStaffError(false);
+        }}
       />
     );
   }
@@ -442,6 +472,8 @@ export default function App() {
           />
         </div>
       </div>
+
+      <Footer />
 
       {modalPlan && (
         <BreakdownModal

@@ -40,7 +40,11 @@ function codeFor(name) {
   return "KEN-" + letters + "-" + String(h).padStart(5, "0").slice(0, 4);
 }
 
-const ADMIN_CODE = (process.env.ADMIN_CODE || "KEN-ADMIN").toUpperCase();
+// Kennion staff sign-in. Defaults are the credentials Hunter asked for; both
+// are overridable by environment variable so the deployed values need not stay
+// in a public repository.
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "hunter@kennion.com").trim().toLowerCase();
+const ADMIN_CODE = String(process.env.ADMIN_CODE || "87878787").trim();
 const byCode = new Map();
 groups.forEach((g) => {
   g.code = codeFor(g.name);
@@ -66,10 +70,16 @@ app.use(express.json({ limit: "256kb" }));
 app.get("/healthz", (_req, res) => res.type("text/plain").send("ok"));
 
 app.post("/api/signin", (req, res) => {
-  const code = String((req.body && req.body.code) || "").trim().toUpperCase();
-  if (!code) return res.status(400).json({ error: "code required" });
+  const body = req.body || {};
 
-  if (code === ADMIN_CODE) {
+  // Staff sign-in: email + code. One generic failure for either field, so a
+  // wrong guess reveals nothing about which half was right.
+  if (body.email != null) {
+    const email = String(body.email).trim().toLowerCase();
+    const code = String(body.code || "").trim();
+    if (email !== ADMIN_EMAIL || code !== ADMIN_CODE) {
+      return res.status(401).json({ error: "invalid credentials" });
+    }
     return res.json({
       kind: "admin",
       meta: data.meta,
@@ -77,6 +87,9 @@ app.post("/api/signin", (req, res) => {
       planDesigns: data.planDesigns,
     });
   }
+
+  const code = String(body.code || "").trim().toUpperCase();
+  if (!code) return res.status(400).json({ error: "code required" });
 
   const g = byCode.get(code);
   if (!g) return res.status(404).json({ error: "no such group" });

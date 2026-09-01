@@ -8,6 +8,7 @@ import {
   type Overrides,
 } from "@/lib/model";
 import { C, chip, Logo, num, panel, pill, textInput, th } from "@/lib/ui";
+import Footer from "@/views/Footer";
 
 interface Props {
   data: KennionData;
@@ -451,6 +452,8 @@ export default function Admin({
           should be keyed by hand from the rate sheet.
         </div>
       </div>
+
+      <Footer />
     </div>
   );
 }
