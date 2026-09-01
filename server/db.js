@@ -10,8 +10,15 @@
 // than living in one browser.
 import pg from "pg";
 
+// Everything lives in its own `kennion` schema. The database may already carry
+// tables from a previous application — the first import failed because a
+// legacy `public.groups` existed with a different shape, so CREATE TABLE IF NOT
+// EXISTS silently did nothing and the insert hit the wrong columns. A dedicated
+// schema cannot collide, and leaves anything already in `public` untouched.
 const SCHEMA = `
-CREATE TABLE IF NOT EXISTS groups (
+CREATE SCHEMA IF NOT EXISTS kennion;
+
+CREATE TABLE IF NOT EXISTS kennion.groups (
   name            text PRIMARY KEY,
   en_identifier   text,
   access_code     text,
@@ -21,9 +28,9 @@ CREATE TABLE IF NOT EXISTS groups (
   imported_at     timestamptz NOT NULL DEFAULT now(),
   imported_by     text
 );
-CREATE INDEX IF NOT EXISTS groups_access_code_idx ON groups (access_code);
+CREATE INDEX IF NOT EXISTS groups_access_code_idx ON kennion.groups (access_code);
 
-CREATE TABLE IF NOT EXISTS rate_overrides (
+CREATE TABLE IF NOT EXISTS kennion.rate_overrides (
   group_name   text NOT NULL,
   plan         text NOT NULL,
   census_tier  text NOT NULL,
@@ -60,7 +67,7 @@ export function createDb(url) {
       const groups = {};
       const splits = {};
       const { rows } = await pool.query(
-        "SELECT name, payload, split FROM groups ORDER BY name",
+        "SELECT name, payload, split FROM kennion.groups ORDER BY name",
       );
       for (const r of rows) {
         groups[r.name] = r.payload;
@@ -69,7 +76,7 @@ export function createDb(url) {
 
       const overrides = {};
       const ov = await pool.query(
-        "SELECT group_name, plan, census_tier, rate FROM rate_overrides",
+        "SELECT group_name, plan, census_tier, rate FROM kennion.rate_overrides",
       );
       for (const r of ov.rows) {
         overrides[`${r.group_name}||${r.plan}||${r.census_tier}`] = String(r.rate);
@@ -80,7 +87,7 @@ export function createDb(url) {
     /** One imported group. Re-importing the same group replaces it. */
     async saveGroup(group, split, by) {
       await pool.query(
-        `INSERT INTO groups (name, en_identifier, access_code, payload, split, imported_by)
+        `INSERT INTO kennion.groups (name, en_identifier, access_code, payload, split, imported_by)
          VALUES ($1,$2,$3,$4,$5,$6)
          ON CONFLICT (name) DO UPDATE SET
            en_identifier = EXCLUDED.en_identifier,
@@ -96,13 +103,13 @@ export function createDb(url) {
     async setOverride(groupName, plan, censusTier, rate, by) {
       if (rate == null || rate === "") {
         await pool.query(
-          "DELETE FROM rate_overrides WHERE group_name=$1 AND plan=$2 AND census_tier=$3",
+          "DELETE FROM kennion.rate_overrides WHERE group_name=$1 AND plan=$2 AND census_tier=$3",
           [groupName, plan, censusTier],
         );
         return;
       }
       await pool.query(
-        `INSERT INTO rate_overrides (group_name, plan, census_tier, rate, updated_by)
+        `INSERT INTO kennion.rate_overrides (group_name, plan, census_tier, rate, updated_by)
          VALUES ($1,$2,$3,$4,$5)
          ON CONFLICT (group_name, plan, census_tier) DO UPDATE SET
            rate = EXCLUDED.rate, updated_at = now(), updated_by = EXCLUDED.updated_by`,
@@ -111,8 +118,8 @@ export function createDb(url) {
     },
 
     async stats() {
-      const g = await pool.query("SELECT count(*)::int n FROM groups");
-      const o = await pool.query("SELECT count(*)::int n FROM rate_overrides");
+      const g = await pool.query("SELECT count(*)::int n FROM kennion.groups");
+      const o = await pool.query("SELECT count(*)::int n FROM kennion.rate_overrides");
       return { groups: g.rows[0].n, overrides: o.rows[0].n };
     },
 
