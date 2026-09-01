@@ -10,7 +10,7 @@ import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import crypto from "node:crypto";
-import { parseEmployeeNavigatorXml } from "./en-parse.js";
+import { parseEnStream } from "./en-parse.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.resolve(__dirname, "..", "dist", "public");
@@ -174,71 +174,82 @@ app.post("/api/signin", (req, res) => {
 });
 
 /**
- * Preview an Employee Navigator XML export. Parses and reports what it would
- * change, without touching anything — an import legitimately moves headline
- * numbers (a newer export has different enrollment), so it is shown first.
+ * Read an upload. The request body is streamed straight into the parser rather
+ * than buffered, because a full Data API export runs to hundreds of megabytes
+ * and holding one in memory is what broke the first version of this.
  */
-app.post("/api/admin/import/preview", requireStaff, express.text({ type: "*/*", limit: "60mb" }), (req, res) => {
-  let parsed;
-  try {
-    parsed = parseEmployeeNavigatorXml(req.body);
-  } catch (e) {
-    return res.status(400).json({ error: e.message });
-  }
+async function readUpload(req) {
+  return parseEnStream(req);
+}
+
+const summarise = (parsed) => {
   const g = parsed.group;
   const current = groups.find((x) => x.name === g.name) || null;
-  res.json({
-    group: {
-      name: g.name,
-      tpa: g.tpa,
-      pyStart: g.pyStart,
-      pyEnd: g.pyEnd,
-      enrolled: g.enrolled,
-      lives: g.lives,
-      monthly: g.monthly,
-      plans: g.plans,
-    },
-    stats: parsed.stats,
+  return {
+    name: g.name,
+    enIdentifier: g.enIdentifier,
+    tpa: g.tpa,
+    pyStart: g.pyStart,
+    pyEnd: g.pyEnd,
+    enrolled: g.enrolled,
+    lives: g.lives,
+    monthly: g.monthly,
+    plans: g.plans,
     hasSplit: !!parsed.split,
+    stats: parsed.stats,
+    isNew: !current,
     current: current && {
       enrolled: current.enrolled,
       lives: current.lives,
-      monthly: current.plans.reduce((s, p) => s + (p.monthly || 0), 0),
-      plans: current.plans.length,
+      monthly: (current.plans || []).reduce((s, p) => s + (p.monthly || 0), 0),
+      plans: (current.plans || []).length,
     },
-    isNew: !current,
-  });
+  };
+};
+
+/** Preview: parse and report what would change. Saves nothing. */
+app.post("/api/admin/import/preview", requireStaff, async (req, res) => {
+  try {
+    const { companies, failures } = await readUpload(req);
+    res.json({
+      companies: companies.map(summarise),
+      failures,
+      totalEnrolled: companies.reduce((n, c) => n + c.group.enrolled, 0),
+    });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
 });
 
-/** Apply a previewed import. Replaces that group outright. */
-app.post("/api/admin/import", requireStaff, express.text({ type: "*/*", limit: "60mb" }), (req, res) => {
-  let parsed;
+/** Apply. `only` (a list of company names) limits which are written. */
+app.post("/api/admin/import", requireStaff, async (req, res) => {
+  const only = String(req.query.only || "").trim();
+  const wanted = only ? new Set(only.split("\n").filter(Boolean)) : null;
   try {
-    parsed = parseEmployeeNavigatorXml(req.body);
-  } catch (e) {
-    return res.status(400).json({ error: e.message });
-  }
-  const g = parsed.group;
-  imported.groups = imported.groups || {};
-  imported.splits = imported.splits || {};
-  imported.groups[g.name] = g;
-  if (parsed.split) imported.splits[g.name] = parsed.split;
-  try {
+    const { companies, failures } = await readUpload(req);
+    imported.groups = imported.groups || {};
+    imported.splits = imported.splits || {};
+    const applied = [];
+    for (const parsed of companies) {
+      const g = parsed.group;
+      if (wanted && !wanted.has(g.name)) continue;
+      imported.groups[g.name] = g;
+      if (parsed.split) imported.splits[g.name] = parsed.split;
+      applied.push({ name: g.name, enrolled: g.enrolled, monthly: g.monthly });
+    }
+    if (!applied.length) return res.status(400).json({ error: "Nothing selected to import." });
     saveImports();
+    rebuild();
+    res.json({
+      ok: true,
+      durable: DURABLE,
+      applied,
+      skipped: failures,
+      groups: adminGroups,
+    });
   } catch (e) {
-    return res.status(500).json({ error: "Parsed fine, but could not save: " + e.message });
+    res.status(400).json({ error: e.message });
   }
-  rebuild();
-  const fresh = byCode.get(codeFor(g.name));
-  res.json({
-    ok: true,
-    durable: DURABLE,
-    name: g.name,
-    code: fresh ? fresh.code : null,
-    enrolled: g.enrolled,
-    monthly: g.monthly,
-    groups: adminGroups,
-  });
 });
 
 app.use(
@@ -249,6 +260,19 @@ app.use(express.static(publicDir, { index: false, maxAge: "1h" }));
 
 // SPA fallback — the portal owns every non-API route.
 app.use((_req, res) => res.sendFile(indexHtml));
+
+// Errors on API routes must stay JSON; the default handler returns an HTML
+// stack trace, which the client could only report as "could not read that file".
+app.use((err, req, res, next) => {
+  if (res.headersSent) return next(err);
+  const status = err.status || err.statusCode || 500;
+  const msg =
+    status === 413
+      ? "That file is larger than the server accepts."
+      : err.message || "Server error";
+  if (req.path.startsWith("/api/")) return res.status(status).json({ error: msg });
+  return res.status(status).type("text/plain").send(msg);
+});
 
 const port = Number(process.env.PORT) || 5000;
 rebuild();

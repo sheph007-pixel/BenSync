@@ -58,7 +58,8 @@ export function parseEmployeeNavigatorXml(xml) {
   }
 
   const companyBlock = (blocks(xml, "Company")[0] || xml).slice(0, 4000);
-  const name = text(companyBlock, "Name") || text(companyBlock, "Identifier");
+  const identifier = text(companyBlock, "Identifier");
+  const name = text(companyBlock, "Name") || identifier;
   if (!name) throw new Error("No company name found in the export.");
 
   // The export carries a <Plans> catalog naming the carrier for each plan.
@@ -192,6 +193,8 @@ export function parseEmployeeNavigatorXml(xml) {
   return {
     group: {
       name,
+      /** Employee Navigator's own company identifier, whatever it is set to. */
+      enIdentifier: identifier || null,
       city: text(companyBlock, "City"),
       state: text(companyBlock, "State") || text(companyBlock, "SitusState"),
       sic: text(companyBlock, "SICCode"),
@@ -220,4 +223,66 @@ export function parseEmployeeNavigatorXml(xml) {
       splitsFound: Object.values(splitPlans).reduce((n, r) => n + Object.keys(r).length, 0),
     },
   };
+}
+
+/**
+ * Stream a (possibly very large, multi-company) Employee Navigator export.
+ *
+ * The document root is <Company>, with that company's plan catalog and all of
+ * its employees nested inside, so a full Data API export is simply a run of
+ * <Company> blocks. They are extracted and parsed one at a time and then
+ * discarded, so peak memory is one company — not the whole file, which can run
+ * to hundreds of megabytes.
+ */
+export async function parseEnStream(readable) {
+  const OPEN = "<Company>";
+  const CLOSE = "</Company>";
+  const companies = [];
+  const failures = [];
+  let buf = "";
+  let sawAny = false;
+
+  const drain = () => {
+    for (;;) {
+      const start = buf.indexOf(OPEN);
+      if (start === -1) {
+        // Nothing pending; keep only a tag's worth of tail for a split boundary.
+        if (buf.length > OPEN.length) buf = buf.slice(-OPEN.length);
+        return;
+      }
+      const end = buf.indexOf(CLOSE, start);
+      if (end === -1) {
+        if (start > 0) buf = buf.slice(start);
+        return;
+      }
+      const block = buf.slice(start, end + CLOSE.length);
+      buf = buf.slice(end + CLOSE.length);
+      sawAny = true;
+      try {
+        companies.push(parseEmployeeNavigatorXml(block));
+      } catch (e) {
+        const m = /<Name>([^<]*)<\/Name>/.exec(block) || /<Identifier>([^<]*)<\/Identifier>/.exec(block);
+        failures.push({ name: m ? m[1] : "(unnamed company)", reason: e.message });
+      }
+    }
+  };
+
+  readable.setEncoding("utf8");
+  for await (const chunk of readable) {
+    buf += chunk;
+    if (buf.length > 1e6) drain();
+  }
+  drain();
+
+  if (!sawAny) {
+    throw new Error("This does not look like an Employee Navigator XML export — no <Company> record found.");
+  }
+  if (!companies.length) {
+    throw new Error(
+      failures.length
+        ? `Found ${failures.length} company record(s) but none had active medical enrollments. First: ${failures[0].reason}`
+        : "No companies could be read from that export.",
+    );
+  }
+  return { companies, failures };
 }
