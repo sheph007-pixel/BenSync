@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 import crypto from "node:crypto";
 import { parseEnStream } from "./en-parse.js";
 import { createDb } from "./db.js";
+import { assignCodes, sizeFor } from "./group-id.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.resolve(__dirname, "..", "dist", "public");
@@ -51,6 +52,8 @@ let imported = loadImports();
  */
 const db = createDb(process.env.DATABASE_URL);
 let overrides = {};
+/** Staff-set company IDs and ALE buckets, keyed by group name. */
+let meta = {};
 
 function saveImports() {
   if (db) return; // Postgres holds it; no file to write.
@@ -69,15 +72,8 @@ function overridesFor(name) {
 // The census export carries a grand-total row alongside the real groups; it has
 // no plans, members or rates and is not a client — filtered in rebuild().
 
-/**
- * Group access code.
- *
- * Interim scheme, pending the Employee Navigator Company Identifiers: derived
- * from the group name. Once the identifier list arrives this becomes a lookup
- * of the identifier and nothing else in the app has to change, because codes
- * are resolved here and never shipped to the browser.
- */
-function codeFor(name) {
+/** Superseded scheme, still accepted so codes already sent out keep working. */
+function legacyCodeFor(name) {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 100000;
   const letters = name.replace(/[^A-Za-z]/g, "").toUpperCase().slice(0, 4).padEnd(4, "X");
@@ -98,14 +94,38 @@ function rebuild() {
   for (const [name, g] of Object.entries(imported.groups || {})) merged.set(name, g);
 
   groups = [...merged.values()];
+
+  // Derive a code for every group, then let any staff-assigned one win. Derived
+  // codes are computed over the whole roster so they stay collision-free.
+  const derived = assignCodes(groups.map((g) => g.name));
+  const claimed = new Set(
+    Object.values(meta).map((m) => m && m.companyId).filter(Boolean),
+  );
+
   byCode = new Map();
   groups.forEach((g) => {
-    g.code = codeFor(g.name);
-    byCode.set(g.code, g);
+    const m = meta[g.name] || {};
+    let code = m.companyId || derived.get(g.name);
+    // A derived code must not shadow one a human assigned to another group.
+    if (!m.companyId && claimed.has(code)) code = code.slice(0, 3) + "9" + code.slice(4);
+    g.code = code;
+    g.sizeCategory = m.sizeCategory || sizeFor(g.enrolled);
+    byCode.set(code.toUpperCase(), g);
+    byCode.set(legacyCodeFor(g.name).toUpperCase(), g);
   });
+
   adminGroups = groups.map((g) => ({
     name: g.name,
     code: g.code,
+    sizeCategory: g.sizeCategory,
+    sizeIsSet: !!(meta[g.name] || {}).sizeCategory,
+    codeIsSet: !!(meta[g.name] || {}).companyId,
+    address1: g.address1 || null,
+    city: g.city || null,
+    state: g.state || null,
+    zip: g.zip || null,
+    sic: g.sic || null,
+    sicDesc: g.sicDesc || null,
     tpa: g.tpa,
     enrolled: g.enrolled,
     lives: g.lives,
@@ -255,7 +275,6 @@ app.post("/api/admin/import", requireStaff, async (req, res) => {
     for (const parsed of companies) {
       const g = parsed.group;
       if (wanted && !wanted.has(g.name)) continue;
-      g.code = codeFor(g.name);
       imported.groups[g.name] = g;
       if (parsed.split) imported.splits[g.name] = parsed.split;
       if (db) await db.saveGroup(g, parsed.split, req.staffEmail || null);
@@ -275,6 +294,36 @@ app.post("/api/admin/import", requireStaff, async (req, res) => {
   } catch (e) {
     res.status(400).json({ error: e.message });
   }
+});
+
+/** Set a group's access code or ALE bucket. */
+app.post("/api/admin/group-meta", requireStaff, express.json({ limit: "16kb" }), async (req, res) => {
+  const { group, field, value } = req.body || {};
+  if (!group || !["companyId", "sizeCategory"].includes(field)) {
+    return res.status(400).json({ error: "group and a valid field are required" });
+  }
+  let clean = value == null || value === "" ? null : String(value).trim();
+
+  if (field === "companyId" && clean) {
+    clean = clean.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (clean.length < 4) return res.status(400).json({ error: "Code must be at least 4 characters." });
+    const holder = byCode.get(clean);
+    if (holder && holder.name !== group) {
+      return res.status(409).json({ error: `${clean} is already used by ${holder.name}.` });
+    }
+  }
+  if (field === "sizeCategory" && clean && !["2-50", "51+"].includes(clean)) {
+    return res.status(400).json({ error: "Size must be 2-50 or 51+." });
+  }
+
+  meta[group] = { ...(meta[group] || {}), [field]: clean };
+  try {
+    if (db) await db.setMeta(group, field, clean, req.staffEmail || null);
+  } catch (e) {
+    return res.status(500).json({ error: "Could not save: " + e.message });
+  }
+  rebuild();
+  res.json({ ok: true, groups: adminGroups });
 });
 
 /** Persist one hand-keyed rate. Shared across the team, not per-browser. */
@@ -328,6 +377,7 @@ async function boot() {
       const state = await db.load();
       imported = { groups: state.groups, splits: state.splits };
       overrides = state.overrides;
+      meta = state.meta || {};
       const st = await db.stats();
       console.log(`postgres connected — ${st.groups} imported groups, ${st.overrides} rate overrides`);
     } catch (e) {

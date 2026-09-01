@@ -19,6 +19,24 @@ There is also a **Rate Administration** view (access code `KEN-ADMIN`, or the
 link in the top nav) listing every group × plan × tier rate Kennion holds, with
 the gaps highlighted for hand-keying.
 
+## Access codes and group size
+
+A group's code is four letters from its company name plus the plan year —
+`JSMH2027` for Johnson Storage & Moving Co. Holdings. Four or more significant
+words give their initials; shorter names use the first four letters run
+together (`DAHL2027`), and legal-form words like "LLC", "Inc." and "Holdings"
+never take a slot. Clashes replace the last letter with a digit, so every code
+stays eight characters — Certicable is `CERT2027`, Certified Alarm `CER22027`.
+
+Codes are derived over the whole roster so they are collision-free, and any of
+them can be typed over in the Groups table; a hand-assigned code wins and is
+checked for uniqueness. Codes from the previous `KEN-XXXX-9999` scheme are still
+accepted, so anything already sent out keeps working.
+
+Each group is also categorised **2-50** or **51+ (ALE)**. It defaults from
+enrolled headcount and can be set explicitly, since ALE status is a legal
+determination rather than something an enrollment count settles.
+
 ## Where the numbers come from
 
 Data ships as a single static file, `client/public/data/kennion.json`, built

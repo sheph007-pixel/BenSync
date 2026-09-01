@@ -195,7 +195,9 @@ export function parseEmployeeNavigatorXml(xml) {
       name,
       /** Employee Navigator's own company identifier, whatever it is set to. */
       enIdentifier: identifier || null,
+      address1: text(companyBlock, "Address1"),
       city: text(companyBlock, "City"),
+      zip: (text(companyBlock, "ZIP") || "").split("-")[0] || null,
       state: text(companyBlock, "State") || text(companyBlock, "SitusState"),
       sic: text(companyBlock, "SICCode"),
       pyStart: day(pyStart),

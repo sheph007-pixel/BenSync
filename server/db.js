@@ -30,6 +30,17 @@ CREATE TABLE IF NOT EXISTS kennion.groups (
 );
 CREATE INDEX IF NOT EXISTS groups_access_code_idx ON kennion.groups (access_code);
 
+-- Editable identity for every group, imported or straight from the census:
+-- the access code staff assign, and the ALE bucket, which is a judgement they
+-- make rather than something the enrollment count can settle on its own.
+CREATE TABLE IF NOT EXISTS kennion.group_meta (
+  group_name     text PRIMARY KEY,
+  company_id     text UNIQUE,
+  size_category  text CHECK (size_category IN ('2-50','51+')),
+  updated_at     timestamptz NOT NULL DEFAULT now(),
+  updated_by     text
+);
+
 CREATE TABLE IF NOT EXISTS kennion.rate_overrides (
   group_name   text NOT NULL,
   plan         text NOT NULL,
@@ -74,6 +85,14 @@ export function createDb(url) {
         if (r.split) splits[r.name] = r.split;
       }
 
+      const meta = {};
+      const mrows = await pool.query(
+        "SELECT group_name, company_id, size_category FROM kennion.group_meta",
+      );
+      for (const r of mrows.rows) {
+        meta[r.group_name] = { companyId: r.company_id, sizeCategory: r.size_category };
+      }
+
       const overrides = {};
       const ov = await pool.query(
         "SELECT group_name, plan, census_tier, rate FROM kennion.rate_overrides",
@@ -81,7 +100,7 @@ export function createDb(url) {
       for (const r of ov.rows) {
         overrides[`${r.group_name}||${r.plan}||${r.census_tier}`] = String(r.rate);
       }
-      return { groups, splits, overrides };
+      return { groups, splits, overrides, meta };
     },
 
     /** One imported group. Re-importing the same group replaces it. */
@@ -97,6 +116,18 @@ export function createDb(url) {
            imported_at   = now(),
            imported_by   = EXCLUDED.imported_by`,
         [group.name, group.enIdentifier || null, group.code || null, group, split || null, by || null],
+      );
+    },
+
+    /** Staff edit to a group's code or ALE bucket. */
+    async setMeta(groupName, field, value, by) {
+      const col = field === "companyId" ? "company_id" : "size_category";
+      await pool.query(
+        `INSERT INTO kennion.group_meta (group_name, ${col}, updated_by)
+         VALUES ($1,$2,$3)
+         ON CONFLICT (group_name) DO UPDATE SET
+           ${col} = EXCLUDED.${col}, updated_at = now(), updated_by = EXCLUDED.updated_by`,
+        [groupName, value || null, by || null],
       );
     },
 

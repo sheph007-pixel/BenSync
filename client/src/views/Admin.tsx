@@ -10,6 +10,7 @@ import {
 import { C, chip, Logo, num, panel, pill, textInput, th } from "@/lib/ui";
 import Footer from "@/views/Footer";
 import ImportPanel from "@/views/ImportPanel";
+import GroupsTable, { type AdminGroup } from "@/views/GroupsTable";
 
 interface Props {
   data: KennionData;
@@ -304,6 +305,12 @@ export default function Admin({
         </div>
 
         <ImportPanel token={token} durable={durable} storage={storage} onImported={onImported} />
+
+        <GroupsTable
+          groups={data.groups as unknown as AdminGroup[]}
+          token={token}
+          onChanged={(gs) => onImported(gs as unknown[])}
+        />
 
         <div
           style={{
