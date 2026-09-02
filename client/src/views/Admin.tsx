@@ -14,6 +14,7 @@ import Footer from "@/views/Footer";
 import ImportPanel from "@/views/ImportPanel";
 import GroupsTable, { type AdminGroup } from "@/views/GroupsTable";
 import GroupDetail from "@/views/GroupDetail";
+import Proposals from "@/views/Proposals";
 
 interface Props {
   data: KennionData;
@@ -51,11 +52,12 @@ const cellBase = {
   ...num,
 };
 
-export type AdminTab = "groups" | "rates" | "import";
+export type AdminTab = "groups" | "rates" | "proposals" | "import";
 
 const TABS: { key: AdminTab; label: string; href: string }[] = [
   { key: "groups", label: "Groups", href: PATHS.groups },
-  { key: "rates", label: "Plans & Rates", href: PATHS.rates },
+  { key: "rates", label: "Existing Plans & Rates", href: PATHS.rates },
+  { key: "proposals", label: "Proposals", href: PATHS.proposals },
   { key: "import", label: "Import", href: PATHS.import },
 ];
 
@@ -341,7 +343,7 @@ export default function Admin({
                 letterSpacing: "-0.2px",
               }}
             >
-              2026 rates &mdash; all groups, all plans
+              Existing 2026 rates &mdash; all groups, all plans
             </h1>
             <div
               style={{
@@ -596,6 +598,15 @@ export default function Admin({
               onChanged={(gs) => onImported(gs as unknown[])}
             />
           ))}
+
+        {tab === "proposals" && (
+          <Proposals
+            token={token}
+            groups={(data.groups as unknown as AdminGroup[]).filter(
+              (g) => !g.archived && g.eligible !== false,
+            )}
+          />
+        )}
 
         {tab === "import" && (
           <>

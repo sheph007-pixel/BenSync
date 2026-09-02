@@ -64,6 +64,29 @@ CREATE TABLE IF NOT EXISTS kennion.imports (
   applied_names text[]
 );
 
+-- Carrier proposals, one row per uploaded file. The file itself lives here so
+-- a proposal is never lost to an ephemeral container; the extraction is what
+-- Claude read off it, and status says whether a human has confirmed the group.
+CREATE TABLE IF NOT EXISTS kennion.proposals (
+  id            bigserial PRIMARY KEY,
+  group_name    text,
+  carrier       text,
+  filename      text NOT NULL,
+  mime          text NOT NULL,
+  size          integer NOT NULL,
+  data          bytea NOT NULL,
+  extracted     jsonb,
+  summary       text,
+  confidence    real,
+  status        text NOT NULL DEFAULT 'analyzing',
+  assigned_by   text,
+  error         text,
+  uploaded_by   text,
+  uploaded_at   timestamptz NOT NULL DEFAULT now(),
+  updated_at    timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS proposals_group_idx ON kennion.proposals (group_name);
+
 CREATE TABLE IF NOT EXISTS kennion.rate_overrides (
   group_name   text NOT NULL,
   plan         text NOT NULL,
@@ -220,6 +243,68 @@ export function createDb(url) {
         [limit],
       );
       return rows;
+    },
+
+    /** Store one uploaded proposal file. Returns the row without its bytes. */
+    async addProposal(p) {
+      const { rows } = await pool.query(
+        `INSERT INTO kennion.proposals
+           (group_name, carrier, filename, mime, size, data, status, assigned_by, uploaded_by)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+         RETURNING id, group_name, carrier, filename, mime, size, extracted, summary, confidence,
+                   status, assigned_by, error, uploaded_by, uploaded_at, updated_at`,
+        [
+          p.group_name || null, p.carrier || null, p.filename, p.mime, p.size, p.data,
+          p.status || "analyzing", p.assigned_by || null, p.uploaded_by || null,
+        ],
+      );
+      return rows[0];
+    },
+
+    /** Every proposal, newest first, without the file bytes. */
+    async listProposals() {
+      const { rows } = await pool.query(
+        `SELECT id, group_name, carrier, filename, mime, size, extracted, summary, confidence,
+                status, assigned_by, error, uploaded_by, uploaded_at, updated_at
+           FROM kennion.proposals ORDER BY uploaded_at DESC, id DESC`,
+      );
+      return rows;
+    },
+
+    /** Change any of the reviewable fields on a proposal. */
+    async updateProposal(id, fields) {
+      const allowed = ["group_name", "carrier", "extracted", "summary", "confidence", "status", "assigned_by", "error"];
+      const sets = [];
+      const vals = [];
+      for (const k of allowed) {
+        if (!(k in fields)) continue;
+        vals.push(k === "extracted" ? JSON.stringify(fields[k]) : fields[k]);
+        sets.push(`${k} = $${vals.length}${k === "extracted" ? "::jsonb" : ""}`);
+      }
+      if (!sets.length) return null;
+      vals.push(id);
+      const { rows } = await pool.query(
+        `UPDATE kennion.proposals SET ${sets.join(", ")}, updated_at = now()
+          WHERE id = $${vals.length}
+          RETURNING id, group_name, carrier, filename, mime, size, extracted, summary, confidence,
+                    status, assigned_by, error, uploaded_by, uploaded_at, updated_at`,
+        vals,
+      );
+      return rows[0] || null;
+    },
+
+    /** The stored file, for download or re-analysis. */
+    async getProposalFile(id) {
+      const { rows } = await pool.query(
+        "SELECT filename, mime, data FROM kennion.proposals WHERE id = $1",
+        [id],
+      );
+      return rows[0] || null;
+    },
+
+    async deleteProposal(id) {
+      const { rowCount } = await pool.query("DELETE FROM kennion.proposals WHERE id = $1", [id]);
+      return rowCount > 0;
     },
 
     async stats() {

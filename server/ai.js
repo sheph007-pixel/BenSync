@@ -1,0 +1,190 @@
+// Reads a carrier proposal and says which group it belongs to.
+//
+// A proposal from UnitedHealthcare, Gravie, Nationwide or anyone else arrives
+// as a PDF. Claude reads the document itself — no text extraction step to lose
+// a scanned page — and returns the carrier, the company named on the paper,
+// the plans and tier rates, and the roster group it matches with a confidence.
+// Nothing here is authoritative: the staff can reassign any proposal, and the
+// extracted figures are stored for review, not pushed into the rate tables.
+import Anthropic from "@anthropic-ai/sdk";
+import { jsonSchemaOutputFormat } from "@anthropic-ai/sdk/helpers/json-schema";
+
+/**
+ * The API key. The SDK reads ANTHROPIC_API_KEY on its own; CLAUDE and
+ * CLAUDE_API_KEY are accepted too, since that is how the key was first added
+ * to Railway and renaming a secret is a chore nobody should have to do.
+ */
+const apiKey = () =>
+  process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY || process.env.CLAUDE || "";
+
+/** Set when the deployment has an Anthropic credential to call with. */
+export const aiEnabled = () => !!(apiKey() || process.env.ANTHROPIC_AUTH_TOKEN);
+
+const MODEL = "claude-opus-5";
+
+const nullable = (t) => ({ anyOf: [{ type: t }, { type: "null" }] });
+
+const SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: [
+    "carrier",
+    "group_name_on_document",
+    "matched_group",
+    "confidence",
+    "effective_date",
+    "proposal_type",
+    "enrolled_on_document",
+    "plans",
+    "total_monthly",
+    "summary",
+    "audit_flags",
+  ],
+  properties: {
+    carrier: {
+      type: "string",
+      description:
+        "The carrier or vendor issuing the proposal, e.g. UnitedHealthcare, Surest, Gravie, Nationwide, EBPA, HealthEZ, BCBS of Alabama. 'Unknown' if it cannot be told.",
+    },
+    group_name_on_document: {
+      ...nullable("string"),
+      description: "The employer / group name exactly as printed on the proposal, or null.",
+    },
+    matched_group: {
+      ...nullable("string"),
+      description:
+        "The roster group this proposal is for — copied EXACTLY from the roster list — or null if no roster group clearly matches.",
+    },
+    confidence: {
+      type: "number",
+      description:
+        "0 to 1. How sure the match is. 0.9+ only when the name on the document is unmistakably the roster group.",
+    },
+    effective_date: {
+      ...nullable("string"),
+      description: "Proposed effective date as printed (ISO yyyy-mm-dd if possible), or null.",
+    },
+    proposal_type: {
+      type: "string",
+      description: "renewal, new business, alternative quote, or unknown.",
+    },
+    enrolled_on_document: {
+      ...nullable("integer"),
+      description: "Number of enrolled employees the proposal is priced on, if stated.",
+    },
+    plans: {
+      type: "array",
+      description: "Each plan option quoted, with monthly composite rates by tier where given.",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["name", "plan_type", "deductible", "oop_max", "rates", "monthly_total"],
+        properties: {
+          name: { type: "string" },
+          plan_type: nullable("string"),
+          deductible: nullable("string"),
+          oop_max: nullable("string"),
+          rates: {
+            type: "object",
+            additionalProperties: false,
+            required: ["EE", "ES", "EC", "FAM"],
+            properties: {
+              EE: nullable("number"),
+              ES: nullable("number"),
+              EC: nullable("number"),
+              FAM: nullable("number"),
+            },
+          },
+          monthly_total: nullable("number"),
+        },
+      },
+    },
+    total_monthly: {
+      ...nullable("number"),
+      description: "Total monthly premium for the proposal at the quoted enrollment, if stated.",
+    },
+    summary: {
+      type: "string",
+      description: "One or two sentences a benefits advisor would want: what was quoted and anything unusual.",
+    },
+    audit_flags: {
+      type: "array",
+      items: { type: "string" },
+      description:
+        "Short notes on anything that needs a human look: name does not match cleanly, enrollment differs from the roster, rates missing, dates odd, pages unreadable.",
+    },
+  },
+};
+
+const SYSTEM = `You read insurance carrier proposals for Kennion Benefit Advisors, a benefits brokerage in Alabama. Each proposal is a quote for one employer group's medical plan, sent by a carrier such as UnitedHealthcare (including Surest), Gravie, Nationwide, EBPA, HealthEZ or BCBS of Alabama.
+
+Your job: identify the carrier, read off the plans and tier rates, and decide which group on Kennion's roster the proposal is for. Match by the employer name on the document against the roster names. Treat legal-form words (LLC, Inc., Co., Corporation, Holdings) and punctuation loosely, but do not match on a shared common word alone — "Birmingham Steel" is not "Birmingham-Toledo". When two roster groups could both fit, pick neither and say so in the flags. Copy the matched roster name exactly as listed. Rates are monthly composite amounts per tier: EE (employee only), ES (employee + spouse), EC (employee + children), FAM (family). Leave a value null rather than guessing.`;
+
+/**
+ * Read one proposal. `file` is { buffer, mime, filename }. `roster` is
+ * [{ name, enrolled, tpa }] for every live group. Returns the extraction, or
+ * throws with a message the admin screen can show.
+ */
+export async function analyzeProposal(file, roster) {
+  if (!aiEnabled()) throw new Error("AI matching is off: no ANTHROPIC_API_KEY is set.");
+  const client = apiKey() ? new Anthropic({ apiKey: apiKey() }) : new Anthropic();
+
+  const rosterText = roster
+    .map((g) => `- ${g.name} (${g.enrolled} enrolled, ${g.tpa || "TPA unknown"})`)
+    .join("\n");
+
+  const content = [];
+  if (file.mime === "application/pdf") {
+    content.push({
+      type: "document",
+      source: { type: "base64", media_type: "application/pdf", data: file.buffer.toString("base64") },
+      title: file.filename,
+    });
+  } else {
+    // CSV or plain text from a carrier portal export.
+    content.push({
+      type: "document",
+      source: { type: "text", media_type: "text/plain", data: file.buffer.toString("utf8") },
+      title: file.filename,
+    });
+  }
+  content.push({
+    type: "text",
+    text: `The file is named "${file.filename}".\n\nKennion's roster — the only groups a proposal can be matched to:\n${rosterText}\n\nRead the proposal and fill in the structured result.`,
+  });
+
+  const params = {
+    model: MODEL,
+    max_tokens: 16000,
+    system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],
+    output_config: { effort: "medium", format: jsonSchemaOutputFormat(SCHEMA) },
+    messages: [{ role: "user", content }],
+  };
+
+  // Server-side refusal fallback on the beta endpoint; if that request is
+  // refused as malformed (an org without the beta, say), the same call on the
+  // stable endpoint is identical minus the fallback.
+  let response;
+  const beta = client.beta && client.beta.messages && typeof client.beta.messages.parse === "function";
+  if (beta) {
+    try {
+      response = await client.beta.messages.parse({
+        ...params,
+        betas: ["server-side-fallback-2026-07-01"],
+        fallbacks: "default",
+      });
+    } catch (e) {
+      if (!(e instanceof Anthropic.BadRequestError)) throw e;
+      console.warn("beta fallback request rejected, retrying without it:", e.message);
+    }
+  }
+  if (!response) response = await client.messages.parse(params);
+
+  if (response.stop_reason === "refusal") {
+    throw new Error("The model declined to read this document.");
+  }
+  if (!response.parsed_output) {
+    throw new Error("Could not read a structured result from the document.");
+  }
+  return response.parsed_output;
+}

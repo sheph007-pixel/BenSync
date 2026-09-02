@@ -11,6 +11,7 @@
     "check": "tsc -b --noEmit false --emitDeclarationOnly false"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.123.0",
     "compression": "^1.7.5",
     "express": "^5.0.1",
     "pg": "^8.16.3",
