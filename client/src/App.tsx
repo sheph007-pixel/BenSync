@@ -274,8 +274,10 @@ export default function App() {
           : page.tab === "groups"
             ? "Groups"
             : page.tab === "rates"
-              ? "Plans & Rates"
-              : "Import"
+              ? "Existing Plans & Rates"
+              : page.tab === "proposals"
+                ? "Proposals"
+                : "Import"
       } — Rate Administration`;
     document.title = t;
   }, [page, g]);

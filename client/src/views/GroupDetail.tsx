@@ -3,6 +3,7 @@ import { C, money0, panel } from "@/lib/importui";
 import Link from "@/lib/Link";
 import { PATHS } from "@/lib/router";
 import { BROKER_LABEL, RENEWALS, RENEWAL_LABEL, RENEWAL_TONE, type AdminGroup } from "@/views/GroupsTable";
+import { GroupProposals } from "@/views/Proposals";
 
 interface Props {
   group: AdminGroup & {
@@ -392,12 +393,14 @@ export default function GroupDetail({ group, token, onChanged, onBack, onOpenRat
           <div style={{ marginTop: 10, fontSize: 12.5, color: C.faint }}>
             Tier rates for these plans are on{" "}
             <Link href={PATHS.rates} onClick={() => onOpenRates(group.name)}>
-              Plans &amp; Rates
+              Existing Plans &amp; Rates
             </Link>
             .
           </div>
         </div>
       )}
+
+      <GroupProposals group={group.name} token={token} />
 
       <div style={{ ...panel, marginTop: 16, padding: "18px 22px" }}>
         <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: C.ink }}>

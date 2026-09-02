@@ -11,7 +11,8 @@ import { useEffect, useState, type MouseEvent } from "react";
  *   /options             2027 Medical Plan Options
  *   /admin/groups        Rate Administration — Groups
  *   /admin/groups/:name  one company's page
- *   /admin/rates         Rate Administration — Plans & Rates
+ *   /admin/rates         Rate Administration — Existing Plans & Rates
+ *   /admin/proposals     Rate Administration — Proposals
  *   /admin/import        Rate Administration — Import
  *
  * Sections within a page are plain `#hash` anchors.
@@ -24,7 +25,7 @@ export interface Route {
 export type Page =
   | { kind: "signin"; staff: boolean }
   | { kind: "group"; tab: "current" | "options" }
-  | { kind: "admin"; tab: "groups" | "rates" | "import"; group: string | null }
+  | { kind: "admin"; tab: "groups" | "rates" | "proposals" | "import"; group: string | null }
   | { kind: "unknown" };
 
 export const PATHS = {
@@ -34,6 +35,7 @@ export const PATHS = {
   options: "/options",
   groups: "/admin/groups",
   rates: "/admin/rates",
+  proposals: "/admin/proposals",
   import: "/admin/import",
 } as const;
 
@@ -52,9 +54,9 @@ export function parsePath(path: string): Page {
   if (path === PATHS.staffSignin) return { kind: "signin", staff: true };
   if (path === PATHS.current) return { kind: "group", tab: "current" };
   if (path === PATHS.options) return { kind: "group", tab: "options" };
-  const m = path.match(/^\/admin\/(groups|rates|import)(?:\/(.+))?$/);
+  const m = path.match(/^\/admin\/(groups|rates|proposals|import)(?:\/(.+))?$/);
   if (m) {
-    const tab = m[1] as "groups" | "rates" | "import";
+    const tab = m[1] as "groups" | "rates" | "proposals" | "import";
     return { kind: "admin", tab, group: tab === "groups" && m[2] ? safeDecode(m[2]) : null };
   }
   return { kind: "unknown" };

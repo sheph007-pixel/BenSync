@@ -14,6 +14,7 @@ import { parseEnStream } from "./en-parse.js";
 import { createDb } from "./db.js";
 import { assignCodes, sizeFor, normalizeName } from "./group-id.js";
 import { eligibilityOf } from "./eligibility.js";
+import { aiEnabled, analyzeProposal } from "./ai.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.resolve(__dirname, "..", "dist", "public");
@@ -242,6 +243,7 @@ app.get("/healthz", (_req, res) => res.type("text/plain").send("ok"));
 function adminPayload() {
   return {
     kind: "admin",
+    ai: aiEnabled(),
     durable: !!db || DURABLE,
     storage: db ? "postgres" : DURABLE ? "volume" : "ephemeral",
     overrides,
@@ -506,6 +508,254 @@ app.post("/api/admin/override", requireStaff, express.json({ limit: "16kb" }), a
     return res.status(500).json({ error: "Could not save: " + e.message });
   }
   res.json({ ok: true, key, rate: clean });
+});
+
+/**
+ * Carrier proposals.
+ *
+ * Each uploaded file is stored whole (Postgres when configured, memory
+ * otherwise — the screen says which) and then read by Claude in the
+ * background: carrier, the group named on the paper, plans and tier rates, and
+ * the roster group it matches with a confidence. A confident match is assigned
+ * outright; a weaker one is suggested for review; no match leaves the proposal
+ * in the queue for staff to assign by hand. Any assignment can be changed.
+ */
+const memProposals = [];
+let memNextId = 1;
+function stripBytes(row) {
+  const { data, ...rest } = row;
+  return rest;
+}
+const proposalStore = db
+  ? db
+  : {
+      async addProposal(p) {
+        const row = {
+          id: memNextId++,
+          group_name: p.group_name || null,
+          carrier: p.carrier || null,
+          filename: p.filename,
+          mime: p.mime,
+          size: p.size,
+          data: p.data,
+          extracted: null,
+          summary: null,
+          confidence: null,
+          status: p.status || "analyzing",
+          assigned_by: p.assigned_by || null,
+          error: null,
+          uploaded_by: p.uploaded_by || null,
+          uploaded_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        memProposals.unshift(row);
+        return stripBytes(row);
+      },
+      async listProposals() {
+        return memProposals.map(stripBytes);
+      },
+      async updateProposal(id, fields) {
+        const row = memProposals.find((r) => r.id === id);
+        if (!row) return null;
+        Object.assign(row, fields, { updated_at: new Date().toISOString() });
+        return stripBytes(row);
+      },
+      async getProposalFile(id) {
+        const row = memProposals.find((r) => r.id === id);
+        return row ? { filename: row.filename, mime: row.mime, data: row.data } : null;
+      },
+      async deleteProposal(id) {
+        const i = memProposals.findIndex((r) => r.id === id);
+        if (i < 0) return false;
+        memProposals.splice(i, 1);
+        return true;
+      },
+    };
+
+const liveRoster = () =>
+  groups
+    .filter((g) => !g.archived && g.eligible)
+    .map((g) => ({ name: g.name, enrolled: g.enrolled, tpa: g.tpa }));
+
+/** Cheap fallback when there is no AI: does the filename name a roster group? */
+function matchByFilename(filename) {
+  const hay = normalizeName(filename.replace(/\.[a-z0-9]+$/i, ""));
+  const hits = liveRoster().filter((g) => {
+    const n = normalizeName(g.name);
+    return n.length >= 4 && hay.includes(n);
+  });
+  return hits.length === 1 ? hits[0].name : null;
+}
+
+/** Read the file, match it, and write the outcome back. Runs in the background. */
+async function runAnalysis(id, file, keepAssignment) {
+  try {
+    if (!aiEnabled()) {
+      const guess = keepAssignment ? null : matchByFilename(file.filename);
+      await proposalStore.updateProposal(id, {
+        status: keepAssignment ? "assigned" : guess ? "suggested" : "unassigned",
+        ...(guess ? { group_name: guess, confidence: 0.5, assigned_by: "filename" } : {}),
+        summary: "AI reading is off (no ANTHROPIC_API_KEY). Assign the group by hand.",
+        error: null,
+      });
+      return;
+    }
+    const roster = liveRoster();
+    const out = await analyzeProposal(file, roster);
+    const flags = Array.isArray(out.audit_flags) ? [...out.audit_flags] : [];
+    const matched = roster.find((g) => g.name === out.matched_group) || null;
+    const conf = Math.max(0, Math.min(1, Number(out.confidence) || 0));
+
+    const current = (await proposalStore.listProposals()).find((r) => r.id === id);
+    // Audit against what we know: enrollment on the paper vs the roster.
+    const compareName = keepAssignment && current ? current.group_name : matched && matched.name;
+    const compare = roster.find((g) => g.name === compareName) || null;
+    if (compare && out.enrolled_on_document != null && compare.enrolled) {
+      const diff = Math.abs(out.enrolled_on_document - compare.enrolled) / compare.enrolled;
+      if (diff > 0.2) {
+        flags.push(
+          `Priced on ${out.enrolled_on_document} enrolled; the roster has ${compare.enrolled} for ${compare.name}.`,
+        );
+      }
+    }
+
+    const fields = {
+      carrier: out.carrier || null,
+      extracted: { ...out, audit_flags: flags },
+      summary: out.summary || null,
+      confidence: conf,
+      error: null,
+    };
+    if (keepAssignment) {
+      // Uploaded straight onto a company page: the human already chose the
+      // group. Note a disagreement rather than overriding them.
+      if (matched && current && current.group_name && matched.name !== current.group_name) {
+        fields.extracted.audit_flags.push(
+          `The document appears to be for ${matched.name}, not ${current.group_name}.`,
+        );
+      }
+      fields.status = "assigned";
+    } else if (matched && conf >= 0.85) {
+      Object.assign(fields, { group_name: matched.name, status: "assigned", assigned_by: "ai" });
+    } else if (matched && conf >= 0.5) {
+      Object.assign(fields, { group_name: matched.name, status: "suggested", assigned_by: "ai" });
+    } else {
+      Object.assign(fields, { group_name: null, status: "unassigned", assigned_by: null });
+    }
+    await proposalStore.updateProposal(id, fields);
+  } catch (e) {
+    console.error(`proposal ${id} analysis failed:`, e.message);
+    await proposalStore.updateProposal(id, {
+      status: keepAssignment ? "assigned" : "unassigned",
+      error: e.message,
+    });
+  }
+}
+
+const PROPOSAL_TYPES = new Set(["application/pdf", "text/csv", "text/plain"]);
+
+/** Upload one proposal file. Raw body; filename and optional group in the query. */
+app.post(
+  "/api/admin/proposals",
+  requireStaff,
+  express.raw({ type: () => true, limit: "25mb" }),
+  async (req, res) => {
+    const filename = String(req.query.filename || "proposal.pdf").slice(0, 200);
+    const mime = (req.get("content-type") || "").split(";")[0].trim() || "application/octet-stream";
+    const group = String(req.query.group || "").trim();
+    if (!Buffer.isBuffer(req.body) || !req.body.length) {
+      return res.status(400).json({ error: "No file received." });
+    }
+    if (!PROPOSAL_TYPES.has(mime)) {
+      return res.status(400).json({ error: `Upload a PDF or CSV — ${mime || "that type"} is not supported yet.` });
+    }
+    if (group && !groups.some((g) => g.name === group)) {
+      return res.status(404).json({ error: "No such group." });
+    }
+    try {
+      const row = await proposalStore.addProposal({
+        group_name: group || null,
+        filename,
+        mime,
+        size: req.body.length,
+        data: req.body,
+        status: "analyzing",
+        assigned_by: group ? req.staffEmail || "staff" : null,
+        uploaded_by: req.staffEmail || null,
+      });
+      // Read it after replying; the screen polls until it is done.
+      void runAnalysis(row.id, { buffer: req.body, mime, filename }, !!group);
+      res.json({ ok: true, proposal: row, ai: aiEnabled(), durable: !!db });
+    } catch (e) {
+      res.status(500).json({ error: "Could not store the file: " + e.message });
+    }
+  },
+);
+
+app.get("/api/admin/proposals", requireStaff, async (req, res) => {
+  try {
+    let rows = await proposalStore.listProposals();
+    const group = String(req.query.group || "").trim();
+    if (group) rows = rows.filter((r) => r.group_name === group);
+    res.json({ proposals: rows, ai: aiEnabled(), durable: !!db });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get("/api/admin/proposals/:id/file", requireStaff, async (req, res) => {
+  const id = Number(req.params.id);
+  const f = await proposalStore.getProposalFile(id).catch(() => null);
+  if (!f) return res.status(404).json({ error: "No such proposal." });
+  res.setHeader("Content-Type", f.mime);
+  res.setHeader("Content-Disposition", `inline; filename="${f.filename.replace(/"/g, "")}"`);
+  res.send(f.data);
+});
+
+/** Assign, reassign, confirm, or relabel a proposal. */
+app.post("/api/admin/proposals/:id", requireStaff, express.json({ limit: "16kb" }), async (req, res) => {
+  const id = Number(req.params.id);
+  const { group, carrier, confirm } = req.body || {};
+  const fields = {};
+  if (group !== undefined) {
+    const clean = group == null || group === "" ? null : String(group);
+    if (clean && !groups.some((g) => g.name === clean)) {
+      return res.status(404).json({ error: "No such group." });
+    }
+    fields.group_name = clean;
+    fields.status = clean ? "assigned" : "unassigned";
+    fields.assigned_by = clean ? req.staffEmail || "staff" : null;
+  }
+  if (confirm) {
+    fields.status = "assigned";
+    fields.assigned_by = req.staffEmail || "staff";
+  }
+  if (carrier !== undefined) fields.carrier = carrier == null ? null : String(carrier).slice(0, 80);
+  try {
+    const row = await proposalStore.updateProposal(id, fields);
+    if (!row) return res.status(404).json({ error: "No such proposal." });
+    res.json({ ok: true, proposal: row });
+  } catch (e) {
+    res.status(500).json({ error: "Could not save: " + e.message });
+  }
+});
+
+/** Read the document again — after the roster changed, or a key was added. */
+app.post("/api/admin/proposals/:id/analyze", requireStaff, async (req, res) => {
+  const id = Number(req.params.id);
+  const f = await proposalStore.getProposalFile(id).catch(() => null);
+  if (!f) return res.status(404).json({ error: "No such proposal." });
+  const current = (await proposalStore.listProposals()).find((r) => r.id === id);
+  const keep = !!(current && current.group_name && current.assigned_by && current.assigned_by !== "ai" && current.assigned_by !== "filename");
+  await proposalStore.updateProposal(id, { status: "analyzing", error: null });
+  void runAnalysis(id, { buffer: f.data, mime: f.mime, filename: f.filename }, keep);
+  res.json({ ok: true });
+});
+
+app.delete("/api/admin/proposals/:id", requireStaff, async (req, res) => {
+  const ok = await proposalStore.deleteProposal(Number(req.params.id)).catch(() => false);
+  if (!ok) return res.status(404).json({ error: "No such proposal." });
+  res.json({ ok: true });
 });
 
 app.use(

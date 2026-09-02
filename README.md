@@ -130,6 +130,29 @@ behind a **"Not in program"** filter, listing the carriers actually found on it,
 so a program carrier under an unrecognised name is visible and can be added to
 the rule.
 
+## Proposals
+
+Carrier proposals — UnitedHealthcare, Surest, Gravie, Nationwide, EBPA, HealthEZ,
+BCBS of Alabama — are uploaded on the **Proposals** tab, a whole batch at once,
+or one at a time from a company's page. Each file is stored whole in Postgres
+(`kennion.proposals`) and then read by Claude (`claude-opus-5`, via the
+Anthropic SDK) in the background: the carrier, the employer named on the
+document, the effective date, every plan with its tier rates, and which roster
+group it belongs to, with a confidence. A match at 85% or better is **assigned**
+to the group; between 50% and 85% it is **suggested** and waits for a click to
+confirm; below that the proposal sits in the **to assign** queue with a group
+dropdown. Any assignment can be changed. The extraction is shown under
+"Details" for review and is not pushed into the rate tables. Claude also audits
+what it reads against the roster — a proposal priced on a very different
+headcount than the group's, or a document that names a different company than
+the page it was uploaded to, is flagged.
+
+Reading needs an Anthropic key in the environment — `ANTHROPIC_API_KEY`, or
+`CLAUDE` as it was first added to Railway. Without it uploads are
+still stored and a filename that names a group is used as a hint; staff assign
+the rest by hand. Without `DATABASE_URL` proposals live in memory until the next
+deploy, and the screen says so.
+
 ## Privacy
 
 The census carries names, ages, genders, ZIPs and premiums for over 1,300
@@ -232,6 +255,7 @@ human enters:
 | `kennion.group_meta` | staff-assigned access code and ALE bucket per group |
 | `kennion.rate_overrides` | hand-keyed rates by group + plan + tier, with `updated_at` / `updated_by` |
 | `kennion.imports` | one row per upload — filename, when, by whom, companies found and applied |
+| `kennion.proposals` | one row per carrier proposal — the file itself, what Claude read off it, the group it is assigned to and by whom |
 
 Everything lives in a dedicated `kennion` schema. The database may already carry
 tables from a previous application — a `public.groups` from the old platform is
@@ -279,6 +303,7 @@ at `/app/node_modules/.cache`, and `npm ci` removes `node_modules` wholesale, so
 it fails trying to `rmdir` that mount point with `EBUSY`.
 
 Environment variables, all optional: `DATABASE_URL` (Postgres), `ADMIN_EMAIL`
-and `ADMIN_CODE` for staff sign-in, `DATA_DIR` for a writable volume when there
-is no database, and `PORT` (defaults to 5000). Set the admin values in Railway
+and `ADMIN_CODE` for staff sign-in, `ANTHROPIC_API_KEY` (or `CLAUDE`) so uploaded
+proposals are read and matched to groups, `DATA_DIR` for a writable volume when there is
+no database, and `PORT` (defaults to 5000). Set the admin values in Railway
 so the real credentials are not the ones committed here.
