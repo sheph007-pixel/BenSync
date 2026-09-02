@@ -14,6 +14,8 @@ export interface AdminGroup {
   brokerIsSet?: boolean;
   /** Where the 2027 renewal stands, for tracking. */
   renewal?: Renewal;
+  /** Carrier proposals filed under this group. */
+  proposals?: number;
   address1: string | null;
   city: string | null;
   state: string | null;
@@ -75,6 +77,7 @@ function groupsCsv(rows: AdminGroup[], blockEnrolled: number): string {
     ["Company ID", (g) => g.code],
     ["Employee Navigator name", (g) => g.enName],
     ["Renewal", (g) => RENEWAL_LABEL[g.renewal || "open"]],
+    ["Proposals on file", (g) => g.proposals || 0],
     ["Broker", (g) => BROKER_LABEL[g.broker || "kennion"]],
     ["Size", (g) => g.sizeCategory],
     ["Enrolled", (g) => g.enrolled],
@@ -175,6 +178,7 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
   const [size, setSize] = useState<"All" | "2-50" | "51+">("All");
   const [broker, setBroker] = useState<"All" | Broker>("All");
   const [renewal, setRenewal] = useState<"All" | Renewal>("All");
+  const [proposalsFilter, setProposalsFilter] = useState<"All" | "with" | "without">("All");
   const [view, setView] = useState<"live" | "excluded" | "archived">("live");
   const [sort, setSort] = useState<SortKey>("name");
   const [dir, setDir] = useState(1);
@@ -230,6 +234,7 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
           : !g.archived && g.eligible !== false) &&
       (size === "All" || g.sizeCategory === size) &&
       (broker === "All" || (g.broker || "kennion") === broker) &&
+      (proposalsFilter === "All" || (proposalsFilter === "with" ? (g.proposals || 0) > 0 : !(g.proposals || 0))) &&
       (!q ||
         `${g.name} ${g.enName ?? ""} ${g.code} ${g.city ?? ""} ${g.state ?? ""} ${g.zip ?? ""} ${g.sic ?? ""} ${g.sicDesc ?? ""} ${g.taxId ?? ""} ${g.tpa ?? ""} ${BROKER_LABEL[g.broker || "kennion"]} ${RENEWAL_LABEL[g.renewal || "open"]} ${(g.contacts ?? []).map((c) => `${c.name} ${c.email}`).join(" ")}`
           .toLowerCase()
@@ -261,7 +266,7 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
   });
 
   const filtering =
-    !!q || size !== "All" || broker !== "All" || renewal !== "All" || view !== "live";
+    !!q || size !== "All" || broker !== "All" || renewal !== "All" || proposalsFilter !== "All" || view !== "live";
 
   // Totals for what is on screen. They follow every search, filter and sort.
   const shown = {
@@ -292,6 +297,7 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
     setSize("All");
     setBroker("All");
     setRenewal("All");
+    setProposalsFilter("All");
     setView("live");
   };
 
@@ -430,6 +436,11 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
                 {RENEWAL_LABEL[r]}
               </option>
             ))}
+          </select>
+          <select aria-label="Proposals" value={proposalsFilter} onChange={(e) => setProposalsFilter(e.target.value as typeof proposalsFilter)} style={filterSelect}>
+            <option value="All">Proposals: any</option>
+            <option value="with">With a proposal</option>
+            <option value="without">No proposal yet</option>
           </select>
           {(counts.excluded > 0 || counts.archived > 0) && (
             <select aria-label="Which groups" value={view} onChange={(e) => setView(e.target.value as typeof view)} style={filterSelect}>
@@ -579,6 +590,15 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
                             ? `carriers found: ${(g.carriersSeen || []).join(", ") || "none"}`
                             : (g.programs || []).join(" · ")}
                         </span>
+                        {(g.proposals || 0) > 0 && (
+                          <Link
+                            href={groupPath(g.name)}
+                            title="Proposals on file — open the company page"
+                            style={{ fontSize: 11.5, color: C.green, textDecoration: "none", whiteSpace: "nowrap" }}
+                          >
+                            📎 {g.proposals} proposal{g.proposals === 1 ? "" : "s"}
+                          </Link>
+                        )}
                       </div>
                       {!!g.duplicateOf?.length && (
                         <div style={{ fontSize: 11.5, color: C.red, marginTop: 2 }}>

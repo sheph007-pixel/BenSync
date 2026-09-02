@@ -134,15 +134,32 @@ the rule.
 
 Carrier proposals — UnitedHealthcare, Surest, Gravie, Nationwide, EBPA, HealthEZ,
 BCBS of Alabama — are uploaded on the **Proposals** tab, a whole batch at once,
-or one at a time from a company's page. Each file is stored whole in Postgres
+or one at a time from a company's page. The drop zone takes the proposal in
+whatever form it came: a PDF, a spreadsheet, a Word file, a CSV, a picture of
+a rate sheet — or the **email itself** (`.eml` from Gmail or Apple Mail, `.msg`
+from Outlook). An email is opened on the server, each usable attachment becomes
+a proposal of its own, and the email's subject, sender and body go along as
+context for the match; logos and signature images are skipped, and an email
+with nothing attached is read as the proposal itself. The email is kept too, so
+the original can always be opened. Each file is stored whole in Postgres
 (`kennion.proposals`) and then read by Claude (`claude-opus-5`, via the
 Anthropic SDK) in the background: the carrier, the employer named on the
 document, the effective date, every plan with its tier rates, and which roster
 group it belongs to, with a confidence. A match at 85% or better is **assigned**
 to the group; between 50% and 85% it is **suggested** and waits for a click to
 confirm; below that the proposal sits in the **to assign** queue with a group
-dropdown. Any assignment can be changed. The extraction is shown under
-"Details" for review and is not pushed into the rate tables. Claude also audits
+dropdown. Any assignment can be changed. Each group tracks four **slots** — UHC Fully
+Insured, UHC Level Funded, Gravie and Nationwide (plus Surest and Other) — and
+Claude fills the slot from the carrier and the funding type it reads; staff can
+change it. When a newer proposal lands in a slot a group already has, the older
+one is marked **superseded** and kept, so the current set is always the latest
+from each carrier. That current set, stored in the database, is what the 2027
+options for each group will be built from. The extraction is shown under
+"Details" for review and is not pushed into the rate tables. The tab has two
+layouts: a list, and **By group**, which walks the roster with each group's
+proposals attached and ends with the groups still waiting on one. The Groups
+page shows a proposal count under each company and can filter to groups with or
+without one. Claude also audits
 what it reads against the roster — a proposal priced on a very different
 headcount than the group's, or a document that names a different company than
 the page it was uploaded to, is flagged.

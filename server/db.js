@@ -86,6 +86,17 @@ CREATE TABLE IF NOT EXISTS kennion.proposals (
   updated_at    timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS proposals_group_idx ON kennion.proposals (group_name);
+-- An email is stored as its own row (kind 'email'); each attachment pulled out
+-- of it is a row of kind 'attachment' pointing back at it, carrying the
+-- email's subject, sender and body as context for the match.
+ALTER TABLE kennion.proposals ADD COLUMN IF NOT EXISTS kind text NOT NULL DEFAULT 'file';
+ALTER TABLE kennion.proposals ADD COLUMN IF NOT EXISTS parent_id bigint;
+ALTER TABLE kennion.proposals ADD COLUMN IF NOT EXISTS context jsonb;
+-- Which of a group's proposal slots this fills (UHC Fully Insured, UHC Level
+-- Funded, Gravie, Nationwide…). A newer proposal in the same slot supersedes
+-- the older one, which is kept and marked.
+ALTER TABLE kennion.proposals ADD COLUMN IF NOT EXISTS slot text;
+ALTER TABLE kennion.proposals ADD COLUMN IF NOT EXISTS superseded_by bigint;
 
 CREATE TABLE IF NOT EXISTS kennion.rate_overrides (
   group_name   text NOT NULL,
@@ -249,13 +260,16 @@ export function createDb(url) {
     async addProposal(p) {
       const { rows } = await pool.query(
         `INSERT INTO kennion.proposals
-           (group_name, carrier, filename, mime, size, data, status, assigned_by, uploaded_by)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+           (group_name, carrier, filename, mime, size, data, status, assigned_by, uploaded_by,
+            kind, parent_id, context)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
          RETURNING id, group_name, carrier, filename, mime, size, extracted, summary, confidence,
-                   status, assigned_by, error, uploaded_by, uploaded_at, updated_at`,
+                   status, assigned_by, error, uploaded_by, uploaded_at, updated_at,
+                   kind, parent_id, context, slot, superseded_by`,
         [
           p.group_name || null, p.carrier || null, p.filename, p.mime, p.size, p.data,
           p.status || "analyzing", p.assigned_by || null, p.uploaded_by || null,
+          p.kind || "file", p.parent_id || null, p.context ? JSON.stringify(p.context) : null,
         ],
       );
       return rows[0];
@@ -265,7 +279,8 @@ export function createDb(url) {
     async listProposals() {
       const { rows } = await pool.query(
         `SELECT id, group_name, carrier, filename, mime, size, extracted, summary, confidence,
-                status, assigned_by, error, uploaded_by, uploaded_at, updated_at
+                status, assigned_by, error, uploaded_by, uploaded_at, updated_at,
+                kind, parent_id, context, slot, superseded_by
            FROM kennion.proposals ORDER BY uploaded_at DESC, id DESC`,
       );
       return rows;
@@ -273,7 +288,7 @@ export function createDb(url) {
 
     /** Change any of the reviewable fields on a proposal. */
     async updateProposal(id, fields) {
-      const allowed = ["group_name", "carrier", "extracted", "summary", "confidence", "status", "assigned_by", "error"];
+      const allowed = ["group_name", "carrier", "extracted", "summary", "confidence", "status", "assigned_by", "error", "slot", "superseded_by"];
       const sets = [];
       const vals = [];
       for (const k of allowed) {
@@ -287,7 +302,8 @@ export function createDb(url) {
         `UPDATE kennion.proposals SET ${sets.join(", ")}, updated_at = now()
           WHERE id = $${vals.length}
           RETURNING id, group_name, carrier, filename, mime, size, extracted, summary, confidence,
-                    status, assigned_by, error, uploaded_by, uploaded_at, updated_at`,
+                    status, assigned_by, error, uploaded_by, uploaded_at, updated_at,
+                    kind, parent_id, context, slot, superseded_by`,
         vals,
       );
       return rows[0] || null;
@@ -303,7 +319,11 @@ export function createDb(url) {
     },
 
     async deleteProposal(id) {
-      const { rowCount } = await pool.query("DELETE FROM kennion.proposals WHERE id = $1", [id]);
+      // An email takes its attachments with it.
+      const { rowCount } = await pool.query(
+        "DELETE FROM kennion.proposals WHERE id = $1 OR parent_id = $1",
+        [id],
+      );
       return rowCount > 0;
     },
 
