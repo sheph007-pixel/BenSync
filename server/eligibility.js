@@ -27,11 +27,18 @@ export const CARRIERS = [
   },
 ];
 
-const matchCarrier = (text) => {
+export const matchCarrier = (text) => {
   const s = String(text || "");
   const hit = CARRIERS.find((c) => c.test(s));
   return hit ? hit.key : null;
 };
+
+/**
+ * The program carrier a plan belongs to ("EBPA", "HealthEZ", "BCBS-AL"), or
+ * null. The carrier may be named on the plan's TPA field or inside the plan
+ * name itself ("Blue Secure Silver for Business" administered through a TPA).
+ */
+export const programOf = (plan) => matchCarrier(plan.tpa) || matchCarrier(plan.plan);
 
 /**
  * Decide whether a group belongs in the portal.
@@ -46,9 +53,7 @@ export function eligibilityOf(group) {
   let enrolledOnProgram = 0;
 
   for (const p of plans) {
-    // The carrier may be named on the plan's TPA field or inside the plan name
-    // itself ("Blue Secure Silver for Business" administered through a TPA).
-    const key = matchCarrier(p.tpa) || matchCarrier(p.plan);
+    const key = programOf(p);
     const label = (p.tpa || "").trim() || "—";
     seen.add(label);
     if (key && (p.enrolled || 0) > 0) {

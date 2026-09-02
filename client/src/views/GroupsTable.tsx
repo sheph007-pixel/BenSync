@@ -37,6 +37,26 @@ export interface AdminGroup {
   duplicateOf?: string[];
   tpa?: string;
   plans?: { plan: string; tpa: string; enrolled: number; monthly: number }[];
+  /** Medical premium on EBPA + HealthEZ only — the captive program. BCBS of Alabama is excluded. */
+  groupHealthMonthly?: number;
+  /** Every medical plan, BCBS included. */
+  medicalMonthly?: number;
+  /** Dental, vision, life, disability … — 0 until the group's export has been re-read for them. */
+  supplementalMonthly?: number;
+  /** Medical + supplemental. */
+  totalMonthly?: number;
+  /** Whether supplemental lines were captured for this group at all. */
+  linesLoaded?: boolean;
+  /** Every non-medical benefit in force, with no member detail. */
+  lines?: AdminLine[];
+}
+
+export interface AdminLine {
+  benefit: string;
+  carrier: string;
+  plan: string;
+  enrolled: number;
+  monthly: number;
 }
 
 export const BROKER_LABEL = { kennion: "Kennion", outside: "Outside Broker" } as const;
@@ -65,7 +85,12 @@ type SortKey = "name" | "location" | "contact" | "enrolled" | "share" | "sizeCat
 /** Share of the block, as "4.2%". */
 const pct = (part: number, whole: number) => (whole ? `${((part / whole) * 100).toFixed(1)}%` : "—");
 
+/** Medical premium, summed from the plans in force. */
 const monthlyOf = (g: AdminGroup) => (g.plans || []).reduce((n, p) => n + (p.monthly || 0), 0);
+/** Group health: EBPA + HealthEZ medical only, as the server works it out. */
+const groupHealthOf = (g: AdminGroup) => g.groupHealthMonthly ?? 0;
+/** Every line — medical plus whatever supplemental has been loaded. */
+const totalOf = (g: AdminGroup) => g.totalMonthly ?? monthlyOf(g);
 
 /**
  * The rows on screen, as a CSV Excel opens cleanly. Exports exactly what the
@@ -86,7 +111,11 @@ function groupsCsv(rows: AdminGroup[], blockEnrolled: number): string {
     ["TPA", (g) => g.tpa],
     ["Program carriers", (g) => (g.programs || []).join("; ")],
     ["Plans in force", (g) => (g.plans || []).map((p) => p.plan).join("; ")],
-    ["Monthly premium", (g) => monthlyOf(g).toFixed(2)],
+    ["Group health premium (EBPA+HealthEZ)", (g) => groupHealthOf(g).toFixed(2)],
+    ["Medical premium", (g) => (g.medicalMonthly ?? monthlyOf(g)).toFixed(2)],
+    ["Supplemental premium", (g) => (g.supplementalMonthly ?? 0).toFixed(2)],
+    ["Total premium", (g) => totalOf(g).toFixed(2)],
+    ["Supplemental loaded", (g) => (g.linesLoaded ? "Yes" : "No")],
     ["Address", (g) => g.address1],
     ["City", (g) => g.city],
     ["State", (g) => g.state],
@@ -217,6 +246,8 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
     enrolled: live.reduce((n, g) => n + (g.enrolled || 0), 0),
     lives: live.reduce((n, g) => n + (g.lives || 0), 0),
     monthly: live.reduce((n, g) => n + monthlyOf(g), 0),
+    groupHealth: live.reduce((n, g) => n + groupHealthOf(g), 0),
+    total: live.reduce((n, g) => n + totalOf(g), 0),
     renewal: Object.fromEntries(
       RENEWALS.map((r) => [r, live.filter((g) => (g.renewal || "open") === r).length]),
     ) as Record<Renewal, number>,
@@ -273,6 +304,11 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
     enrolled: rows.reduce((n, g) => n + (g.enrolled || 0), 0),
     lives: rows.reduce((n, g) => n + (g.lives || 0), 0),
     monthly: rows.reduce((n, g) => n + monthlyOf(g), 0),
+    groupHealth: rows.reduce((n, g) => n + groupHealthOf(g), 0),
+    total: rows.reduce((n, g) => n + totalOf(g), 0),
+    // Whether any row's export has been read for supplemental lines; until
+    // one has, "total" is medical only and the tile says so.
+    linesLoaded: rows.some((g) => g.linesLoaded),
     small: rows.filter((g) => g.sizeCategory === "2-50").length,
     large: rows.filter((g) => g.sizeCategory === "51+").length,
   };
@@ -315,21 +351,24 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
     download(`kennion-groups${tag ? "-" + tag : ""}-${stamp}.csv`, groupsCsv(rows, counts.enrolled));
   };
 
-  const tile = (label: string, value: string, note: string) => (
+  const tile = (label: string, value: string, note: string, aside?: string) => (
     <div key={label} style={{ ...panel, padding: "14px 16px" }}>
       <div style={{ fontSize: 12.5, color: C.muted }}>{label}</div>
       <div style={{ marginTop: 5, fontSize: 24, fontWeight: 600, color: C.ink, letterSpacing: "-0.4px", ...num }}>
         {value}
       </div>
       <div style={{ marginTop: 3, fontSize: 12, color: C.faint }}>{note}</div>
+      {aside && <div style={{ marginTop: 5, fontSize: 11.5, color: C.ghost, lineHeight: 1.4 }}>{aside}</div>}
     </div>
   );
 
   return (
     <div>
-      {/* Dashboard: three numbers for whatever is on screen. They move with
+      {/* Dashboard: four numbers for whatever is on screen. They move with
           every search and filter, so a slice of the book reads as a block of
-          its own; unfiltered, they describe the whole live roster. */}
+          its own; unfiltered, they describe the whole live roster. Premium is
+          shown twice: group health (EBPA + HealthEZ medical, the captive
+          program) and the total across every line, supplemental included. */}
       <div
         style={{
           display: "grid",
@@ -351,9 +390,17 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
           `${shown.lives.toLocaleString()} covered lives${filtering ? ` · ${pct(shown.enrolled, counts.enrolled)} of block` : ""}`,
         )}
         {tile(
-          "Monthly premium",
-          money0(shown.monthly),
-          `${money0(shown.monthly * 12)} annualized${filtering ? ` · ${pct(shown.monthly, counts.monthly)} of block` : ""}`,
+          "Group health premium",
+          money0(shown.groupHealth),
+          `EBPA + HealthEZ medical · ${money0(shown.groupHealth * 12)} annualized${filtering ? ` · ${pct(shown.groupHealth, counts.groupHealth)} of block` : ""}`,
+        )}
+        {tile(
+          "Total premium",
+          money0(shown.total),
+          `all lines incl. supplemental · ${money0(shown.total * 12)} annualized${filtering ? ` · ${pct(shown.total, counts.total)} of block` : ""}`,
+          rows.length && !shown.linesLoaded
+            ? "Supplemental lines appear after the next Employee Navigator import."
+            : undefined,
         )}
         <div style={{ ...panel, padding: "14px 16px", gridColumn: "span 2", minWidth: 0 }}>
           <div style={{ fontSize: 12.5, color: C.muted }}>2027 renewal</div>
@@ -703,8 +750,8 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
                   <strong>{rows.length === 1 ? "1 group" : `${rows.length} groups`}</strong>
                   <span style={{ color: C.muted }}>
                     {" "}
-                    · {shown.lives.toLocaleString()} covered lives · {money0(shown.monthly)} monthly premium ·{" "}
-                    {money0(shown.monthly * 12)} annualized
+                    · {shown.lives.toLocaleString()} covered lives · {money0(shown.groupHealth)} group health ·{" "}
+                    {money0(shown.total)} total premium · {money0(shown.total * 12)} annualized (total)
                   </span>
                 </td>
                 <td style={{ padding: "12px 10px", textAlign: "right", fontSize: 13, fontWeight: 600, color: C.ink, borderTop: `1px solid ${C.border}`, ...num }}>
