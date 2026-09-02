@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { C, panel } from "@/lib/importui";
+import { useMemo, useState, type CSSProperties } from "react";
+import { C, money0, panel } from "@/lib/importui";
 import Link from "@/lib/Link";
 import { groupPath } from "@/lib/router";
 
@@ -12,6 +12,8 @@ export interface AdminGroup {
   /** Who brokers the group. Only the label is kept, never a broker's name. */
   broker?: "kennion" | "outside";
   brokerIsSet?: boolean;
+  /** Where the 2027 renewal stands, for tracking. */
+  renewal?: Renewal;
   address1: string | null;
   city: string | null;
   state: string | null;
@@ -35,18 +37,30 @@ export interface AdminGroup {
   plans?: { plan: string; tpa: string; enrolled: number; monthly: number }[];
 }
 
-interface Props {
-  groups: AdminGroup[];
-  token: string;
-  onChanged: (groups: AdminGroup[]) => void;
-}
-
-type SortKey =
-  | "name" | "code" | "address1" | "city" | "state" | "zip" | "sic"
-  | "taxId" | "contact" | "enrolled" | "sizeCategory" | "broker" | "importedAt";
-
 export const BROKER_LABEL = { kennion: "Kennion", outside: "Outside Broker" } as const;
 type Broker = keyof typeof BROKER_LABEL;
+
+export const RENEWALS = ["open", "sent", "renewed", "non-renewed"] as const;
+export type Renewal = (typeof RENEWALS)[number];
+export const RENEWAL_LABEL: Record<Renewal, string> = {
+  open: "Open",
+  sent: "Sent",
+  renewed: "Renewed",
+  "non-renewed": "Non-Renewed",
+};
+/** [text, background, border] for each renewal state. */
+export const RENEWAL_TONE: Record<Renewal, [string, string, string]> = {
+  open: [C.blue, C.blueTint, C.blueEdge],
+  sent: [C.amber, C.amberTint, C.amberEdge],
+  renewed: [C.green, C.greenTint, C.greenEdge],
+  "non-renewed": [C.red, C.redTint, C.redEdge],
+};
+
+type Field = "companyId" | "sizeCategory" | "broker" | "renewal";
+
+type SortKey = "name" | "location" | "contact" | "enrolled" | "sizeCategory" | "broker" | "renewal";
+
+const monthlyOf = (g: AdminGroup) => (g.plans || []).reduce((n, p) => n + (p.monthly || 0), 0);
 
 /**
  * The rows on screen, as a CSV Excel opens cleanly. Exports exactly what the
@@ -57,6 +71,7 @@ function groupsCsv(rows: AdminGroup[]): string {
     ["Company", (g) => g.name],
     ["Company ID", (g) => g.code],
     ["Employee Navigator name", (g) => g.enName],
+    ["Renewal", (g) => RENEWAL_LABEL[g.renewal || "open"]],
     ["Broker", (g) => BROKER_LABEL[g.broker || "kennion"]],
     ["Size", (g) => g.sizeCategory],
     ["Enrolled", (g) => g.enrolled],
@@ -64,7 +79,7 @@ function groupsCsv(rows: AdminGroup[]): string {
     ["TPA", (g) => g.tpa],
     ["Program carriers", (g) => (g.programs || []).join("; ")],
     ["Plans in force", (g) => (g.plans || []).map((p) => p.plan).join("; ")],
-    ["Monthly premium", (g) => (g.plans || []).reduce((n, p) => n + (p.monthly || 0), 0).toFixed(2)],
+    ["Monthly premium", (g) => monthlyOf(g).toFixed(2)],
     ["Address", (g) => g.address1],
     ["City", (g) => g.city],
     ["State", (g) => g.state],
@@ -89,7 +104,7 @@ function groupsCsv(rows: AdminGroup[]): string {
   const lines = [cols.map(([h]) => cell(h)).join(",")];
   rows.forEach((g) => lines.push(cols.map(([, f]) => cell(f(g))).join(",")));
   // BOM so Excel reads the file as UTF-8 (names with apostrophes and accents).
-  return "\ufeff" + lines.join("\r\n");
+  return "﻿" + lines.join("\r\n");
 }
 
 function download(filename: string, text: string) {
@@ -101,29 +116,69 @@ function download(filename: string, text: string) {
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
 
-const th = {
-  textAlign: "left" as const,
-  padding: "11px 10px",
+interface Props {
+  groups: AdminGroup[];
+  token: string;
+  onChanged: (groups: AdminGroup[]) => void;
+}
+
+const th: CSSProperties = {
+  textAlign: "left",
+  padding: "10px 10px",
+  fontSize: 12,
   fontWeight: 600,
-  color: C.ink,
+  color: C.muted,
+  textTransform: "uppercase",
+  letterSpacing: ".3px",
   borderBottom: `1px solid ${C.border}`,
-  whiteSpace: "nowrap" as const,
+  whiteSpace: "nowrap",
 };
-const td = { padding: "8px 10px", borderBottom: `1px solid ${C.hairline}`, color: C.ink };
+const td: CSSProperties = {
+  padding: "10px 10px",
+  borderBottom: `1px solid ${C.hairline}`,
+  color: C.ink,
+  verticalAlign: "top",
+  fontSize: 13,
+};
+const num: CSSProperties = { fontVariantNumeric: "tabular-nums" };
+
+/** Compact select, the one control used for every editable label in the grid. */
+const selectStyle = (color: string, bg: string = "#fff", border: string = C.border): CSSProperties => ({
+  appearance: "none",
+  WebkitAppearance: "none",
+  padding: "5px 24px 5px 9px",
+  fontSize: 12.5,
+  fontWeight: 500,
+  color,
+  background: `${bg} url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238b9296' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 8px center`,
+  border: `1px solid ${border}`,
+  borderRadius: 4,
+  cursor: "pointer",
+  outline: "none",
+  width: "100%",
+});
+
+const filterSelect: CSSProperties = {
+  ...selectStyle(C.ink, "#fff", C.inputEdge),
+  width: "auto",
+  padding: "8px 28px 8px 11px",
+  fontSize: 13,
+  fontWeight: 400,
+};
 
 export default function GroupsTable({ groups, token, onChanged }: Props) {
   const [query, setQuery] = useState("");
   const [size, setSize] = useState<"All" | "2-50" | "51+">("All");
   const [broker, setBroker] = useState<"All" | Broker>("All");
-  const [showArchived, setShowArchived] = useState(false);
-  const [view, setView] = useState<"live" | "excluded">("live");
+  const [renewal, setRenewal] = useState<"All" | Renewal>("All");
+  const [view, setView] = useState<"live" | "excluded" | "archived">("live");
   const [sort, setSort] = useState<SortKey>("name");
   const [dir, setDir] = useState(1);
   const [editing, setEditing] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const [saved, setSaved] = useState("");
 
-  async function save(group: string, field: "companyId" | "sizeCategory" | "broker", value: string) {
+  async function save(group: string, field: Field, value: string) {
     setError("");
     const r = await fetch("/api/admin/group-meta", {
       method: "POST",
@@ -141,24 +196,47 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
     return true;
   }
 
+  // The roster the dashboard describes: in the portal, not archived. The same
+  // rule Plans & Rates uses, so the two pages count the same groups.
+  const live = useMemo(() => groups.filter((g) => !g.archived && g.eligible !== false), [groups]);
+  const counts = {
+    small: live.filter((g) => g.sizeCategory === "2-50").length,
+    large: live.filter((g) => g.sizeCategory === "51+").length,
+    archived: groups.filter((g) => g.archived).length,
+    excluded: groups.filter((g) => !g.archived && g.eligible === false).length,
+    outside: live.filter((g) => g.broker === "outside").length,
+    dupes: groups.filter((g) => !g.archived && (g.duplicateOf || []).length).length,
+    enrolled: live.reduce((n, g) => n + (g.enrolled || 0), 0),
+    lives: live.reduce((n, g) => n + (g.lives || 0), 0),
+    monthly: live.reduce((n, g) => n + monthlyOf(g), 0),
+    renewal: Object.fromEntries(
+      RENEWALS.map((r) => [r, live.filter((g) => (g.renewal || "open") === r).length]),
+    ) as Record<Renewal, number>,
+  };
+
   const q = query.trim().toLowerCase();
   const filtered = groups.filter(
     (g) =>
-      (showArchived ? !!g.archived : !g.archived) &&
-      (view === "excluded" ? g.eligible === false : g.eligible !== false) &&
+      (view === "archived"
+        ? !!g.archived
+        : view === "excluded"
+          ? !g.archived && g.eligible === false
+          : !g.archived && g.eligible !== false) &&
       (size === "All" || g.sizeCategory === size) &&
       (broker === "All" || (g.broker || "kennion") === broker) &&
+      (renewal === "All" || (g.renewal || "open") === renewal) &&
       (!q ||
-        `${g.name} ${g.code} ${g.city ?? ""} ${g.state ?? ""} ${g.zip ?? ""} ${g.sic ?? ""} ${g.taxId ?? ""} ${BROKER_LABEL[g.broker || "kennion"]} ${(g.contacts ?? []).map((c) => `${c.name} ${c.email}`).join(" ")}`
+        `${g.name} ${g.enName ?? ""} ${g.code} ${g.city ?? ""} ${g.state ?? ""} ${g.zip ?? ""} ${g.sic ?? ""} ${g.sicDesc ?? ""} ${g.taxId ?? ""} ${g.tpa ?? ""} ${BROKER_LABEL[g.broker || "kennion"]} ${RENEWAL_LABEL[g.renewal || "open"]} ${(g.contacts ?? []).map((c) => `${c.name} ${c.email}`).join(" ")}`
           .toLowerCase()
           .includes(q)),
   );
 
   const sortVal = (g: AdminGroup): string | number => {
     if (sort === "enrolled") return g.enrolled ?? 0;
-    if (sort === "importedAt") return g.importedAt ? Date.parse(g.importedAt) : 0;
     if (sort === "contact") return (g.contacts?.[0]?.name || "").toLowerCase();
+    if (sort === "location") return `${g.state || ""} ${g.city || ""}`.trim().toLowerCase();
     if (sort === "broker") return BROKER_LABEL[g.broker || "kennion"].toLowerCase();
+    if (sort === "renewal") return RENEWALS.indexOf(g.renewal || "open");
     const v = (g as unknown as Record<string, unknown>)[sort];
     return String(v ?? "").toLowerCase();
   };
@@ -168,10 +246,17 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
     if (va === vb) return a.name.localeCompare(b.name);
     // Blanks sort last regardless of direction, so an empty column does not
     // bury the rows that actually have values.
-    if (va === "" ) return 1;
+    if (va === "") return 1;
     if (vb === "") return -1;
     return (va > vb ? 1 : -1) * dir;
   });
+
+  // Totals for what is on screen. They follow every search, filter and sort.
+  const shown = {
+    enrolled: rows.reduce((n, g) => n + (g.enrolled || 0), 0),
+    lives: rows.reduce((n, g) => n + (g.lives || 0), 0),
+    monthly: rows.reduce((n, g) => n + monthlyOf(g), 0),
+  };
 
   const sortBy = (k: SortKey) => {
     setDir((d) => (sort === k ? -d : 1));
@@ -180,422 +265,406 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
   const H = ({ k, label, align, width }: { k: SortKey; label: string; align?: "right"; width?: number }) => (
     <th
       onClick={() => sortBy(k)}
-      style={{
-        ...th,
-        width,
-        textAlign: align || "left",
-        cursor: "pointer",
-        userSelect: "none",
-      }}
+      aria-sort={sort === k ? (dir > 0 ? "ascending" : "descending") : "none"}
+      style={{ ...th, width, textAlign: align || "left", cursor: "pointer", userSelect: "none" }}
     >
       {label}
       <span style={{ color: sort === k ? C.blue : "transparent" }}>{dir > 0 ? " ▲" : " ▼"}</span>
     </th>
   );
 
-  const live = groups.filter((g) => !g.archived && g.eligible !== false);
-  const counts = {
-    small: live.filter((g) => g.sizeCategory === "2-50").length,
-    large: live.filter((g) => g.sizeCategory === "51+").length,
-    archived: groups.length - live.length,
-    excluded: groups.filter((g) => !g.archived && g.eligible === false).length,
-    outside: live.filter((g) => g.broker === "outside").length,
-    dupes: groups.filter((g) => !g.archived && (g.duplicateOf || []).length).length,
+  const filtering =
+    !!q || size !== "All" || broker !== "All" || renewal !== "All" || view !== "live";
+  const clear = () => {
+    setQuery("");
+    setSize("All");
+    setBroker("All");
+    setRenewal("All");
+    setView("live");
   };
 
+  const exportRows = () => {
+    const tag = [
+      view === "live" ? "" : view === "excluded" ? "not-in-program" : "archived",
+      renewal === "All" ? "" : renewal,
+      broker === "All" ? "" : broker === "outside" ? "outside-broker" : "kennion",
+      size === "All" ? "" : size.replace("+", "plus"),
+      q ? "search" : "",
+    ]
+      .filter(Boolean)
+      .join("-");
+    const stamp = new Date().toISOString().slice(0, 10);
+    download(`kennion-groups${tag ? "-" + tag : ""}-${stamp}.csv`, groupsCsv(rows));
+  };
+
+  const tile = (label: string, value: string, note: string) => (
+    <div key={label} style={{ ...panel, padding: "14px 16px" }}>
+      <div style={{ fontSize: 12.5, color: C.muted }}>{label}</div>
+      <div style={{ marginTop: 5, fontSize: 24, fontWeight: 600, color: C.ink, letterSpacing: "-0.4px", ...num }}>
+        {value}
+      </div>
+      <div style={{ marginTop: 3, fontSize: 12, color: C.faint }}>{note}</div>
+    </div>
+  );
+
   return (
-    <div style={{ ...panel, marginTop: 16, padding: "20px 22px" }}>
-      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: 12 }}>
-        <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600, color: C.ink }}>Groups</h2>
-        <span style={{ fontSize: 12.5, color: C.faint }}>
-          {live.length} groups · {counts.small} at 2-50 · {counts.large} at 51+ (ALE) ·{" "}
-          {counts.outside} with an outside broker
-          {counts.archived > 0 && ` · ${counts.archived} archived`}
-        </span>
-      </div>
-      {view === "excluded" && (
-        <div style={{ marginTop: 8, fontSize: 13, color: C.muted, lineHeight: 1.65, maxWidth: 880 }}>
-          These groups have no enrolled medical plan with EBPA, HealthEZ or BCBS of Alabama, so
-          they are not in the 2027 portal and their access codes are refused. The carriers found
-          on each are listed — if one of those <em>is</em> a program carrier under a name the
-          rule does not recognise, say so and it will be matched.
-        </div>
-      )}
-
-      <div style={{ marginTop: 14, display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search company, code, city, ZIP or SIC"
-          aria-label="Search groups"
-          style={{
-            flex: 1,
-            minWidth: 260,
-            padding: "8px 11px",
-            fontSize: 13.5,
-            color: C.ink,
-            border: `1px solid ${C.inputEdge}`,
-            borderRadius: 4,
-            outline: "none",
-          }}
-        />
-        <div style={{ display: "flex", gap: 2 }}>
-          {(["All", "2-50", "51+"] as const).map((s) => (
-            <button
-              key={s}
-              onClick={() => setSize(s)}
-              style={{
-                padding: "7px 13px",
-                fontSize: 13,
-                borderRadius: 4,
-                cursor: "pointer",
-                ...(size === s
-                  ? { color: "#fff", background: C.blue, border: `1px solid ${C.blue}`, fontWeight: 500 }
-                  : { color: C.body, background: "#fff", border: `1px solid ${C.inputEdge}` }),
-              }}
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-        <div style={{ display: "flex", gap: 2 }} role="group" aria-label="Filter by broker">
-          {(["All", "kennion", "outside"] as const).map((b) => (
-            <button
-              key={b}
-              onClick={() => setBroker(b)}
-              aria-pressed={broker === b}
-              style={{
-                padding: "7px 13px",
-                fontSize: 13,
-                borderRadius: 4,
-                cursor: "pointer",
-                ...(broker === b
-                  ? { color: "#fff", background: C.blue, border: `1px solid ${C.blue}`, fontWeight: 500 }
-                  : { color: C.body, background: "#fff", border: `1px solid ${C.inputEdge}` }),
-              }}
-            >
-              {b === "All" ? "All brokers" : BROKER_LABEL[b]}
-            </button>
-          ))}
-        </div>
-        {counts.excluded > 0 && (
-          <button
-            onClick={() => setView((v) => (v === "live" ? "excluded" : "live"))}
-            style={{
-              padding: "7px 13px",
-              fontSize: 13,
-              borderRadius: 4,
-              cursor: "pointer",
-              ...(view === "excluded"
-                ? { color: "#fff", background: C.red, border: `1px solid ${C.red}`, fontWeight: 500 }
-                : { color: C.body, background: "#fff", border: `1px solid ${C.inputEdge}` }),
-            }}
-          >
-            {view === "excluded" ? "Viewing not in program" : `Not in program (${counts.excluded})`}
-          </button>
-        )}
-        {counts.archived > 0 && (
-          <button
-            onClick={() => setShowArchived((v) => !v)}
-            style={{
-              padding: "7px 13px",
-              fontSize: 13,
-              borderRadius: 4,
-              cursor: "pointer",
-              ...(showArchived
-                ? { color: "#fff", background: C.amber, border: `1px solid ${C.amber}`, fontWeight: 500 }
-                : { color: C.body, background: "#fff", border: `1px solid ${C.inputEdge}` }),
-            }}
-          >
-            {showArchived ? "Viewing archived" : `Archived (${counts.archived})`}
-          </button>
-        )}
-        <span style={{ fontSize: 12.5, color: C.faint }}>{rows.length} shown</span>
-        <button
-          onClick={() => {
-            const tag = [
-              view === "excluded" ? "not-in-program" : showArchived ? "archived" : "",
-              broker === "All" ? "" : broker === "outside" ? "outside-broker" : "kennion",
-              size === "All" ? "" : size.replace("+", "plus"),
-              q ? "search" : "",
-            ]
-              .filter(Boolean)
-              .join("-");
-            const stamp = new Date().toISOString().slice(0, 10);
-            download(`kennion-groups${tag ? "-" + tag : ""}-${stamp}.csv`, groupsCsv(rows));
-          }}
-          disabled={!rows.length}
-          title="Download the rows shown, with the current search, filters and sort, as a CSV for Excel"
-          style={{
-            padding: "7px 14px",
-            fontSize: 13,
-            fontWeight: 500,
-            color: "#fff",
-            background: C.blue,
-            border: `1px solid ${C.blue}`,
-            borderRadius: 4,
-            cursor: rows.length ? "pointer" : "default",
-            opacity: rows.length ? 1 : 0.5,
-            whiteSpace: "nowrap",
-          }}
-        >
-          Export {rows.length === 1 ? "1 group" : `${rows.length} groups`}
-        </button>
-      </div>
-
-      {counts.dupes > 0 && (
-        <div
-          style={{
-            marginTop: 12,
-            padding: "10px 12px",
-            background: C.amberTint,
-            border: `1px solid ${C.amberEdge}`,
-            borderRadius: 4,
-            fontSize: 12.5,
-            color: C.amber,
-            lineHeight: 1.55,
-          }}
-        >
-          <strong>{counts.dupes} rows look like the same client under two names.</strong> These
-          were created before imports matched on a normalised name. Open each pair, decide which
-          holds the current data, and archive the other — nothing is deleted. Flagged with
-          <span style={{ color: C.red }}> ⚠ duplicate</span> below.
-        </div>
-      )}
-
-      {error && (
-        <div
-          role="alert"
-          style={{
-            marginTop: 12,
-            padding: "9px 12px",
-            background: C.redTint,
-            border: `1px solid ${C.redEdge}`,
-            borderRadius: 4,
-            fontSize: 13,
-            color: C.red,
-          }}
-        >
-          {error}
-        </div>
-      )}
-
-      <div style={{ marginTop: 14, overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 1040 }}>
-          <thead>
-            <tr>
-              <H k="name" label="Company" />
-              <H k="code" label="Company ID" width={132} />
-              <H k="address1" label="Address" />
-              <H k="city" label="City" />
-              <H k="state" label="State" width={62} />
-              <H k="zip" label="ZIP" width={84} />
-              <H k="sic" label="SIC" width={80} />
-              <H k="taxId" label="EIN" width={110} />
-              <H k="contact" label="Contact" />
-              <H k="enrolled" label="Enrolled" align="right" width={92} />
-              <H k="sizeCategory" label="Size" width={150} />
-              <H k="broker" label="Broker" width={190} />
-              <H k="importedAt" label="Data from" width={132} />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((g) => {
-              const key = g.name + "|companyId";
-              const val = editing[key] ?? g.code;
+    <div>
+      {/* Dashboard: the whole live roster, in four numbers. The renewal tile
+          doubles as a filter — click a state to see those groups. */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))",
+          gap: 14,
+          marginTop: 16,
+        }}
+      >
+        {tile("Groups", String(live.length), `${counts.small} at 2-50 · ${counts.large} at 51+ (ALE)`)}
+        {tile("Enrolled employees", counts.enrolled.toLocaleString(), `${counts.lives.toLocaleString()} covered lives`)}
+        {tile("Monthly premium", money0(counts.monthly), `${money0(counts.monthly * 12)} annualized`)}
+        {tile("Outside broker", String(counts.outside), `${live.length - counts.outside} placed by Kennion`)}
+        <div style={{ ...panel, padding: "14px 16px", gridColumn: "span 2", minWidth: 0 }}>
+          <div style={{ fontSize: 12.5, color: C.muted }}>2027 renewal</div>
+          <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {RENEWALS.map((r) => {
+              const [fg, bg, bd] = RENEWAL_TONE[r];
+              const on = renewal === r;
               return (
-                <tr key={g.name}>
-                  <td style={{ ...td, lineHeight: 1.4 }}>
-                    <Link href={groupPath(g.name)} style={{ color: C.blue }}>
-                      {g.name}
-                    </Link>
-                    {!!g.duplicateOf?.length && (
-                      <div style={{ fontSize: 11.5, color: C.red, marginTop: 2 }}>
-                        ⚠ duplicate of {g.duplicateOf.join(", ")}
+                <button
+                  key={r}
+                  onClick={() => {
+                    setRenewal(on ? "All" : r);
+                    if (view !== "live") setView("live");
+                  }}
+                  aria-pressed={on}
+                  title={on ? "Show all renewal states" : `Show only ${RENEWAL_LABEL[r]}`}
+                  style={{
+                    display: "flex",
+                    alignItems: "baseline",
+                    gap: 7,
+                    padding: "6px 11px",
+                    fontSize: 13,
+                    borderRadius: 4,
+                    cursor: "pointer",
+                    color: fg,
+                    background: bg,
+                    border: `1px solid ${on ? fg : bd}`,
+                    boxShadow: on ? `inset 0 0 0 1px ${fg}` : "none",
+                  }}
+                >
+                  <span style={{ fontSize: 18, fontWeight: 600, ...num }}>{counts.renewal[r]}</span>
+                  <span>{RENEWAL_LABEL[r]}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ ...panel, marginTop: 16 }}>
+        {/* One row of controls: search, three filters, which roster, export. */}
+        <div
+          style={{
+            padding: "14px 18px",
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 10,
+            alignItems: "center",
+            borderBottom: `1px solid ${C.border}`,
+          }}
+        >
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search company, ID, city, contact…"
+            aria-label="Search groups"
+            style={{
+              flex: "1 1 240px",
+              minWidth: 200,
+              padding: "8px 11px",
+              fontSize: 13.5,
+              color: C.ink,
+              border: `1px solid ${C.inputEdge}`,
+              borderRadius: 4,
+              outline: "none",
+            }}
+          />
+          <select aria-label="Size" value={size} onChange={(e) => setSize(e.target.value as typeof size)} style={filterSelect}>
+            <option value="All">All sizes</option>
+            <option value="2-50">2-50</option>
+            <option value="51+">51+ (ALE)</option>
+          </select>
+          <select aria-label="Broker" value={broker} onChange={(e) => setBroker(e.target.value as typeof broker)} style={filterSelect}>
+            <option value="All">All brokers</option>
+            <option value="kennion">Kennion</option>
+            <option value="outside">Outside Broker</option>
+          </select>
+          <select aria-label="Renewal" value={renewal} onChange={(e) => setRenewal(e.target.value as typeof renewal)} style={filterSelect}>
+            <option value="All">All renewal states</option>
+            {RENEWALS.map((r) => (
+              <option key={r} value={r}>
+                {RENEWAL_LABEL[r]}
+              </option>
+            ))}
+          </select>
+          {(counts.excluded > 0 || counts.archived > 0) && (
+            <select aria-label="Which groups" value={view} onChange={(e) => setView(e.target.value as typeof view)} style={filterSelect}>
+              <option value="live">In the portal</option>
+              {counts.excluded > 0 && <option value="excluded">Not in program ({counts.excluded})</option>}
+              {counts.archived > 0 && <option value="archived">Archived ({counts.archived})</option>}
+            </select>
+          )}
+          {filtering && (
+            <button
+              onClick={clear}
+              style={{ background: "none", border: "none", fontSize: 13, color: C.blue, cursor: "pointer", padding: "0 2px" }}
+            >
+              Clear
+            </button>
+          )}
+          <span style={{ marginLeft: "auto", fontSize: 12.5, color: C.faint, whiteSpace: "nowrap" }}>
+            {rows.length} shown
+          </span>
+          <button
+            onClick={exportRows}
+            disabled={!rows.length}
+            title="Download the rows shown, with the current search, filters and sort, as a CSV for Excel"
+            style={{
+              padding: "8px 14px",
+              fontSize: 13,
+              fontWeight: 500,
+              color: "#fff",
+              background: C.blue,
+              border: `1px solid ${C.blue}`,
+              borderRadius: 4,
+              cursor: rows.length ? "pointer" : "default",
+              opacity: rows.length ? 1 : 0.5,
+              whiteSpace: "nowrap",
+            }}
+          >
+            Export {rows.length === 1 ? "1 group" : `${rows.length} groups`}
+          </button>
+        </div>
+
+        {view === "excluded" && (
+          <div style={{ padding: "12px 18px 0", fontSize: 13, color: C.muted, lineHeight: 1.65, maxWidth: 880 }}>
+            These groups have no enrolled medical plan with EBPA, HealthEZ or BCBS of Alabama, so
+            they are not in the 2027 portal and their access codes are refused. The carriers found
+            on each are listed — if one of those <em>is</em> a program carrier under a name the
+            rule does not recognise, say so and it will be matched.
+          </div>
+        )}
+
+        {counts.dupes > 0 && view === "live" && (
+          <div
+            style={{
+              margin: "12px 18px 0",
+              padding: "10px 12px",
+              background: C.amberTint,
+              border: `1px solid ${C.amberEdge}`,
+              borderRadius: 4,
+              fontSize: 12.5,
+              color: C.amber,
+              lineHeight: 1.55,
+            }}
+          >
+            <strong>{counts.dupes} rows look like the same client under two names.</strong> Open each
+            pair, decide which holds the current data, and archive the other — nothing is deleted.
+            Flagged with <span style={{ color: C.red }}>⚠ duplicate</span> below.
+          </div>
+        )}
+
+        {error && (
+          <div
+            role="alert"
+            style={{
+              margin: "12px 18px 0",
+              padding: "9px 12px",
+              background: C.redTint,
+              border: `1px solid ${C.redEdge}`,
+              borderRadius: 4,
+              fontSize: 13,
+              color: C.red,
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        <div style={{ overflowX: "auto", padding: "0 8px" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 880 }}>
+            <thead>
+              <tr>
+                <H k="name" label="Company" />
+                <H k="location" label="Location" width={150} />
+                <H k="contact" label="Contact" />
+                <H k="enrolled" label="Enrolled" align="right" width={90} />
+                <H k="sizeCategory" label="Size" width={110} />
+                <H k="broker" label="Broker" width={150} />
+                <H k="renewal" label="Renewal" width={140} />
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((g) => {
+                const key = g.name + "|companyId";
+                const val = editing[key] ?? g.code;
+                const r = g.renewal || "open";
+                const [rfg, rbg, rbd] = RENEWAL_TONE[r];
+                const b = g.broker || "kennion";
+                const contact = g.contacts?.[0];
+                return (
+                  <tr key={g.name}>
+                    <td style={{ ...td, lineHeight: 1.4 }}>
+                      <Link href={groupPath(g.name)} style={{ color: C.blue, fontWeight: 500 }}>
+                        {g.name}
+                      </Link>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 3 }}>
+                        <input
+                          value={val}
+                          onChange={(e) => setEditing((p) => ({ ...p, [key]: e.target.value.toUpperCase() }))}
+                          onBlur={async () => {
+                            if (val === g.code) return;
+                            await save(g.name, "companyId", val);
+                            setEditing((p) => {
+                              const n = { ...p };
+                              delete n[key];
+                              return n;
+                            });
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                          }}
+                          aria-label={`Company ID for ${g.name}`}
+                          title="Access code — type over it to change"
+                          style={{
+                            width: 92,
+                            padding: "2px 5px",
+                            fontSize: 12,
+                            fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+                            fontWeight: 600,
+                            color: g.codeIsSet ? C.blue : C.body,
+                            border: `1px solid ${saved === key ? C.greenEdge : "transparent"}`,
+                            background: saved === key ? C.greenTint : C.hairline,
+                            borderRadius: 3,
+                            outline: "none",
+                          }}
+                        />
+                        <span style={{ fontSize: 11.5, color: C.ghost }}>
+                          {view === "excluded"
+                            ? `carriers found: ${(g.carriersSeen || []).join(", ") || "none"}`
+                            : (g.programs || []).join(" · ")}
+                        </span>
                       </div>
-                    )}
-                    {g.enName && (
-                      <div style={{ fontSize: 11.5, color: C.ghost, marginTop: 2 }}>
-                        Employee Navigator: {g.enName}
-                      </div>
-                    )}
-                    {view === "excluded" ? (
-                      <div style={{ fontSize: 11.5, color: C.red, marginTop: 2 }}>
-                        carriers found: {(g.carriersSeen || []).join(", ") || "none"}
-                      </div>
-                    ) : (
-                      <div style={{ fontSize: 11.5, color: C.ghost }}>
-                        {(g.programs || []).join(" · ")}
-                        {g.sicDesc ? `${g.programs?.length ? " · " : ""}${g.sicDesc}` : ""}
-                      </div>
-                    )}
-                  </td>
-                  <td style={{ ...td, padding: "5px 8px" }}>
-                    <input
-                      value={val}
-                      onChange={(e) => setEditing((p) => ({ ...p, [key]: e.target.value.toUpperCase() }))}
-                      onBlur={async () => {
-                        if (val === g.code) return;
-                        const ok = await save(g.name, "companyId", val);
-                        setEditing((p) => {
-                          const n = { ...p };
-                          delete n[key];
-                          return n;
-                        });
-                        if (!ok) return;
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-                      }}
-                      aria-label={`Company ID for ${g.name}`}
-                      style={{
-                        width: "100%",
-                        padding: "6px 8px",
-                        fontSize: 12.5,
-                        fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-                        color: g.codeIsSet ? C.blue : C.ink,
-                        fontWeight: 600,
-                        border: `1px solid ${saved === key ? C.greenEdge : C.border}`,
-                        background: saved === key ? C.greenTint : "#fff",
-                        borderRadius: 3,
-                        outline: "none",
-                      }}
-                    />
-                  </td>
-                  <td style={{ ...td, color: g.address1 ? C.ink : C.ghost }}>{g.address1 || "—"}</td>
-                  <td style={{ ...td, color: g.city ? C.ink : C.ghost }}>{g.city || "—"}</td>
-                  <td style={{ ...td, color: g.state ? C.ink : C.ghost }}>{g.state || "—"}</td>
-                  <td style={{ ...td, color: g.zip ? C.ink : C.ghost, fontVariantNumeric: "tabular-nums" }}>
-                    {g.zip || "—"}
-                  </td>
-                  <td style={{ ...td, color: g.sic ? C.ink : C.ghost, fontVariantNumeric: "tabular-nums" }}>
-                    {g.sic || "—"}
-                  </td>
-                  <td
-                    style={{
-                      ...td,
-                      color: g.taxId ? C.ink : C.ghost,
-                      fontVariantNumeric: "tabular-nums",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {g.taxId || "—"}
-                  </td>
-                  <td style={{ ...td, lineHeight: 1.4 }}>
-                    {g.contacts && g.contacts.length ? (
-                      <>
-                        {g.contacts[0].name}
-                        {g.contacts[0].email && (
-                          <div style={{ fontSize: 11.5 }}>
-                            <a href={`mailto:${g.contacts[0].email}`}>{g.contacts[0].email}</a>
-                          </div>
-                        )}
-                        {g.contacts.length > 1 && (
-                          <div style={{ fontSize: 11, color: C.ghost }}>
-                            +{g.contacts.length - 1} more
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <span style={{ color: C.ghost }}>—</span>
-                    )}
-                  </td>
-                  <td style={{ ...td, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
-                    {g.enrolled}
-                  </td>
-                  <td style={{ ...td, padding: "5px 8px" }}>
-                    <div style={{ display: "flex", gap: 2 }}>
-                      {(["2-50", "51+"] as const).map((s) => {
-                        const on = g.sizeCategory === s;
-                        return (
-                          <button
-                            key={s}
-                            onClick={() => void save(g.name, "sizeCategory", s)}
-                            style={{
-                              flex: 1,
-                              padding: "5px 8px",
-                              fontSize: 12,
-                              borderRadius: 3,
-                              cursor: "pointer",
-                              whiteSpace: "nowrap",
-                              ...(on
-                                ? {
-                                    color: "#fff",
-                                    background: C.blue,
-                                    border: `1px solid ${C.blue}`,
-                                    fontWeight: 500,
-                                  }
-                                : { color: C.body, background: "#fff", border: `1px solid ${C.border}` }),
-                            }}
-                          >
-                            {s}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {!g.sizeIsSet && (
-                      <div style={{ fontSize: 10.5, color: C.ghost, marginTop: 2 }}>from headcount</div>
-                    )}
-                  </td>
-                  <td style={{ ...td, padding: "5px 8px" }}>
-                    <div style={{ display: "flex", gap: 2 }} role="group" aria-label={`Broker for ${g.name}`}>
-                      {(["kennion", "outside"] as const).map((b) => {
-                        const on = (g.broker || "kennion") === b;
-                        return (
-                          <button
-                            key={b}
-                            onClick={() => void save(g.name, "broker", b)}
-                            aria-pressed={on}
-                            style={{
-                              flex: 1,
-                              padding: "5px 8px",
-                              fontSize: 12,
-                              borderRadius: 3,
-                              cursor: "pointer",
-                              whiteSpace: "nowrap",
-                              ...(on
-                                ? b === "outside"
-                                  ? {
-                                      color: "#fff",
-                                      background: C.amber,
-                                      border: `1px solid ${C.amber}`,
-                                      fontWeight: 500,
-                                    }
-                                  : {
-                                      color: "#fff",
-                                      background: C.blue,
-                                      border: `1px solid ${C.blue}`,
-                                      fontWeight: 500,
-                                    }
-                                : { color: C.body, background: "#fff", border: `1px solid ${C.border}` }),
-                            }}
-                          >
-                            {BROKER_LABEL[b]}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </td>
-                  <td style={{ ...td, whiteSpace: "nowrap" }}>
-                    {g.importedAt ? (
-                      <>
-                        <span style={{ color: C.green, fontSize: 12.5 }}>XML import</span>
-                        <div style={{ fontSize: 11.5, color: C.ghost }}>
-                          {new Date(g.importedAt).toLocaleDateString()}
+                      {!!g.duplicateOf?.length && (
+                        <div style={{ fontSize: 11.5, color: C.red, marginTop: 2 }}>
+                          ⚠ duplicate of {g.duplicateOf.join(", ")}
                         </div>
-                      </>
-                    ) : (
-                      <>
-                        <span style={{ color: C.faint, fontSize: 12.5 }}>Census</span>
-                        <div style={{ fontSize: 11.5, color: C.ghost }}>7/31/2026</div>
-                      </>
+                      )}
+                      {g.enName && (
+                        <div style={{ fontSize: 11.5, color: C.ghost, marginTop: 2 }}>
+                          Employee Navigator: {g.enName}
+                        </div>
+                      )}
+                    </td>
+                    <td style={{ ...td, color: g.city ? C.ink : C.ghost, lineHeight: 1.4 }}>
+                      {g.city ? `${g.city}${g.state ? `, ${g.state}` : ""}` : g.state || "—"}
+                      {g.zip && <div style={{ fontSize: 11.5, color: C.ghost, ...num }}>{g.zip}</div>}
+                    </td>
+                    <td style={{ ...td, lineHeight: 1.4 }}>
+                      {contact ? (
+                        <>
+                          {contact.name}
+                          {contact.email && (
+                            <div style={{ fontSize: 11.5 }}>
+                              <a href={`mailto:${contact.email}`}>{contact.email}</a>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <span style={{ color: C.ghost }}>—</span>
+                      )}
+                    </td>
+                    <td style={{ ...td, textAlign: "right", ...num }}>
+                      {g.enrolled}
+                      <div style={{ fontSize: 11.5, color: C.ghost }}>{g.lives} lives</div>
+                    </td>
+                    <td style={{ ...td, padding: "7px 10px" }}>
+                      <select
+                        value={g.sizeCategory}
+                        onChange={(e) => void save(g.name, "sizeCategory", e.target.value)}
+                        aria-label={`Size for ${g.name}`}
+                        title={g.sizeIsSet ? "Set by staff" : "Defaulted from headcount"}
+                        style={selectStyle(g.sizeIsSet ? C.ink : C.body, saved === g.name + "|sizeCategory" ? C.greenTint : "#fff")}
+                      >
+                        <option value="2-50">2-50</option>
+                        <option value="51+">51+</option>
+                      </select>
+                    </td>
+                    <td style={{ ...td, padding: "7px 10px" }}>
+                      <select
+                        value={b}
+                        onChange={(e) => void save(g.name, "broker", e.target.value)}
+                        aria-label={`Broker for ${g.name}`}
+                        style={selectStyle(
+                          b === "outside" ? C.amber : C.ink,
+                          saved === g.name + "|broker" ? C.greenTint : b === "outside" ? C.amberTint : "#fff",
+                          b === "outside" ? C.amberEdge : C.border,
+                        )}
+                      >
+                        <option value="kennion">Kennion</option>
+                        <option value="outside">Outside Broker</option>
+                      </select>
+                    </td>
+                    <td style={{ ...td, padding: "7px 10px" }}>
+                      <select
+                        value={r}
+                        onChange={(e) => void save(g.name, "renewal", e.target.value)}
+                        aria-label={`Renewal for ${g.name}`}
+                        style={selectStyle(rfg, saved === g.name + "|renewal" ? C.greenTint : rbg, rbd)}
+                      >
+                        {RENEWALS.map((x) => (
+                          <option key={x} value={x}>
+                            {RENEWAL_LABEL[x]}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                  </tr>
+                );
+              })}
+              {!rows.length && (
+                <tr>
+                  <td colSpan={7} style={{ ...td, padding: "26px 10px", textAlign: "center", color: C.faint }}>
+                    No groups match.{" "}
+                    {filtering && (
+                      <button onClick={clear} style={{ background: "none", border: "none", color: C.blue, cursor: "pointer", fontSize: 13, padding: 0 }}>
+                        Clear the filters
+                      </button>
                     )}
                   </td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              )}
+            </tbody>
+            {/* Totals for the rows shown — they move with every filter. */}
+            <tfoot>
+              <tr>
+                <td colSpan={3} style={{ padding: "12px 10px", fontSize: 13, color: C.ink, borderTop: `1px solid ${C.border}` }}>
+                  <strong>{rows.length === 1 ? "1 group" : `${rows.length} groups`}</strong>
+                  <span style={{ color: C.muted }}>
+                    {" "}
+                    · {shown.lives.toLocaleString()} covered lives · {money0(shown.monthly)} monthly premium ·{" "}
+                    {money0(shown.monthly * 12)} annualized
+                  </span>
+                </td>
+                <td style={{ padding: "12px 10px", textAlign: "right", fontSize: 13, fontWeight: 600, color: C.ink, borderTop: `1px solid ${C.border}`, ...num }}>
+                  {shown.enrolled.toLocaleString()}
+                  <div style={{ fontSize: 11.5, fontWeight: 400, color: C.ghost }}>enrolled</div>
+                </td>
+                <td colSpan={3} style={{ borderTop: `1px solid ${C.border}` }} />
+              </tr>
+            </tfoot>
+          </table>
+        </div>
       </div>
     </div>
   );

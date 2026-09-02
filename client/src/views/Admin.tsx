@@ -462,7 +462,9 @@ export default function Admin({
               <tr style={{ textAlign: "left" }}>
                 <th style={{ ...th, padding: "12px 8px 11px 0" }}>Group</th>
                 <th style={th}>Plan</th>
-                <th style={{ ...th, textAlign: "right" }}>Lives</th>
+                <th style={{ ...th, textAlign: "right" }} title="Employees enrolled in this plan — the same count the Groups page adds up per group">
+                  Enrolled
+                </th>
                 {TIERS.map((t) => (
                   <th key={t.key} style={{ ...th, textAlign: "right", width: 112 }}>
                     {t.key === "EE"
