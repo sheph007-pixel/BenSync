@@ -58,7 +58,10 @@ export const RENEWAL_TONE: Record<Renewal, [string, string, string]> = {
 
 type Field = "companyId" | "sizeCategory" | "broker" | "renewal";
 
-type SortKey = "name" | "location" | "contact" | "enrolled" | "sizeCategory" | "broker" | "renewal";
+type SortKey = "name" | "location" | "contact" | "enrolled" | "share" | "sizeCategory" | "broker" | "renewal";
+
+/** Share of the block, as "4.2%". */
+const pct = (part: number, whole: number) => (whole ? `${((part / whole) * 100).toFixed(1)}%` : "—");
 
 const monthlyOf = (g: AdminGroup) => (g.plans || []).reduce((n, p) => n + (p.monthly || 0), 0);
 
@@ -66,7 +69,7 @@ const monthlyOf = (g: AdminGroup) => (g.plans || []).reduce((n, p) => n + (p.mon
  * The rows on screen, as a CSV Excel opens cleanly. Exports exactly what the
  * table shows — same search, filters and sort — so a filtered view is a report.
  */
-function groupsCsv(rows: AdminGroup[]): string {
+function groupsCsv(rows: AdminGroup[], blockEnrolled: number): string {
   const cols: [string, (g: AdminGroup) => unknown][] = [
     ["Company", (g) => g.name],
     ["Company ID", (g) => g.code],
@@ -75,6 +78,7 @@ function groupsCsv(rows: AdminGroup[]): string {
     ["Broker", (g) => BROKER_LABEL[g.broker || "kennion"]],
     ["Size", (g) => g.sizeCategory],
     ["Enrolled", (g) => g.enrolled],
+    ["% of block (enrolled)", (g) => (blockEnrolled ? ((g.enrolled || 0) / blockEnrolled * 100).toFixed(1) : "")],
     ["Covered lives", (g) => g.lives],
     ["TPA", (g) => g.tpa],
     ["Program carriers", (g) => (g.programs || []).join("; ")],
@@ -232,7 +236,7 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
   );
 
   const sortVal = (g: AdminGroup): string | number => {
-    if (sort === "enrolled") return g.enrolled ?? 0;
+    if (sort === "enrolled" || sort === "share") return g.enrolled ?? 0;
     if (sort === "contact") return (g.contacts?.[0]?.name || "").toLowerCase();
     if (sort === "location") return `${g.state || ""} ${g.city || ""}`.trim().toLowerCase();
     if (sort === "broker") return BROKER_LABEL[g.broker || "kennion"].toLowerCase();
@@ -294,7 +298,7 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
       .filter(Boolean)
       .join("-");
     const stamp = new Date().toISOString().slice(0, 10);
-    download(`kennion-groups${tag ? "-" + tag : ""}-${stamp}.csv`, groupsCsv(rows));
+    download(`kennion-groups${tag ? "-" + tag : ""}-${stamp}.csv`, groupsCsv(rows, counts.enrolled));
   };
 
   const tile = (label: string, value: string, note: string) => (
@@ -492,13 +496,14 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
         )}
 
         <div style={{ overflowX: "auto", padding: "0 8px" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 880 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 960 }}>
             <thead>
               <tr>
                 <H k="name" label="Company" />
                 <H k="location" label="Location" width={150} />
                 <H k="contact" label="Contact" />
                 <H k="enrolled" label="Enrolled" align="right" width={90} />
+                <H k="share" label="% of block" align="right" width={96} />
                 <H k="sizeCategory" label="Size" width={110} />
                 <H k="broker" label="Broker" width={150} />
                 <H k="renewal" label="Renewal" width={140} />
@@ -588,6 +593,12 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
                       {g.enrolled}
                       <div style={{ fontSize: 11.5, color: C.ghost }}>{g.lives} lives</div>
                     </td>
+                    <td
+                      style={{ ...td, textAlign: "right", color: C.body, ...num }}
+                      title={`${g.enrolled} of ${counts.enrolled.toLocaleString()} enrolled across the block`}
+                    >
+                      {pct(g.enrolled || 0, counts.enrolled)}
+                    </td>
                     <td style={{ ...td, padding: "7px 10px" }}>
                       <select
                         value={g.sizeCategory}
@@ -634,7 +645,7 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
               })}
               {!rows.length && (
                 <tr>
-                  <td colSpan={7} style={{ ...td, padding: "26px 10px", textAlign: "center", color: C.faint }}>
+                  <td colSpan={8} style={{ ...td, padding: "26px 10px", textAlign: "center", color: C.faint }}>
                     No groups match.{" "}
                     {filtering && (
                       <button onClick={clear} style={{ background: "none", border: "none", color: C.blue, cursor: "pointer", fontSize: 13, padding: 0 }}>
@@ -659,6 +670,13 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
                 <td style={{ padding: "12px 10px", textAlign: "right", fontSize: 13, fontWeight: 600, color: C.ink, borderTop: `1px solid ${C.border}`, ...num }}>
                   {shown.enrolled.toLocaleString()}
                   <div style={{ fontSize: 11.5, fontWeight: 400, color: C.ghost }}>enrolled</div>
+                </td>
+                <td
+                  style={{ padding: "12px 10px", textAlign: "right", fontSize: 13, fontWeight: 600, color: C.ink, borderTop: `1px solid ${C.border}`, ...num }}
+                  title="Share of all enrolled employees in the block held by the groups shown"
+                >
+                  {pct(shown.enrolled, counts.enrolled)}
+                  <div style={{ fontSize: 11.5, fontWeight: 400, color: C.ghost }}>of block</div>
                 </td>
                 <td colSpan={3} style={{ borderTop: `1px solid ${C.border}` }} />
               </tr>

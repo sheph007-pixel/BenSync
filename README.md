@@ -92,11 +92,13 @@ or the company page and saved like the other labels.
 
 The Groups page opens with a dashboard of the live roster: group count, enrolled
 employees and covered lives, monthly premium, outside-broker count, and the
-renewal states (click one to filter to it). The table below keeps to seven
-columns — company and access code, location, contact, enrolled, size, broker,
-renewal — with the rest of each group's details on its own page. A totals row
-at the foot adds up whatever is on screen and moves with every search, filter
-and sort. The **Export** button downloads exactly those rows as a CSV that opens
+renewal states (click one to filter to it). The table below keeps to eight
+columns — company and access code, location, contact, enrolled, **% of block**
+(that group's enrolled employees as a share of every enrolled employee in the
+portal, so concentration is visible at a glance), size, broker, renewal — with
+the rest of each group's details on its own page. A totals row at the foot adds
+up whatever is on screen and moves with every search, filter and sort, so
+filtering to Outside Broker shows what share of the block those groups hold. The **Export** button downloads exactly those rows as a CSV that opens
 in Excel, with every detail column included. Filter first, then export, and the
 file is the report.
 
