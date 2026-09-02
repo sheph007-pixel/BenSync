@@ -16,6 +16,7 @@ import ImportPanel from "@/views/ImportPanel";
 import GroupsTable, { type AdminGroup } from "@/views/GroupsTable";
 import GroupDetail from "@/views/GroupDetail";
 import Proposals from "@/views/Proposals";
+import Reconciliation, { reportGroupHealth, type CarrierStats } from "@/views/Reconciliation";
 
 interface Props {
   data: KennionData;
@@ -25,6 +26,9 @@ interface Props {
   saveState: "idle" | "saving" | "saved" | "error";
   onImported: (groups: unknown[], imports?: ImportRecord[]) => void;
   imports: ImportRecord[];
+  /** Employee Navigator's carrier stats report, if one has been uploaded. */
+  carrierStats: CarrierStats | null;
+  onCarrierStats: (s: CarrierStats) => void;
   /** Which tab the address names. */
   tab: AdminTab;
   /** The company page open under /admin/groups/:name, if any. */
@@ -78,6 +82,8 @@ export default function Admin({
   saveState,
   onImported,
   imports,
+  carrierStats,
+  onCarrierStats,
   tab,
   openGroup,
   overrides,
@@ -692,6 +698,7 @@ export default function Admin({
               groups={data.groups as unknown as AdminGroup[]}
               token={token}
               onChanged={(gs) => onImported(gs as unknown[])}
+              enReport={reportGroupHealth(carrierStats)}
             />
           ))}
 
@@ -711,6 +718,13 @@ export default function Admin({
               durable={durable}
               storage={storage}
               onImported={(gs, ims) => onImported(gs, ims as ImportRecord[] | undefined)}
+            />
+
+            <Reconciliation
+              token={token}
+              stats={carrierStats}
+              groups={activeGroups as unknown as AdminGroup[]}
+              onStats={onCarrierStats}
             />
 
             <div style={{ ...panel, marginTop: 16, padding: "20px 22px" }}>

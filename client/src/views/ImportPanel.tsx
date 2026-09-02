@@ -160,8 +160,10 @@ export default function ImportPanel({ token, durable, storage, onImported }: Pro
       </h2>
       <div style={{ marginTop: 8, fontSize: 13, color: C.muted, lineHeight: 1.65, maxWidth: 880 }}>
         Upload an Employee Navigator XML export — a single group, or a full Data API export with
-        every company in it. It reads active medical enrollments only, and pulls the billed rate and
-        the actual employer/employee split for every tier someone is enrolled in. Nothing is saved
+        every company in it. It reads every current enrollment — medical for the rate tables, every
+        other line for the premium totals — and pulls the billed rate and the actual employer/employee
+        split for every tier someone is enrolled in. Anyone still on a plan counts; terminated employees
+        and ended or waived elections do not. Nothing is saved
         until you confirm.
       </div>
 

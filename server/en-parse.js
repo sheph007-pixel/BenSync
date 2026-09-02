@@ -243,7 +243,11 @@ const companyBlock = wholeCompany.slice(0, headEnd > 0 ? headEnd : 8000);
   const today = new Date();
 
   for (const emp of employees) {
-    if (text(emp, "EmploymentStatus") !== "Active") continue;
+    // Employee Navigator counts anyone still enrolled — on leave, on COBRA,
+    // a retiree with coverage — so only a terminated (or otherwise gone)
+    // employee is skipped here; their enrollments carry end dates anyway.
+    const status = text(emp, "EmploymentStatus") || "";
+    if (/terminat|inactive|deceased|separat/i.test(status)) continue;
 
     // Same currency rule for every benefit: an enrollment that has not ended,
     // on an active employee.

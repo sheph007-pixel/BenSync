@@ -98,6 +98,18 @@ ALTER TABLE kennion.proposals ADD COLUMN IF NOT EXISTS context jsonb;
 ALTER TABLE kennion.proposals ADD COLUMN IF NOT EXISTS slot text;
 ALTER TABLE kennion.proposals ADD COLUMN IF NOT EXISTS superseded_by bigint;
 
+-- Employee Navigator's Carrier Stats report, one row per upload. The latest
+-- one is the independent check the XML import is reconciled against.
+CREATE TABLE IF NOT EXISTS kennion.carrier_stats (
+  id            bigserial PRIMARY KEY,
+  filename      text,
+  report_date   date,
+  rows          jsonb NOT NULL,
+  total         jsonb,
+  uploaded_by   text,
+  uploaded_at   timestamptz NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS kennion.rate_overrides (
   group_name   text NOT NULL,
   plan         text NOT NULL,
@@ -108,6 +120,15 @@ CREATE TABLE IF NOT EXISTS kennion.rate_overrides (
   PRIMARY KEY (group_name, plan, census_tier)
 );
 `;
+
+const shapeStats = (r) => ({
+  filename: r.filename,
+  reportDate: r.report_date ? String(r.report_date).slice(0, 10) : null,
+  rows: r.rows,
+  total: r.total,
+  uploadedAt: r.uploaded_at,
+  uploadedBy: r.uploaded_by,
+});
 
 export function createDb(url) {
   if (!url) return null;
@@ -325,6 +346,25 @@ export function createDb(url) {
         [id],
       );
       return rowCount > 0;
+    },
+
+    /** Keep a carrier stats report. Returns it in the shape the client uses. */
+    async saveCarrierStats(rec) {
+      const { rows } = await pool.query(
+        `INSERT INTO kennion.carrier_stats (filename, report_date, rows, total, uploaded_by)
+         VALUES ($1,$2,$3,$4,$5)
+         RETURNING filename, report_date, rows, total, uploaded_by, uploaded_at`,
+        [rec.filename || null, rec.reportDate || null, JSON.stringify(rec.rows), rec.total ? JSON.stringify(rec.total) : null, rec.uploadedBy || null],
+      );
+      return shapeStats(rows[0]);
+    },
+
+    async latestCarrierStats() {
+      const { rows } = await pool.query(
+        `SELECT filename, report_date, rows, total, uploaded_by, uploaded_at
+           FROM kennion.carrier_stats ORDER BY uploaded_at DESC, id DESC LIMIT 1`,
+      );
+      return rows[0] ? shapeStats(rows[0]) : null;
     },
 
     async stats() {

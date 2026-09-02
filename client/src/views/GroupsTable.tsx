@@ -162,6 +162,8 @@ interface Props {
   groups: AdminGroup[];
   token: string;
   onChanged: (groups: AdminGroup[]) => void;
+  /** Group health as Employee Navigator's carrier stats report states it. */
+  enReport?: { enrolled: number; monthly: number } | null;
 }
 
 const th: CSSProperties = {
@@ -208,7 +210,7 @@ const filterSelect: CSSProperties = {
   fontWeight: 400,
 };
 
-export default function GroupsTable({ groups, token, onChanged }: Props) {
+export default function GroupsTable({ groups, token, onChanged, enReport }: Props) {
   const [query, setQuery] = useState("");
   const [size, setSize] = useState<"All" | "2-50" | "51+">("All");
   const [broker, setBroker] = useState<"All" | Broker>("All");
@@ -404,8 +406,13 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
           "Group health premium",
           money0(shown.groupHealth),
           `EBPA + HealthEZ medical · ${shown.groupHealthEnrolled.toLocaleString()} enrolled · ${money0(shown.groupHealth * 12)} annualized${filtering ? ` · ${pct(shown.groupHealth, counts.groupHealth)} of block` : ""}`,
-          shown.bcbs > 0 || shown.unrecognized > 0
+          shown.bcbs > 0 || shown.unrecognized > 0 || (enReport && !filtering)
             ? [
+                enReport && !filtering
+                  ? `Employee Navigator reports ${enReport.enrolled.toLocaleString()} enrolled · ${money0(enReport.monthly)} (${
+                      Math.abs(shown.groupHealth - enReport.monthly) <= Math.max(50, 0.01 * enReport.monthly) ? "matches" : `portal is ${shown.groupHealth < enReport.monthly ? "−" : "+"}${money0(Math.abs(shown.groupHealth - enReport.monthly))}`
+                    })`
+                  : "",
                 shown.bcbs > 0 ? `Excludes ${money0(shown.bcbs)} (${shown.bcbsEnrolled} enrolled) on BCBS of Alabama` : "",
                 shown.unrecognized > 0
                   ? `${money0(shown.unrecognized)} (${shown.unrecognizedEnrolled} enrolled) on carriers not recognised — see Existing Plans & Rates`

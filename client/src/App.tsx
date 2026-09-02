@@ -16,6 +16,7 @@ import { clearSession, loadSession, saveSession } from "@/lib/session";
 import Login from "@/views/Login";
 import Footer from "@/views/Footer";
 import Admin, { type ImportRecord } from "@/views/Admin";
+import type { CarrierStats } from "@/views/Reconciliation";
 import Current, { CURRENT_SECTIONS } from "@/views/Current";
 import Options, { OPTIONS_SECTIONS, type SortKey } from "@/views/Options";
 import SectionNav from "@/views/SectionNav";
@@ -53,6 +54,7 @@ export default function App() {
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [storage, setStorage] = useState("");
   const [imports, setImports] = useState<ImportRecord[]>([]);
+  const [carrierStats, setCarrierStats] = useState<CarrierStats | null>(null);
   const [durable, setDurable] = useState(false);
 
   const [modalPlan, setModalPlan] = useState<string | null>(null);
@@ -80,6 +82,7 @@ export default function App() {
     setStorage((p.storage as string) || "");
     setOverrides((p.overrides as Overrides) || {});
     setImports((p.imports as ImportRecord[]) || []);
+    setCarrierStats((p.carrierStats as CarrierStats | null) || null);
     setData({
       meta: p.meta,
       groups: p.groups,
@@ -434,6 +437,8 @@ export default function App() {
         storage={storage}
         saveState={saveState}
         imports={imports}
+        carrierStats={carrierStats}
+        onCarrierStats={setCarrierStats}
         tab={page.tab}
         openGroup={page.group}
         onImported={(gs, ims) => {
