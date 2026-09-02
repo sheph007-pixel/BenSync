@@ -1,0 +1,351 @@
+{
+  "groups": {
+    "Tiers Co": {
+      "name": "Tiers Co",
+      "enIdentifier": "T2",
+      "address1": null,
+      "city": null,
+      "zip": null,
+      "taxId": null,
+      "phone": null,
+      "situsState": null,
+      "corporationType": null,
+      "contacts": [],
+      "state": null,
+      "sic": null,
+      "pyStart": "2026-01-01",
+      "pyEnd": "2026-12-31",
+      "tpa": "EBPA",
+      "enrolled": 8,
+      "lives": 8,
+      "tiers": {
+        "EE": 5,
+        "ES": 1,
+        "EC": 1,
+        "FAM": 1
+      },
+      "monthly": 5900,
+      "annual": 70800,
+      "plans": [
+        {
+          "plan": "EBPA Preferred Silver",
+          "tpa": "EBPA",
+          "enrolled": 7,
+          "monthly": 5300
+        },
+        {
+          "plan": "EBPA Deluxe Platinum",
+          "tpa": "EBPA",
+          "enrolled": 1,
+          "monthly": 600
+        }
+      ],
+      "lines": [],
+      "groupHealthMonthly": 5900,
+      "groupHealthEnrolled": 8,
+      "medicalMonthly": 5900,
+      "bcbsMonthly": 0,
+      "bcbsEnrolled": 0,
+      "unrecognizedMonthly": 0,
+      "unrecognizedEnrolled": 0,
+      "assumedMonthly": 0,
+      "supplementalMonthly": 0,
+      "totalMonthly": 5900,
+      "linesLoaded": true,
+      "members": [
+        {
+          "first": "Ann",
+          "last": "T",
+          "gender": "M",
+          "age": 41,
+          "zip": "35203",
+          "tier": "Employee",
+          "plan": "EBPA Preferred Silver",
+          "tpa": "EBPA",
+          "premium": 500,
+          "spAges": [],
+          "chAges": []
+        },
+        {
+          "first": "Bob",
+          "last": "T",
+          "gender": "M",
+          "age": 41,
+          "zip": "35203",
+          "tier": "Employee + Child(ren)",
+          "plan": "EBPA Preferred Silver",
+          "tpa": "EBPA",
+          "premium": 900,
+          "spAges": [],
+          "chAges": []
+        },
+        {
+          "first": "Cal",
+          "last": "T",
+          "gender": "M",
+          "age": 41,
+          "zip": "35203",
+          "tier": "Employee + Spouse",
+          "plan": "EBPA Preferred Silver",
+          "tpa": "EBPA",
+          "premium": 1000,
+          "spAges": [],
+          "chAges": []
+        },
+        {
+          "first": "Dee",
+          "last": "T",
+          "gender": "M",
+          "age": 41,
+          "zip": "35203",
+          "tier": "Employee + Family",
+          "plan": "EBPA Preferred Silver",
+          "tpa": "EBPA",
+          "premium": 1400,
+          "spAges": [],
+          "chAges": []
+        },
+        {
+          "first": "Eve",
+          "last": "T",
+          "gender": "M",
+          "age": 41,
+          "zip": "35203",
+          "tier": "Employee",
+          "plan": "EBPA Preferred Silver",
+          "tpa": "EBPA",
+          "premium": 500,
+          "spAges": [],
+          "chAges": []
+        },
+        {
+          "first": "Fay",
+          "last": "T",
+          "gender": "M",
+          "age": 41,
+          "zip": "35203",
+          "tier": "Employee",
+          "plan": "EBPA Preferred Silver",
+          "tpa": "EBPA",
+          "premium": 500,
+          "spAges": [],
+          "chAges": []
+        },
+        {
+          "first": "Gus",
+          "last": "T",
+          "gender": "M",
+          "age": 41,
+          "zip": "35203",
+          "tier": "Employee",
+          "plan": "EBPA Preferred Silver",
+          "tpa": "EBPA",
+          "premium": 500,
+          "spAges": [],
+          "chAges": []
+        },
+        {
+          "first": "Jon",
+          "last": "T",
+          "gender": "M",
+          "age": 41,
+          "zip": "35203",
+          "tier": "Employee",
+          "plan": "EBPA Deluxe Platinum",
+          "tpa": "EBPA",
+          "premium": 600,
+          "spAges": [],
+          "chAges": []
+        }
+      ],
+      "rates": {
+        "EBPA Preferred Silver": {
+          "Employee": 500,
+          "Employee + Child(ren)": 900,
+          "Employee + Spouse": 1000,
+          "Employee + Family": 1400
+        },
+        "EBPA Deluxe Platinum": {
+          "Employee": 600
+        }
+      },
+      "archived": false,
+      "eligible": true,
+      "programs": [
+        "EBPA"
+      ],
+      "carriersSeen": [
+        "EBPA"
+      ],
+      "code": "TIER2027",
+      "sizeCategory": "2-50",
+      "broker": "kennion",
+      "renewal": "open"
+    },
+    "Test Company, LLC": {
+      "name": "Test Company, LLC",
+      "enIdentifier": "TEST001",
+      "address1": "1 Main St",
+      "city": "Birmingham",
+      "zip": "35203",
+      "taxId": null,
+      "phone": null,
+      "situsState": "AL",
+      "corporationType": null,
+      "contacts": [
+        {
+          "name": "Pat Owner",
+          "phone": "205-555-0100",
+          "email": "pat@example.com"
+        }
+      ],
+      "state": "AL",
+      "sic": null,
+      "pyStart": "2026-01-01",
+      "pyEnd": "2026-12-31",
+      "tpa": "EBPA",
+      "enrolled": 2,
+      "lives": 2,
+      "tiers": {
+        "EE": 1,
+        "ES": 1,
+        "EC": 0,
+        "FAM": 0
+      },
+      "monthly": 1600,
+      "annual": 19200,
+      "plans": [
+        {
+          "plan": "EBPA Preferred Silver",
+          "tpa": "EBPA",
+          "enrolled": 1,
+          "monthly": 500
+        },
+        {
+          "plan": "Blue Secure Gold",
+          "tpa": "Blue Cross Blue Shield of Alabama",
+          "enrolled": 1,
+          "monthly": 1100
+        }
+      ],
+      "lines": [
+        {
+          "benefit": "Dental",
+          "carrier": "Guardian",
+          "plan": "Guardian Dental PPO",
+          "enrolled": 2,
+          "monthly": 80
+        },
+        {
+          "benefit": "Vision",
+          "carrier": "VSP",
+          "plan": "VSP Choice",
+          "enrolled": 1,
+          "monthly": 12
+        }
+      ],
+      "groupHealthMonthly": 500,
+      "groupHealthEnrolled": 1,
+      "medicalMonthly": 1600,
+      "bcbsMonthly": 1100,
+      "bcbsEnrolled": 1,
+      "unrecognizedMonthly": 0,
+      "unrecognizedEnrolled": 0,
+      "assumedMonthly": 0,
+      "supplementalMonthly": 92,
+      "totalMonthly": 1692,
+      "linesLoaded": true,
+      "members": [
+        {
+          "first": "Ann",
+          "last": "Test",
+          "gender": "F",
+          "age": 45,
+          "zip": "35203",
+          "tier": "Employee",
+          "plan": "EBPA Preferred Silver",
+          "tpa": "EBPA",
+          "premium": 500,
+          "spAges": [],
+          "chAges": []
+        },
+        {
+          "first": "Bob",
+          "last": "Test",
+          "gender": "F",
+          "age": 45,
+          "zip": "35203",
+          "tier": "Employee + Spouse",
+          "plan": "Blue Secure Gold",
+          "tpa": "Blue Cross Blue Shield of Alabama",
+          "premium": 1100,
+          "spAges": [],
+          "chAges": []
+        }
+      ],
+      "rates": {
+        "EBPA Preferred Silver": {
+          "Employee": 500
+        },
+        "Blue Secure Gold": {
+          "Employee + Spouse": 1100
+        }
+      }
+    }
+  },
+  "splits": {
+    "Tiers Co": {
+      "source": "Employee Navigator XML import — employer/employee cost as configured in payroll",
+      "plans": {
+        "EBPA Preferred Silver": {
+          "Employee": {
+            "total": 500,
+            "er": 400,
+            "ee": 100
+          },
+          "Employee + Child(ren)": {
+            "total": 900,
+            "er": 800,
+            "ee": 100
+          },
+          "Employee + Spouse": {
+            "total": 1000,
+            "er": 900,
+            "ee": 100
+          },
+          "Employee + Family": {
+            "total": 1400,
+            "er": 1300,
+            "ee": 100
+          }
+        },
+        "EBPA Deluxe Platinum": {
+          "Employee": {
+            "total": 600,
+            "er": 500,
+            "ee": 100
+          }
+        }
+      }
+    },
+    "Test Company, LLC": {
+      "source": "Employee Navigator XML import — employer/employee cost as configured in payroll",
+      "plans": {
+        "EBPA Preferred Silver": {
+          "Employee": {
+            "total": 500,
+            "er": 400,
+            "ee": 100
+          }
+        },
+        "Blue Secure Gold": {
+          "Employee + Spouse": {
+            "total": 1100,
+            "er": 700,
+            "ee": 400
+          }
+        }
+      }
+    }
+  }
+}

@@ -55,6 +55,7 @@ export default function App() {
   const [storage, setStorage] = useState("");
   const [imports, setImports] = useState<ImportRecord[]>([]);
   const [carrierStats, setCarrierStats] = useState<CarrierStats | null>(null);
+  const [ai, setAi] = useState(false);
   const [durable, setDurable] = useState(false);
 
   const [modalPlan, setModalPlan] = useState<string | null>(null);
@@ -83,6 +84,7 @@ export default function App() {
     setOverrides((p.overrides as Overrides) || {});
     setImports((p.imports as ImportRecord[]) || []);
     setCarrierStats((p.carrierStats as CarrierStats | null) || null);
+    setAi(!!p.ai);
     setData({
       meta: p.meta,
       groups: p.groups,
@@ -439,6 +441,7 @@ export default function App() {
         imports={imports}
         carrierStats={carrierStats}
         onCarrierStats={setCarrierStats}
+        ai={ai}
         tab={page.tab}
         openGroup={page.group}
         onImported={(gs, ims) => {

@@ -152,6 +152,51 @@ export function premiumBreakdown(group) {
   };
 }
 
+const plan0 = (en) => cleanPlan(text(en, "Plan"));
+
+/** Empty diagnostics; see mergeDiagnostics for the rollup across companies. */
+export function newDiagnostics() {
+  const bucket = () => ({ n: 0, premium: 0, byProgram: {} });
+  return {
+    employees: { total: 0, byStatus: {}, skipped: {} },
+    medical: {
+      kept: { n: 0, premium: 0 },
+      excluded: { terminatedEmployee: bucket(), ended: bucket(), waived: bucket() },
+      noPremium: { n: 0, byProgram: {} },
+      endDates: { nil: 0, absent: 0, past: 0, future: 0 },
+    },
+  };
+}
+
+/** Add one company's diagnostics into a running total (a + b, in place on a). */
+export function mergeDiagnostics(a, b) {
+  if (!b) return a;
+  const addMap = (x, y) => {
+    for (const [k, v] of Object.entries(y || {})) x[k] = (x[k] || 0) + v;
+  };
+  a.employees.total += b.employees.total;
+  addMap(a.employees.byStatus, b.employees.byStatus);
+  addMap(a.employees.skipped, b.employees.skipped);
+  a.medical.kept.n += b.medical.kept.n;
+  a.medical.kept.premium = round2(a.medical.kept.premium + b.medical.kept.premium);
+  for (const r of Object.keys(a.medical.excluded)) {
+    const x = a.medical.excluded[r];
+    const y = b.medical.excluded[r];
+    if (!y) continue;
+    x.n += y.n;
+    x.premium = round2(x.premium + y.premium);
+    for (const [p, v] of Object.entries(y.byProgram || {})) {
+      x.byProgram[p] = x.byProgram[p] || { n: 0, premium: 0 };
+      x.byProgram[p].n += v.n;
+      x.byProgram[p].premium = round2(x.byProgram[p].premium + v.premium);
+    }
+  }
+  a.medical.noPremium.n += b.medical.noPremium.n;
+  addMap(a.medical.noPremium.byProgram, b.medical.noPremium.byProgram);
+  addMap(a.medical.endDates, b.medical.endDates);
+  return a;
+}
+
 /**
  * The catalog names plans slightly differently from the enrollment rows now
  * and then — a stray space, different case, a year in one place and not the
@@ -242,12 +287,60 @@ const companyBlock = wholeCompany.slice(0, headEnd > 0 ? headEnd : 8000);
   const unmappedLevels = {};
   const today = new Date();
 
+  // What was left out, and why — so the import can be reconciled to Employee
+  // Navigator's own counts and any gap explained rather than guessed at.
+  const diag = newDiagnostics();
+  const programFor = (plan) => {
+    const carrier = carrierFor(planCarrier, plan) || "";
+    return programOf({ tpa: carrier, plan }) || "Other";
+  };
+  const note = (reason, en) => {
+    const plan = cleanPlan(text(en, "Plan"));
+    const cost = Number(text(en, "PlanCost")) || 0;
+    const b = diag.medical.excluded[reason];
+    const p = programFor(plan);
+    b.n++;
+    b.premium = round2(b.premium + cost);
+    b.byProgram[p] = b.byProgram[p] || { n: 0, premium: 0 };
+    b.byProgram[p].n++;
+    b.byProgram[p].premium = round2(b.byProgram[p].premium + cost);
+  };
+  const endDateKind = (en) => {
+    if (isNil(en, "EndDate")) return "nil";
+    const end = text(en, "EndDate");
+    if (end == null || end === "") return "absent";
+    const d = new Date(end);
+    return isNaN(d) ? "absent" : d > today ? "future" : "past";
+  };
+
   for (const emp of employees) {
     // Employee Navigator counts anyone still enrolled — on leave, on COBRA,
     // a retiree with coverage — so only a terminated (or otherwise gone)
     // employee is skipped here; their enrollments carry end dates anyway.
     const status = text(emp, "EmploymentStatus") || "";
-    if (/terminat|inactive|deceased|separat/i.test(status)) continue;
+    diag.employees.total++;
+    diag.employees.byStatus[status || "(blank)"] = (diag.employees.byStatus[status || "(blank)"] || 0) + 1;
+    const allEnrollments = blocks(emp, "Enrollment");
+    for (const en of allEnrollments) {
+      if (text(en, "Benefit") !== "Medical") continue;
+      diag.medical.endDates[endDateKind(en)]++;
+    }
+    if (/terminat|inactive|deceased|separat/i.test(status)) {
+      diag.employees.skipped[status] = (diag.employees.skipped[status] || 0) + 1;
+      // A terminated employee whose medical coverage has not ended is the
+      // classic reason EN's count runs higher than ours: record it.
+      for (const en of allEnrollments) {
+        if (text(en, "Benefit") !== "Medical" || isWaived(en)) continue;
+        if (isCurrent(en, today)) note("terminatedEmployee", en);
+        else note("ended", en);
+      }
+      continue;
+    }
+    for (const en of allEnrollments) {
+      if (text(en, "Benefit") !== "Medical") continue;
+      if (isWaived(en)) note("waived", en);
+      else if (!isCurrent(en, today)) note("ended", en);
+    }
 
     // Same currency rule for every benefit: an enrollment that has not ended,
     // on an active employee.
@@ -290,6 +383,17 @@ const companyBlock = wholeCompany.slice(0, headEnd > 0 ? headEnd : 8000);
       // derivation, and reported in the stats.
       const tier = TIER_LABEL[key || "EE"];
       const tierKnown = !!key;
+      {
+        const cost = text(en, "PlanCost");
+        if (cost == null || cost === "") {
+          diag.medical.noPremium.n++;
+          const p = programFor(plan0(en));
+          diag.medical.noPremium.byProgram[p] = (diag.medical.noPremium.byProgram[p] || 0) + 1;
+        } else {
+          diag.medical.kept.n++;
+          diag.medical.kept.premium = round2(diag.medical.kept.premium + (Number(cost) || 0));
+        }
+      }
 
       const starts = text(en, "PlanStarts");
       const ends = text(en, "PlanEnds");
@@ -435,6 +539,7 @@ const companyBlock = wholeCompany.slice(0, headEnd > 0 ? headEnd : 8000);
       employeesInFile: employees.length,
       coverageLevels: levelsSeen,
       unmappedLevels,
+      diagnostics: diag,
       tierCounts: TIER_ORDER.reduce((o, t) => ({ ...o, [t]: members.filter((m) => m.tier === t).length }), {}),
       ratesFound: Object.values(rates).reduce((n, r) => n + Object.keys(r).length, 0),
       splitsFound: Object.values(splitPlans).reduce((n, r) => n + Object.keys(r).length, 0),

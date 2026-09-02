@@ -14,6 +14,23 @@ export interface CarrierStats {
   uploadedBy: string | null;
 }
 
+/** What the last import left out, and why. Aggregates by carrier program. */
+export interface ImportDiagnostics {
+  employees: { total: number; byStatus: Record<string, number>; skipped: Record<string, number> };
+  medical: {
+    kept: { n: number; premium: number };
+    excluded: Record<"terminatedEmployee" | "ended" | "waived", { n: number; premium: number; byProgram: Record<string, { n: number; premium: number }> }>;
+    noPremium: { n: number; byProgram: Record<string, number> };
+    endDates: { nil: number; absent: number; past: number; future: number };
+  };
+}
+
+const REASON_LABEL: Record<string, string> = {
+  terminatedEmployee: "Terminated employee whose medical coverage has not ended",
+  ended: "Medical enrollment that has ended (EndDate in the past)",
+  waived: "Waived or declined medical election",
+};
+
 type Plan = { plan: string; tpa?: string; enrolled?: number; monthly?: number; program?: string | null; groupHealth?: boolean; assumed?: boolean };
 type Line = { benefit: string; carrier: string; plan: string; enrolled: number; monthly: number };
 
@@ -95,6 +112,9 @@ interface Props {
   /** The live roster, with classified plans and lines. */
   groups: AdminGroup[];
   onStats: (s: CarrierStats) => void;
+  diagnostics?: ImportDiagnostics | null;
+  lastImport?: { filename: string | null; when: string } | null;
+  ai?: boolean;
 }
 
 const cell = (right = false): React.CSSProperties => ({
@@ -116,10 +136,29 @@ const diff = (portal: number, report: number, money = false) => {
  * Second upload on the Import tab: Employee Navigator's Carrier Stats report,
  * kept alongside the XML so the two can be checked against each other.
  */
-export default function Reconciliation({ token, stats, groups, onStats }: Props) {
+export default function Reconciliation({ token, stats, groups, onStats, diagnostics, lastImport, ai }: Props) {
   const ref = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [explaining, setExplaining] = useState(false);
+  const [explanation, setExplanation] = useState("");
+
+  async function explain(rows: Recon[]) {
+    setExplaining(true);
+    setExplanation("");
+    try {
+      const portal = rows.map((r) => ({ carrier: r.carrier, program: r.program, report: r.report, portal: r.portal, pending: r.pending }));
+      const r = await fetch("/api/admin/reconcile/explain", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ portal }),
+      });
+      const j = await r.json().catch(() => ({ error: `Server returned ${r.status}.` }));
+      setExplanation(r.ok ? j.text : `Could not get an explanation: ${j.error}`);
+    } finally {
+      setExplaining(false);
+    }
+  }
 
   async function upload(f: File) {
     setBusy(true);
@@ -285,6 +324,98 @@ export default function Reconciliation({ token, stats, groups, onStats }: Props)
             </table>
           </div>
         </>
+      )}
+      {diagnostics && (
+        <div style={{ marginTop: 16, paddingTop: 14, borderTop: `1px solid ${C.rule}` }}>
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: 12 }}>
+            <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: C.ink }}>What the last XML import left out</h3>
+            {lastImport && (
+              <span style={{ fontSize: 12.5, color: C.faint }}>
+                {lastImport.filename || "export"} · {new Date(lastImport.when).toLocaleString()} ·{" "}
+                {diagnostics.employees.total.toLocaleString()} employees in the file
+              </span>
+            )}
+          </div>
+          <div style={{ marginTop: 6, fontSize: 12.5, color: C.muted, lineHeight: 1.6, maxWidth: 880 }}>
+            Every medical enrollment the parser did not count, by the rule that excluded it and the
+            carrier it was on, with the premium it carried. This is the bridge between the report&rsquo;s
+            numbers and the portal&rsquo;s: a gap should be accounted for here.
+          </div>
+          <div style={{ overflowX: "auto", marginTop: 8 }}>
+            <table style={{ borderCollapse: "collapse", fontSize: 12.5, minWidth: 720 }}>
+              <thead>
+                <tr>
+                  <th style={{ ...cell(), color: C.muted, fontWeight: 600, whiteSpace: "normal" }}>Left out because</th>
+                  {["EBPA", "HealthEZ", "BCBS-AL", "Other"].map((p) => (
+                    <th key={p} style={{ ...cell(true), color: C.muted, fontWeight: 600 }}>{p === "BCBS-AL" ? "BCBS AL" : p}</th>
+                  ))}
+                  <th style={{ ...cell(true), color: C.muted, fontWeight: 600 }}>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(Object.keys(REASON_LABEL) as (keyof ImportDiagnostics["medical"]["excluded"])[]).map((k) => {
+                  const b = diagnostics.medical.excluded[k];
+                  if (!b) return null;
+                  return (
+                    <tr key={k} style={{ color: b.n ? C.ink : C.faint }}>
+                      <td style={{ ...cell(), whiteSpace: "normal" }}>{REASON_LABEL[k]}</td>
+                      {["EBPA", "HealthEZ", "BCBS-AL", "Other"].map((p) => {
+                        const v = b.byProgram[p];
+                        return (
+                          <td key={p} style={cell(true)}>
+                            {v ? `${v.n} · ${money0(v.premium)}` : "—"}
+                          </td>
+                        );
+                      })}
+                      <td style={{ ...cell(true), fontWeight: 600 }}>{b.n ? `${b.n} · ${money0(b.premium)}` : "—"}</td>
+                    </tr>
+                  );
+                })}
+                <tr style={{ color: diagnostics.medical.noPremium.n ? C.amber : C.faint }}>
+                  <td style={{ ...cell(), whiteSpace: "normal" }}>Counted as enrolled, but no PlanCost in the file (adds $0)</td>
+                  {["EBPA", "HealthEZ", "BCBS-AL", "Other"].map((p) => (
+                    <td key={p} style={cell(true)}>{diagnostics.medical.noPremium.byProgram[p] ?? "—"}</td>
+                  ))}
+                  <td style={{ ...cell(true), fontWeight: 600 }}>{diagnostics.medical.noPremium.n || "—"}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div style={{ marginTop: 8, fontSize: 12, color: C.faint, lineHeight: 1.6 }}>
+            Counted: {diagnostics.medical.kept.n.toLocaleString()} medical enrollments · {money0(diagnostics.medical.kept.premium)} / mo.
+            {" "}Employees by status: {Object.entries(diagnostics.employees.byStatus).map(([k, n]) => `${k} ${n}`).join(" · ")}.
+            {" "}Medical EndDate: {diagnostics.medical.endDates.nil} nil · {diagnostics.medical.endDates.absent} absent · {diagnostics.medical.endDates.future} future · {diagnostics.medical.endDates.past} past.
+          </div>
+        </div>
+      )}
+
+      {stats && (
+        <div style={{ marginTop: 14, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12 }}>
+          <button
+            onClick={() => void explain(rows)}
+            disabled={explaining || !ai}
+            title={ai ? "Send the report, the portal totals and the import diagnostics to Claude for a plain-language explanation" : "Needs ANTHROPIC_API_KEY on the server"}
+            style={{
+              padding: "8px 14px",
+              fontSize: 13,
+              fontWeight: 500,
+              color: "#fff",
+              background: C.blue,
+              border: `1px solid ${C.blue}`,
+              borderRadius: 4,
+              cursor: explaining || !ai ? "default" : "pointer",
+              opacity: explaining || !ai ? 0.6 : 1,
+            }}
+          >
+            {explaining ? "Claude is reading…" : "Ask Claude what explains the gap"}
+          </button>
+          <span style={{ fontSize: 12, color: C.faint }}>Aggregates only — no member data leaves the server.</span>
+        </div>
+      )}
+      {explanation && (
+        <div style={{ marginTop: 10, padding: "12px 14px", background: C.blueTint, border: `1px solid ${C.blueEdge}`, borderRadius: 4, fontSize: 13, color: C.ink, lineHeight: 1.65, whiteSpace: "pre-wrap", maxWidth: 900 }}>
+          {explanation}
+        </div>
       )}
       {!stats && (
         <div style={{ marginTop: 12, fontSize: 12.5, color: C.faint }}>
