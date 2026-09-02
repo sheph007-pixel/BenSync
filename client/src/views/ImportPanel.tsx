@@ -21,7 +21,21 @@ interface Preview {
   companies: Company[];
   failures: { name: string; reason: string }[];
   totalEnrolled: number;
+  totalMonthly?: number;
+  /** Enrolled and premium by program, straight from the file, before anything is saved. */
+  programs?: { key: string; groups: number; enrolled: number; monthly: number; carriers: string[] }[];
+  /** Coverage levels the parser could not read, with how many enrollments carried each. */
+  unmappedLevels?: Record<string, number>;
 }
+
+const PROGRAM_LABEL: Record<string, string> = {
+  EBPA: "EBPA",
+  HealthEZ: "HealthEZ",
+  assumed: "Carrier not named — taken as EBPA/HealthEZ (group is all program)",
+  "BCBS-AL": "BCBS of Alabama",
+  unknown: "Carrier not recognised",
+};
+const PROGRAM_ORDER = ["EBPA", "HealthEZ", "assumed", "BCBS-AL", "unknown"];
 
 interface Props {
   token: string;
@@ -205,7 +219,8 @@ export default function ImportPanel({ token, durable, storage, onImported }: Pro
               export
             </strong>
             <span style={{ fontSize: 12.5, color: C.faint }}>
-              {preview.totalEnrolled} enrolled in total
+              {preview.totalEnrolled.toLocaleString()} enrolled in total
+              {preview.totalMonthly != null ? ` · ${money0(preview.totalMonthly)} monthly medical premium` : ""}
             </span>
             {preview.companies.length > 1 && (
               <span style={{ display: "flex", gap: 10, marginLeft: "auto" }}>
@@ -226,6 +241,42 @@ export default function ImportPanel({ token, durable, storage, onImported }: Pro
               </span>
             )}
           </div>
+
+          {!!preview.programs?.length && (
+            <div style={{ marginBottom: 12, padding: "10px 12px", background: C.zebra, border: `1px solid ${C.hairline}`, borderRadius: 4 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 600, color: C.ink }}>
+                What this file says, by program — check it against Employee Navigator before importing
+              </div>
+              <table style={{ borderCollapse: "collapse", fontSize: 12.5, marginTop: 6 }}>
+                <tbody>
+                  {[...preview.programs]
+                    .sort((a, b) => PROGRAM_ORDER.indexOf(a.key) - PROGRAM_ORDER.indexOf(b.key))
+                    .map((t) => (
+                      <tr key={t.key}>
+                        <td style={{ padding: "3px 18px 3px 0", color: C.ink }}>{PROGRAM_LABEL[t.key] || t.key}</td>
+                        <td style={{ padding: "3px 18px 3px 0", color: C.body, fontVariantNumeric: "tabular-nums" }}>
+                          {t.groups} group{t.groups === 1 ? "" : "s"}
+                        </td>
+                        <td style={{ padding: "3px 18px 3px 0", color: C.ink, fontWeight: 600, fontVariantNumeric: "tabular-nums", textAlign: "right" }}>
+                          {t.enrolled.toLocaleString()} enrolled
+                        </td>
+                        <td style={{ padding: "3px 18px 3px 0", color: C.ink, fontWeight: 600, fontVariantNumeric: "tabular-nums", textAlign: "right" }}>
+                          {money0(t.monthly)} / mo
+                        </td>
+                        <td style={{ padding: "3px 0", color: C.faint, fontSize: 11.5 }}>{t.carriers.join(" · ")}</td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+              {!!Object.keys(preview.unmappedLevels || {}).length && (
+                <div style={{ marginTop: 6, fontSize: 12, color: C.amber }}>
+                  Coverage levels this file uses that could not be read as a tier (the people are still
+                  counted, filed as employee-only):{" "}
+                  {Object.entries(preview.unmappedLevels!).map(([k, n]) => `"${k}" ×${n}`).join(", ")}
+                </div>
+              )}
+            </div>
+          )}
 
           <div style={{ maxHeight: 420, overflowY: "auto", border: `1px solid ${C.hairline}`, borderRadius: 4 }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
