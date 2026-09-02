@@ -15,6 +15,14 @@ import {
 } from "@/lib/model";
 import { C, h2, num, panel, pill, sectionHead, smallPrimaryBtn, th } from "@/lib/ui";
 
+/** Sections on this page, in order, for the "On this page" links. */
+export const CURRENT_SECTIONS = [
+  { id: "plans", label: "Plans in force" },
+  { id: "summary", label: "Summary" },
+  { id: "split", label: "Employer / employee split" },
+  { id: "combined", label: "Combined" },
+];
+
 interface Props {
   data: KennionData;
   overrides: Overrides;
@@ -60,7 +68,7 @@ export default function Current({
 
   return (
     <div>
-      <div style={sectionHead}>
+      <div id="plans" className="anchor" style={sectionHead}>
         <h2 style={h2}>Current Medical Plan(s)</h2>
       </div>
 
@@ -222,6 +230,8 @@ export default function Current({
       </div>
 
       <div
+        id="summary"
+        className="anchor"
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit,minmax(178px,1fr))",
@@ -249,7 +259,7 @@ export default function Current({
         ))}
       </div>
 
-      <div className="panel" style={{ ...panel, marginTop: 16, padding: "16px 18px" }}>
+      <div id="split" className="panel anchor" style={{ ...panel, marginTop: 16, padding: "16px 18px" }}>
         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
           <span style={{ fontSize: 15, fontWeight: 600, color: C.ink }}>
             Employer / employee split
@@ -316,7 +326,7 @@ export default function Current({
         )}
       </div>
 
-      <div style={sectionHead}>
+      <div id="combined" className="anchor" style={sectionHead}>
         <h2 style={h2}>Current Medical Plan(s) &mdash; Combined</h2>
       </div>
 

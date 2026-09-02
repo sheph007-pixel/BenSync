@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { C, money0, panel } from "@/lib/importui";
+import Link from "@/lib/Link";
+import { PATHS } from "@/lib/router";
 import type { AdminGroup } from "@/views/GroupsTable";
 
 interface Props {
@@ -14,7 +16,10 @@ interface Props {
   };
   token: string;
   onChanged: (groups: AdminGroup[]) => void;
+  /** Return to the Groups list (after an archive, for instance). */
   onBack: () => void;
+  /** Called before following the link to Plans & Rates, so it opens filtered to this group. */
+  onOpenRates: (name: string) => void;
 }
 
 const FIELDS: { key: string; label: string; width?: number }[] = [
@@ -30,7 +35,7 @@ const FIELDS: { key: string; label: string; width?: number }[] = [
   { key: "situsState", label: "Situs state", width: 90 },
 ];
 
-export default function GroupDetail({ group, token, onChanged, onBack }: Props) {
+export default function GroupDetail({ group, token, onChanged, onBack, onOpenRates }: Props) {
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const [saved, setSaved] = useState("");
@@ -93,13 +98,18 @@ export default function GroupDetail({ group, token, onChanged, onBack }: Props) 
 
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "4px 0 14px" }}>
-        <button
-          onClick={onBack}
-          style={{ background: "none", border: "none", fontSize: 13, color: C.blue, cursor: "pointer", padding: 0 }}
-        >
-          ← All groups
-        </button>
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12, margin: "4px 0 14px" }}>
+        <nav aria-label="Breadcrumb" style={{ fontSize: 13, color: C.faint }}>
+          <ol style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", gap: 6 }}>
+            <li>
+              <Link href={PATHS.groups}>Groups</Link>
+            </li>
+            <li aria-hidden="true">›</li>
+            <li aria-current="page" style={{ color: C.ink }}>
+              {group.name}
+            </li>
+          </ol>
+        </nav>
         {group.archived && (
           <span
             style={{
@@ -312,7 +322,11 @@ export default function GroupDetail({ group, token, onChanged, onBack }: Props) 
             </tbody>
           </table>
           <div style={{ marginTop: 10, fontSize: 12.5, color: C.faint }}>
-            Tier rates for these plans are on the Plans &amp; Rates tab.
+            Tier rates for these plans are on{" "}
+            <Link href={PATHS.rates} onClick={() => onOpenRates(group.name)}>
+              Plans &amp; Rates
+            </Link>
+            .
           </div>
         </div>
       )}

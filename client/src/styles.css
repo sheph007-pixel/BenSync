@@ -29,6 +29,10 @@ textarea {
 .printonly {
   display: none;
 }
+/* Room above a section when a #hash link scrolls to it. */
+.anchor {
+  scroll-margin-top: 16px;
+}
 
 @media print {
   @page {
