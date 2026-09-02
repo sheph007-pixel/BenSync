@@ -26,6 +26,28 @@ const TIER_KEY = {
   "Employee + Child(ren)": "EC",
   "Employee + Family": "FAM",
 };
+const TIER_LABEL = { EE: "Employee", ES: "Employee + Spouse", EC: "Employee + Child(ren)", FAM: "Employee + Family" };
+
+/**
+ * Employee Navigator spells coverage levels many ways — "Employee Only",
+ * "Employee + Child", "Employee + Children", "Employee + Domestic Partner",
+ * "Employee + Dependents", "Family". Every active medical enrollment must
+ * count, so the level is read loosely; only a level that says nothing at all
+ * is left unmapped, and even then the person and their premium are kept.
+ */
+export function tierKeyOf(level) {
+  if (!level) return null;
+  if (TIER_KEY[level]) return TIER_KEY[level];
+  const s = String(level).toLowerCase();
+  const spouse = /spouse|partner|\bsp\b/.test(s);
+  const child = /child|\bch\b|kid/.test(s);
+  if (/family|\bfam\b|dependents|\bdeps?\b/.test(s) || (spouse && child)) return "FAM";
+  if (spouse) return "ES";
+  if (child) return "EC";
+  if (/\+\s*1\b|plus\s*one/.test(s)) return "ES";
+  if (/employee|\bee\b|self|individual|single|only/.test(s)) return "EE";
+  return null;
+}
 
 const text = (xml, tag) => {
   const m = new RegExp(`<${tag}>([^<]*)</${tag}>`).exec(xml);
@@ -40,6 +62,18 @@ const decode = (s) =>
     .replace(/&apos;/g, "'");
 const blocks = (xml, tag) => xml.match(new RegExp(`<${tag}>[\\s\\S]*?</${tag}>`, "g")) || [];
 const isNil = (xml, tag) => new RegExp(`<${tag}[^>]*xsi:nil="true"`).test(xml);
+
+/**
+ * An enrollment is current when it has not ended: EndDate nil, absent, or
+ * still in the future (a scheduled termination is still coverage today).
+ */
+function isCurrent(en, asOf) {
+  if (isNil(en, "EndDate")) return true;
+  const end = text(en, "EndDate");
+  if (end == null || end === "") return true;
+  const d = new Date(end);
+  return isNaN(d) ? true : d > asOf;
+}
 
 /** Whole years between a date of birth and an as-of date. */
 function ageAt(dob, asOf) {
@@ -203,13 +237,17 @@ const companyBlock = wholeCompany.slice(0, headEnd > 0 ? headEnd : 8000);
   // Supplemental lines, aggregated per benefit + carrier + plan. No member
   // detail is kept for these — only the enrolled count and billed premium.
   const lineAgg = new Map();
+  // Coverage levels as the export spelled them, and any that could not be read.
+  const levelsSeen = {};
+  const unmappedLevels = {};
+  const today = new Date();
 
   for (const emp of employees) {
     if (text(emp, "EmploymentStatus") !== "Active") continue;
 
-    // Same currency rule for every benefit: an open enrollment (no EndDate) on
-    // an active employee.
-    const current = blocks(emp, "Enrollment").filter((en) => isNil(en, "EndDate"));
+    // Same currency rule for every benefit: an enrollment that has not ended,
+    // on an active employee.
+    const current = blocks(emp, "Enrollment").filter((en) => isCurrent(en, today));
 
     // Everything but medical goes to the per-line totals. An active employee
     // on dental alone still counts here, even though they have no medical
@@ -237,8 +275,17 @@ const companyBlock = wholeCompany.slice(0, headEnd > 0 ? headEnd : 8000);
     }));
 
     for (const en of medical) {
-      const tier = text(en, "CoverageLevel");
-      if (!TIER_KEY[tier]) continue;
+      // A waived or declined election is not coverage, whatever its label.
+      if (isWaived(en)) continue;
+      const level = text(en, "CoverageLevel") || "";
+      levelsSeen[level || "(blank)"] = (levelsSeen[level || "(blank)"] || 0) + 1;
+      const key = tierKeyOf(level);
+      if (!key) unmappedLevels[level || "(blank)"] = (unmappedLevels[level || "(blank)"] || 0) + 1;
+      // Never drop a live enrollment over its label: an unreadable level is
+      // filed as employee-only for the tier counts, kept out of the rate
+      // derivation, and reported in the stats.
+      const tier = TIER_LABEL[key || "EE"];
+      const tierKnown = !!key;
 
       const starts = text(en, "PlanStarts");
       const ends = text(en, "PlanEnds");
@@ -265,6 +312,8 @@ const companyBlock = wholeCompany.slice(0, headEnd > 0 ? headEnd : 8000);
         age: ageAt(text(emp, "DOB"), asOf),
         zip: (text(emp, "ZIP") || "").split("-")[0] || null,
         tier,
+        tierKnown,
+        coverageLevel: level,
         plan,
         premium: num("PlanCost"),
         employeeCost: num("EmployeeCost"),
@@ -286,9 +335,9 @@ const companyBlock = wholeCompany.slice(0, headEnd > 0 ? headEnd : 8000);
 
   for (const m of members) {
     (rates[m.plan] = rates[m.plan] || {});
-    if (m.premium != null && rates[m.plan][m.tier] == null) rates[m.plan][m.tier] = m.premium;
+    if (m.tierKnown && m.premium != null && rates[m.plan][m.tier] == null) rates[m.plan][m.tier] = m.premium;
 
-    if (m.employerCost != null && m.employeeCost != null && m.premium != null) {
+    if (m.tierKnown && m.employerCost != null && m.employeeCost != null && m.premium != null) {
       const sp = (splitPlans[m.plan] = splitPlans[m.plan] || {});
       if (!sp[m.tier]) sp[m.tier] = { total: m.premium, er: m.employerCost, ee: m.employeeCost };
     }
@@ -380,6 +429,8 @@ const companyBlock = wholeCompany.slice(0, headEnd > 0 ? headEnd : 8000);
       : null,
     stats: {
       employeesInFile: employees.length,
+      coverageLevels: levelsSeen,
+      unmappedLevels,
       tierCounts: TIER_ORDER.reduce((o, t) => ({ ...o, [t]: members.filter((m) => m.tier === t).length }), {}),
       ratesFound: Object.values(rates).reduce((n, r) => n + Object.keys(r).length, 0),
       splitsFound: Object.values(splitPlans).reduce((n, r) => n + Object.keys(r).length, 0),

@@ -355,10 +355,33 @@ const summarise = (parsed) => {
 app.post("/api/admin/import/preview", requireStaff, async (req, res) => {
   try {
     const { companies, failures } = await readUpload(req);
+    // Totals straight from the file, by program, so what was read can be
+    // checked against Employee Navigator's own numbers before anything is saved.
+    const programs = {};
+    const unmapped = {};
+    for (const c of companies) {
+      for (const p of classifyPlans(c.group)) {
+        const key = p.assumed ? "assumed" : p.program || "unknown";
+        const t = (programs[key] = programs[key] || { key, groups: new Set(), enrolled: 0, monthly: 0, carriers: new Set() });
+        t.groups.add(c.group.name);
+        t.enrolled += p.enrolled || 0;
+        t.monthly += p.monthly || 0;
+        t.carriers.add((p.tpa || "").trim() || "(blank)");
+      }
+      for (const [lvl, n] of Object.entries(c.stats?.unmappedLevels || {})) unmapped[lvl] = (unmapped[lvl] || 0) + n;
+    }
     res.json({
       companies: companies.map(summarise),
       failures,
       totalEnrolled: companies.reduce((n, c) => n + c.group.enrolled, 0),
+      totalMonthly: Math.round(companies.reduce((n, c) => n + (c.group.monthly || 0), 0) * 100) / 100,
+      programs: Object.values(programs).map((t) => ({
+        ...t,
+        groups: t.groups.size,
+        carriers: [...t.carriers].sort(),
+        monthly: Math.round(t.monthly * 100) / 100,
+      })),
+      unmappedLevels: unmapped,
     });
   } catch (e) {
     res.status(400).json({ error: e.message });
