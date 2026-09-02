@@ -219,7 +219,9 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
   };
 
   const q = query.trim().toLowerCase();
-  const filtered = groups.filter(
+  // Everything but the renewal filter, so the renewal tile can count each state
+  // within the current slice and still let you switch between states.
+  const slice = groups.filter(
     (g) =>
       (view === "archived"
         ? !!g.archived
@@ -228,12 +230,15 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
           : !g.archived && g.eligible !== false) &&
       (size === "All" || g.sizeCategory === size) &&
       (broker === "All" || (g.broker || "kennion") === broker) &&
-      (renewal === "All" || (g.renewal || "open") === renewal) &&
       (!q ||
         `${g.name} ${g.enName ?? ""} ${g.code} ${g.city ?? ""} ${g.state ?? ""} ${g.zip ?? ""} ${g.sic ?? ""} ${g.sicDesc ?? ""} ${g.taxId ?? ""} ${g.tpa ?? ""} ${BROKER_LABEL[g.broker || "kennion"]} ${RENEWAL_LABEL[g.renewal || "open"]} ${(g.contacts ?? []).map((c) => `${c.name} ${c.email}`).join(" ")}`
           .toLowerCase()
           .includes(q)),
   );
+  const filtered = slice.filter((g) => renewal === "All" || (g.renewal || "open") === renewal);
+  const sliceRenewal = Object.fromEntries(
+    RENEWALS.map((r) => [r, slice.filter((g) => (g.renewal || "open") === r).length]),
+  ) as Record<Renewal, number>;
 
   const sortVal = (g: AdminGroup): string | number => {
     if (sort === "enrolled" || sort === "share") return g.enrolled ?? 0;
@@ -255,11 +260,16 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
     return (va > vb ? 1 : -1) * dir;
   });
 
+  const filtering =
+    !!q || size !== "All" || broker !== "All" || renewal !== "All" || view !== "live";
+
   // Totals for what is on screen. They follow every search, filter and sort.
   const shown = {
     enrolled: rows.reduce((n, g) => n + (g.enrolled || 0), 0),
     lives: rows.reduce((n, g) => n + (g.lives || 0), 0),
     monthly: rows.reduce((n, g) => n + monthlyOf(g), 0),
+    small: rows.filter((g) => g.sizeCategory === "2-50").length,
+    large: rows.filter((g) => g.sizeCategory === "51+").length,
   };
 
   const sortBy = (k: SortKey) => {
@@ -277,8 +287,6 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
     </th>
   );
 
-  const filtering =
-    !!q || size !== "All" || broker !== "All" || renewal !== "All" || view !== "live";
   const clear = () => {
     setQuery("");
     setSize("All");
@@ -313,8 +321,9 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
 
   return (
     <div>
-      {/* Dashboard: the whole live roster, in four numbers. The renewal tile
-          doubles as a filter — click a state to see those groups. */}
+      {/* Dashboard: three numbers for whatever is on screen. They move with
+          every search and filter, so a slice of the book reads as a block of
+          its own; unfiltered, they describe the whole live roster. */}
       <div
         style={{
           display: "grid",
@@ -323,10 +332,23 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
           marginTop: 16,
         }}
       >
-        {tile("Groups", String(live.length), `${counts.small} at 2-50 · ${counts.large} at 51+ (ALE)`)}
-        {tile("Enrolled employees", counts.enrolled.toLocaleString(), `${counts.lives.toLocaleString()} covered lives`)}
-        {tile("Monthly premium", money0(counts.monthly), `${money0(counts.monthly * 12)} annualized`)}
-        {tile("Outside broker", String(counts.outside), `${live.length - counts.outside} placed by Kennion`)}
+        {tile(
+          filtering ? "Groups shown" : "Groups",
+          String(rows.length),
+          filtering
+            ? `of ${live.length} in the portal · ${shown.small} at 2-50 · ${shown.large} at 51+`
+            : `${counts.small} at 2-50 · ${counts.large} at 51+ (ALE)`,
+        )}
+        {tile(
+          "Enrolled employees",
+          shown.enrolled.toLocaleString(),
+          `${shown.lives.toLocaleString()} covered lives${filtering ? ` · ${pct(shown.enrolled, counts.enrolled)} of block` : ""}`,
+        )}
+        {tile(
+          "Monthly premium",
+          money0(shown.monthly),
+          `${money0(shown.monthly * 12)} annualized${filtering ? ` · ${pct(shown.monthly, counts.monthly)} of block` : ""}`,
+        )}
         <div style={{ ...panel, padding: "14px 16px", gridColumn: "span 2", minWidth: 0 }}>
           <div style={{ fontSize: 12.5, color: C.muted }}>2027 renewal</div>
           <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -336,10 +358,7 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
               return (
                 <button
                   key={r}
-                  onClick={() => {
-                    setRenewal(on ? "All" : r);
-                    if (view !== "live") setView("live");
-                  }}
+                  onClick={() => setRenewal(on ? "All" : r)}
                   aria-pressed={on}
                   title={on ? "Show all renewal states" : `Show only ${RENEWAL_LABEL[r]}`}
                   style={{
@@ -354,9 +373,10 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
                     background: bg,
                     border: `1px solid ${on ? fg : bd}`,
                     boxShadow: on ? `inset 0 0 0 1px ${fg}` : "none",
+                    opacity: renewal !== "All" && !on ? 0.6 : 1,
                   }}
                 >
-                  <span style={{ fontSize: 18, fontWeight: 600, ...num }}>{counts.renewal[r]}</span>
+                  <span style={{ fontSize: 18, fontWeight: 600, ...num }}>{sliceRenewal[r]}</span>
                   <span>{RENEWAL_LABEL[r]}</span>
                 </button>
               );

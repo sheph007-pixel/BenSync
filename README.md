@@ -90,9 +90,11 @@ Each group also has a **2027 renewal** state for tracking — **Open** (the
 default), **Sent**, **Renewed** or **Non-Renewed** — set from the Groups table
 or the company page and saved like the other labels.
 
-The Groups page opens with a dashboard of the live roster: group count, enrolled
-employees and covered lives, monthly premium, outside-broker count, and the
-renewal states (click one to filter to it). The table below keeps to eight
+The Groups page opens with a dashboard that follows the filters: group count,
+enrolled employees and covered lives, and monthly premium for whatever is on
+screen — filter to a broker, a size band or a renewal state and the three
+numbers describe that slice, with its share of the whole block. The renewal
+tile counts each state within the current slice; click one to filter to it. The table below keeps to eight
 columns — company and access code, location, contact, enrolled, **% of block**
 (that group's enrolled employees as a share of every enrolled employee in the
 portal, so concentration is visible at a glance), size, broker, renewal — with
