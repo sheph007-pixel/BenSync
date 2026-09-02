@@ -400,6 +400,66 @@ export default function GroupDetail({ group, token, onChanged, onBack, onOpenRat
         </div>
       )}
 
+      {/* Everything that is not medical — dental, vision, life, disability —
+          as premium totals only; the portal never prices these. */}
+      {!!group.plans?.length && (
+        <div style={{ ...panel, marginTop: 16, padding: "18px 22px" }}>
+          <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: C.ink }}>Other lines in force</h3>
+          {group.lines?.length ? (
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginTop: 10 }}>
+              <thead>
+                <tr>
+                  {["Benefit", "Carrier", "Plan", "Enrolled", "Monthly premium"].map((h, i) => (
+                    <th
+                      key={h}
+                      style={{
+                        textAlign: i >= 3 ? "right" : "left",
+                        padding: i === 0 ? "9px 8px 9px 0" : 9,
+                        fontWeight: 600,
+                        color: C.ink,
+                        borderBottom: `1px solid ${C.border}`,
+                      }}
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {group.lines.map((l) => (
+                  <tr key={`${l.benefit}|${l.carrier}|${l.plan}`}>
+                    <td style={{ padding: "9px 8px 9px 0", borderBottom: `1px solid ${C.hairline}`, color: C.ink }}>
+                      {l.benefit}
+                    </td>
+                    <td style={{ padding: 9, borderBottom: `1px solid ${C.hairline}`, color: C.body }}>{l.carrier || "—"}</td>
+                    <td style={{ padding: 9, borderBottom: `1px solid ${C.hairline}`, color: C.body }}>{l.plan}</td>
+                    <td style={{ padding: 9, borderBottom: `1px solid ${C.hairline}`, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+                      {l.enrolled}
+                    </td>
+                    <td style={{ padding: "9px 0 9px 9px", borderBottom: `1px solid ${C.hairline}`, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+                      {money0(l.monthly)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : group.linesLoaded ? (
+            <div style={{ marginTop: 8, fontSize: 13, color: C.muted }}>
+              No dental, vision, life or disability enrollment in this group's export.
+            </div>
+          ) : (
+            <div style={{ marginTop: 8, fontSize: 13, color: C.muted }}>
+              Supplemental lines will appear here after the next Employee Navigator import.
+            </div>
+          )}
+          <div style={{ marginTop: 10, fontSize: 12.5, color: C.faint, fontVariantNumeric: "tabular-nums" }}>
+            Monthly premium: <strong style={{ color: C.body, fontWeight: 500 }}>{money0(group.groupHealthMonthly ?? 0)}</strong>{" "}
+            group health (EBPA + HealthEZ) · {money0(group.medicalMonthly ?? 0)} medical ·{" "}
+            {money0(group.supplementalMonthly ?? 0)} supplemental · {money0(group.totalMonthly ?? 0)} total
+          </div>
+        </div>
+      )}
+
       <GroupProposals group={group.name} token={token} />
 
       <div style={{ ...panel, marginTop: 16, padding: "18px 22px" }}>
