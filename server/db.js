@@ -46,6 +46,9 @@ CREATE TABLE IF NOT EXISTS kennion.group_meta (
 );
 ALTER TABLE kennion.group_meta ADD COLUMN IF NOT EXISTS archived boolean NOT NULL DEFAULT false;
 ALTER TABLE kennion.group_meta ADD COLUMN IF NOT EXISTS fields jsonb NOT NULL DEFAULT '{}'::jsonb;
+-- Who brokers the group: Kennion directly, or an outside broker. Only the
+-- label is stored, never the broker's name.
+ALTER TABLE kennion.group_meta ADD COLUMN IF NOT EXISTS broker text CHECK (broker IN ('kennion','outside'));
 
 -- One row per upload, so the admin screen can say when data last came in and
 -- from which file.
@@ -105,7 +108,7 @@ export function createDb(url) {
 
       const meta = {};
       const mrows = await pool.query(
-        "SELECT group_name, company_id, size_category, archived, fields FROM kennion.group_meta",
+        "SELECT group_name, company_id, size_category, archived, fields, broker FROM kennion.group_meta",
       );
       for (const r of mrows.rows) {
         meta[r.group_name] = {
@@ -113,6 +116,7 @@ export function createDb(url) {
           sizeCategory: r.size_category,
           archived: r.archived,
           fields: r.fields || {},
+          broker: r.broker || null,
         };
       }
 
@@ -145,10 +149,16 @@ export function createDb(url) {
       );
     },
 
-    /** Staff edit to a group's code, ALE bucket, or archived state. */
+    /** Staff edit to a group's code, ALE bucket, broker label, or archived state. */
     async setMeta(groupName, field, value, by) {
       const col =
-        field === "companyId" ? "company_id" : field === "archived" ? "archived" : "size_category";
+        field === "companyId"
+          ? "company_id"
+          : field === "archived"
+            ? "archived"
+            : field === "broker"
+              ? "broker"
+              : "size_category";
       await pool.query(
         `INSERT INTO kennion.group_meta (group_name, ${col}, updated_by)
          VALUES ($1,$2,$3)

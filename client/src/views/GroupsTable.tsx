@@ -9,6 +9,9 @@ export interface AdminGroup {
   sizeCategory: "2-50" | "51+";
   sizeIsSet?: boolean;
   codeIsSet?: boolean;
+  /** Who brokers the group. Only the label is kept, never a broker's name. */
+  broker?: "kennion" | "outside";
+  brokerIsSet?: boolean;
   address1: string | null;
   city: string | null;
   state: string | null;
@@ -40,7 +43,10 @@ interface Props {
 
 type SortKey =
   | "name" | "code" | "address1" | "city" | "state" | "zip" | "sic"
-  | "taxId" | "contact" | "enrolled" | "sizeCategory" | "importedAt";
+  | "taxId" | "contact" | "enrolled" | "sizeCategory" | "broker" | "importedAt";
+
+export const BROKER_LABEL = { kennion: "Kennion", outside: "Outside Broker" } as const;
+type Broker = keyof typeof BROKER_LABEL;
 
 const th = {
   textAlign: "left" as const,
@@ -55,6 +61,7 @@ const td = { padding: "8px 10px", borderBottom: `1px solid ${C.hairline}`, color
 export default function GroupsTable({ groups, token, onChanged }: Props) {
   const [query, setQuery] = useState("");
   const [size, setSize] = useState<"All" | "2-50" | "51+">("All");
+  const [broker, setBroker] = useState<"All" | Broker>("All");
   const [showArchived, setShowArchived] = useState(false);
   const [view, setView] = useState<"live" | "excluded">("live");
   const [sort, setSort] = useState<SortKey>("name");
@@ -63,7 +70,7 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
   const [error, setError] = useState("");
   const [saved, setSaved] = useState("");
 
-  async function save(group: string, field: "companyId" | "sizeCategory", value: string) {
+  async function save(group: string, field: "companyId" | "sizeCategory" | "broker", value: string) {
     setError("");
     const r = await fetch("/api/admin/group-meta", {
       method: "POST",
@@ -87,8 +94,9 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
       (showArchived ? !!g.archived : !g.archived) &&
       (view === "excluded" ? g.eligible === false : g.eligible !== false) &&
       (size === "All" || g.sizeCategory === size) &&
+      (broker === "All" || (g.broker || "kennion") === broker) &&
       (!q ||
-        `${g.name} ${g.code} ${g.city ?? ""} ${g.state ?? ""} ${g.zip ?? ""} ${g.sic ?? ""} ${g.taxId ?? ""} ${(g.contacts ?? []).map((c) => `${c.name} ${c.email}`).join(" ")}`
+        `${g.name} ${g.code} ${g.city ?? ""} ${g.state ?? ""} ${g.zip ?? ""} ${g.sic ?? ""} ${g.taxId ?? ""} ${BROKER_LABEL[g.broker || "kennion"]} ${(g.contacts ?? []).map((c) => `${c.name} ${c.email}`).join(" ")}`
           .toLowerCase()
           .includes(q)),
   );
@@ -97,6 +105,7 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
     if (sort === "enrolled") return g.enrolled ?? 0;
     if (sort === "importedAt") return g.importedAt ? Date.parse(g.importedAt) : 0;
     if (sort === "contact") return (g.contacts?.[0]?.name || "").toLowerCase();
+    if (sort === "broker") return BROKER_LABEL[g.broker || "kennion"].toLowerCase();
     const v = (g as unknown as Record<string, unknown>)[sort];
     return String(v ?? "").toLowerCase();
   };
@@ -137,6 +146,7 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
     large: live.filter((g) => g.sizeCategory === "51+").length,
     archived: groups.length - live.length,
     excluded: groups.filter((g) => !g.archived && g.eligible === false).length,
+    outside: live.filter((g) => g.broker === "outside").length,
     dupes: groups.filter((g) => !g.archived && (g.duplicateOf || []).length).length,
   };
 
@@ -145,7 +155,8 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: 12 }}>
         <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600, color: C.ink }}>Groups</h2>
         <span style={{ fontSize: 12.5, color: C.faint }}>
-          {live.length} groups · {counts.small} at 2-50 · {counts.large} at 51+ (ALE)
+          {live.length} groups · {counts.small} at 2-50 · {counts.large} at 51+ (ALE) ·{" "}
+          {counts.outside} with an outside broker
           {counts.archived > 0 && ` · ${counts.archived} archived`}
         </span>
       </div>
@@ -161,8 +172,9 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
           <>
             Every group and the code it signs in with. Codes are generated from the company name —
             four letters plus the plan year — and can be typed over. Size defaults from enrolled
-            headcount; set it explicitly where the ALE determination differs. Click a company to
-            open its page.
+            headcount; set it explicitly where the ALE determination differs. Broker says whether
+            Kennion places the group directly or an outside broker does. Click a company to open
+            its page.
           </>
         )}
       </div>
@@ -200,6 +212,26 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
               }}
             >
               {s}
+            </button>
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: 2 }} role="group" aria-label="Filter by broker">
+          {(["All", "kennion", "outside"] as const).map((b) => (
+            <button
+              key={b}
+              onClick={() => setBroker(b)}
+              aria-pressed={broker === b}
+              style={{
+                padding: "7px 13px",
+                fontSize: 13,
+                borderRadius: 4,
+                cursor: "pointer",
+                ...(broker === b
+                  ? { color: "#fff", background: C.blue, border: `1px solid ${C.blue}`, fontWeight: 500 }
+                  : { color: C.body, background: "#fff", border: `1px solid ${C.inputEdge}` }),
+              }}
+            >
+              {b === "All" ? "All brokers" : BROKER_LABEL[b]}
             </button>
           ))}
         </div>
@@ -290,6 +322,7 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
               <H k="contact" label="Contact" />
               <H k="enrolled" label="Enrolled" align="right" width={92} />
               <H k="sizeCategory" label="Size" width={150} />
+              <H k="broker" label="Broker" width={190} />
               <H k="importedAt" label="Data from" width={132} />
             </tr>
           </thead>
@@ -430,6 +463,45 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
                     {!g.sizeIsSet && (
                       <div style={{ fontSize: 10.5, color: C.ghost, marginTop: 2 }}>from headcount</div>
                     )}
+                  </td>
+                  <td style={{ ...td, padding: "5px 8px" }}>
+                    <div style={{ display: "flex", gap: 2 }} role="group" aria-label={`Broker for ${g.name}`}>
+                      {(["kennion", "outside"] as const).map((b) => {
+                        const on = (g.broker || "kennion") === b;
+                        return (
+                          <button
+                            key={b}
+                            onClick={() => void save(g.name, "broker", b)}
+                            aria-pressed={on}
+                            style={{
+                              flex: 1,
+                              padding: "5px 8px",
+                              fontSize: 12,
+                              borderRadius: 3,
+                              cursor: "pointer",
+                              whiteSpace: "nowrap",
+                              ...(on
+                                ? b === "outside"
+                                  ? {
+                                      color: "#fff",
+                                      background: C.amber,
+                                      border: `1px solid ${C.amber}`,
+                                      fontWeight: 500,
+                                    }
+                                  : {
+                                      color: "#fff",
+                                      background: C.blue,
+                                      border: `1px solid ${C.blue}`,
+                                      fontWeight: 500,
+                                    }
+                                : { color: C.body, background: "#fff", border: `1px solid ${C.border}` }),
+                            }}
+                          >
+                            {BROKER_LABEL[b]}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </td>
                   <td style={{ ...td, whiteSpace: "nowrap" }}>
                     {g.importedAt ? (

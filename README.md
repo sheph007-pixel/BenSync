@@ -80,6 +80,12 @@ Each group is also categorised **2-50** or **51+ (ALE)**. It defaults from
 enrolled headcount and can be set explicitly, since ALE status is a legal
 determination rather than something an enrollment count settles.
 
+Every group also carries a **Broker** label: **Kennion**, for groups Kennion
+places directly, or **Outside Broker**. Seven groups ship labelled Outside
+Broker; the label can be flipped on any group in the Groups table or on its
+page, and the Groups table sorts and filters on it. Only the label is stored —
+never the outside broker's name.
+
 ## Who is in the portal
 
 The 2027 program covers **EBPA, HealthEZ and BCBS of Alabama**. A group is in

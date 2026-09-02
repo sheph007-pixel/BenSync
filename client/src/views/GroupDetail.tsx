@@ -2,7 +2,7 @@ import { useState } from "react";
 import { C, money0, panel } from "@/lib/importui";
 import Link from "@/lib/Link";
 import { PATHS } from "@/lib/router";
-import type { AdminGroup } from "@/views/GroupsTable";
+import { BROKER_LABEL, type AdminGroup } from "@/views/GroupsTable";
 
 interface Props {
   group: AdminGroup & {
@@ -215,6 +215,44 @@ export default function GroupDetail({ group, token, onChanged, onBack, onOpenRat
                   defaulted from headcount — set it to make the ALE call explicit
                 </div>
               )}
+            </div>
+
+            <div style={{ marginTop: 14 }}>
+              <label style={{ display: "block", fontSize: 12.5, color: C.body, marginBottom: 5 }}>
+                Broker
+              </label>
+              <div style={{ display: "flex", gap: 4 }} role="group" aria-label="Broker">
+                {(["kennion", "outside"] as const).map((b) => {
+                  const on = (group.broker || "kennion") === b;
+                  return (
+                    <button
+                      key={b}
+                      onClick={() => void save("broker", b)}
+                      aria-pressed={on}
+                      style={{
+                        padding: "7px 14px",
+                        fontSize: 13,
+                        borderRadius: 4,
+                        cursor: "pointer",
+                        ...(on
+                          ? {
+                              color: "#fff",
+                              background: b === "outside" ? C.amber : C.blue,
+                              border: `1px solid ${b === "outside" ? C.amber : C.blue}`,
+                              fontWeight: 500,
+                            }
+                          : { color: C.body, background: "#fff", border: `1px solid ${C.inputEdge}` }),
+                      }}
+                    >
+                      {BROKER_LABEL[b]}
+                    </button>
+                  );
+                })}
+              </div>
+              <div style={{ fontSize: 11.5, color: C.ghost, marginTop: 4 }}>
+                Whether Kennion places this group directly or an outside broker does. Only the label
+                is kept, not a name.
+              </div>
             </div>
 
             <div style={{ marginTop: 14, fontSize: 12.5, color: C.faint, lineHeight: 1.6 }}>
