@@ -63,6 +63,7 @@ CREATE TABLE IF NOT EXISTS kennion.imports (
   companies_applied integer,
   applied_names text[]
 );
+ALTER TABLE kennion.imports ADD COLUMN IF NOT EXISTS diagnostics jsonb;
 
 -- Carrier proposals, one row per uploaded file. The file itself lives here so
 -- a proposal is never lost to an ephemeral container; the extraction is what
@@ -257,12 +258,12 @@ export function createDb(url) {
       );
     },
 
-    async logImport(filename, by, found, applied, names) {
+    async logImport(filename, by, found, applied, names, diagnostics) {
       const { rows } = await pool.query(
         `INSERT INTO kennion.imports
-           (filename, uploaded_by, companies_found, companies_applied, applied_names)
-         VALUES ($1,$2,$3,$4,$5) RETURNING uploaded_at`,
-        [filename || null, by || null, found, applied, names || []],
+           (filename, uploaded_by, companies_found, companies_applied, applied_names, diagnostics)
+         VALUES ($1,$2,$3,$4,$5,$6) RETURNING uploaded_at`,
+        [filename || null, by || null, found, applied, names || [], diagnostics ? JSON.stringify(diagnostics) : null],
       );
       return rows[0].uploaded_at;
     },
@@ -270,7 +271,7 @@ export function createDb(url) {
     /** Most recent uploads, newest first, for the import history panel. */
     async recentImports(limit = 8) {
       const { rows } = await pool.query(
-        `SELECT filename, uploaded_at, uploaded_by, companies_found, companies_applied
+        `SELECT filename, uploaded_at, uploaded_by, companies_found, companies_applied, diagnostics
            FROM kennion.imports ORDER BY uploaded_at DESC LIMIT $1`,
         [limit],
       );

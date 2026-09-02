@@ -10,11 +10,11 @@ import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import crypto from "node:crypto";
-import { parseEnStream, premiumBreakdown, classifyPlans } from "./en-parse.js";
+import { parseEnStream, premiumBreakdown, classifyPlans, newDiagnostics, mergeDiagnostics } from "./en-parse.js";
 import { createDb } from "./db.js";
 import { assignCodes, sizeFor, normalizeName } from "./group-id.js";
 import { eligibilityOf } from "./eligibility.js";
-import { aiEnabled, analyzeProposal } from "./ai.js";
+import { aiEnabled, analyzeProposal, explainReconciliation } from "./ai.js";
 import { expandUpload, prepareForModel } from "./intake.js";
 import { parseCarrierStats } from "./carrier-stats.js";
 
@@ -386,6 +386,36 @@ app.post(
   },
 );
 
+/** Every company's diagnostics added up into one picture of the file. */
+function rollupDiagnostics(companies) {
+  const all = newDiagnostics();
+  for (const c of companies) mergeDiagnostics(all, c.stats && c.stats.diagnostics);
+  return all;
+}
+
+/**
+ * Ask Claude what explains the gap between the carrier stats report and the
+ * import. Only aggregates go out: the report rows, per-carrier portal totals
+ * the screen computed, and the last import's diagnostics.
+ */
+app.post("/api/admin/reconcile/explain", requireStaff, express.json({ limit: "256kb" }), async (req, res) => {
+  if (!carrierStats) return res.status(400).json({ error: "Upload the carrier stats report first." });
+  const diagnostics = (recentImports[0] && recentImports[0].diagnostics) || null;
+  const payload = {
+    report: { reportDate: carrierStats.reportDate, rows: carrierStats.rows, total: carrierStats.total },
+    portal: req.body && req.body.portal ? req.body.portal : null,
+    lastImport: recentImports[0]
+      ? { filename: recentImports[0].filename, when: recentImports[0].uploaded_at, diagnostics }
+      : null,
+  };
+  try {
+    const text = await explainReconciliation(payload);
+    res.json({ ok: true, text });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 /** Preview: parse and report what would change. Saves nothing. */
 app.post("/api/admin/import/preview", requireStaff, async (req, res) => {
   try {
@@ -408,6 +438,7 @@ app.post("/api/admin/import/preview", requireStaff, async (req, res) => {
     res.json({
       companies: companies.map(summarise),
       failures,
+      diagnostics: rollupDiagnostics(companies),
       totalEnrolled: companies.reduce((n, c) => n + c.group.enrolled, 0),
       totalMonthly: Math.round(companies.reduce((n, c) => n + (c.group.monthly || 0), 0) * 100) / 100,
       programs: Object.values(programs).map((t) => ({
@@ -456,6 +487,7 @@ app.post("/api/admin/import", requireStaff, async (req, res) => {
     if (!applied.length) return res.status(400).json({ error: "Nothing selected to import." });
     saveImports();
 
+    const diagnostics = rollupDiagnostics(companies);
     if (db) {
       const at = await db.logImport(
         String(req.query.filename || "").slice(0, 200) || null,
@@ -463,11 +495,30 @@ app.post("/api/admin/import", requireStaff, async (req, res) => {
         companies.length,
         applied.length,
         applied.map((a) => a.name),
+        diagnostics,
       );
       applied.forEach((a) => {
         importedAt[a.name] = at;
       });
       recentImports = await db.recentImports();
+    } else {
+      // No database: keep the history in memory so the screen can still show
+      // what the last import did and what it left out.
+      const at = new Date().toISOString();
+      applied.forEach((a) => {
+        importedAt[a.name] = at;
+      });
+      recentImports = [
+        {
+          filename: String(req.query.filename || "").slice(0, 200) || null,
+          uploaded_at: at,
+          uploaded_by: req.staffEmail || null,
+          companies_found: companies.length,
+          companies_applied: applied.length,
+          diagnostics,
+        },
+        ...recentImports,
+      ].slice(0, 8);
     }
     rebuild();
 

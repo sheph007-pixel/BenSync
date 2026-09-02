@@ -206,3 +206,28 @@ export async function analyzeProposal(file, roster) {
   }
   return response.parsed_output;
 }
+
+
+/**
+ * Explain a reconciliation: Employee Navigator's carrier stats report against
+ * what the import produced, with what the import left out and why. Aggregates
+ * only — no member data leaves the server. Returns plain text for the screen.
+ */
+export async function explainReconciliation(payload) {
+  if (!aiEnabled()) throw new Error("AI is off: no ANTHROPIC_API_KEY is set.");
+  const client = apiKey() ? new Anthropic({ apiKey: apiKey() }) : new Anthropic();
+  const response = await client.messages.create({
+    model: MODEL,
+    max_tokens: 4000,
+    output_config: { effort: "medium" },
+    system:
+      "You are a benefits data analyst helping a brokerage reconcile its own import of an Employee Navigator XML export against Employee Navigator's Carrier Stats report. The report's 'Enrolled Employees' and 'Plan Costs' per carrier are the reference. The import's rules: an employee is skipped when their employment status says terminated/inactive/deceased; a medical enrollment counts when its EndDate is nil, absent or in the future; waived elections are skipped; an enrollment with no PlanCost adds nothing to premium. The diagnostics say how many enrollments each rule left out, by carrier program, with the premium they carried. Write for a benefits advisor: plain language, no code. For each carrier that differs by more than about 1%, say what most likely explains the difference, citing the specific exclusion bucket and numbers, and whether a rule should change to match Employee Navigator's counting — be concrete about which rule. If the gap cannot be explained by the buckets, say what to look at next. Keep it under 300 words.",
+    messages: [{ role: "user", content: JSON.stringify(payload) }],
+  });
+  if (response.stop_reason === "refusal") throw new Error("The model declined this request.");
+  return response.content
+    .filter((b) => b.type === "text")
+    .map((b) => b.text)
+    .join("\n")
+    .trim();
+}

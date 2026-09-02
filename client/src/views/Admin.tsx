@@ -16,7 +16,7 @@ import ImportPanel from "@/views/ImportPanel";
 import GroupsTable, { type AdminGroup } from "@/views/GroupsTable";
 import GroupDetail from "@/views/GroupDetail";
 import Proposals from "@/views/Proposals";
-import Reconciliation, { reportGroupHealth, type CarrierStats } from "@/views/Reconciliation";
+import Reconciliation, { reportGroupHealth, type CarrierStats, type ImportDiagnostics } from "@/views/Reconciliation";
 
 interface Props {
   data: KennionData;
@@ -28,6 +28,8 @@ interface Props {
   imports: ImportRecord[];
   /** Employee Navigator's carrier stats report, if one has been uploaded. */
   carrierStats: CarrierStats | null;
+  /** Whether the server has an Anthropic key. */
+  ai: boolean;
   onCarrierStats: (s: CarrierStats) => void;
   /** Which tab the address names. */
   tab: AdminTab;
@@ -72,6 +74,8 @@ export interface ImportRecord {
   uploaded_by: string | null;
   companies_found: number;
   companies_applied: number;
+  /** What the parser left out of this import and why (see server/en-parse.js). */
+  diagnostics?: ImportDiagnostics | null;
 }
 
 export default function Admin({
@@ -84,6 +88,7 @@ export default function Admin({
   imports,
   carrierStats,
   onCarrierStats,
+  ai,
   tab,
   openGroup,
   overrides,
@@ -725,6 +730,9 @@ export default function Admin({
               stats={carrierStats}
               groups={activeGroups as unknown as AdminGroup[]}
               onStats={onCarrierStats}
+              diagnostics={imports[0]?.diagnostics || null}
+              lastImport={imports[0] ? { filename: imports[0].filename, when: imports[0].uploaded_at } : null}
+              ai={ai}
             />
 
             <div style={{ ...panel, marginTop: 16, padding: "20px 22px" }}>

@@ -207,6 +207,17 @@ appear once the XML has been imported with line capture. Administrators with
 no premium (a COBRA or FSA vendor) are shown greyed. The Groups page
 group-health tile quotes the report's figure next to the portal's.
 
+Under the table, **What the last XML import left out** lists every medical
+enrollment the parser did not count — a terminated employee whose coverage has
+not ended, an enrollment that has ended, a waived election, a row with no
+PlanCost — by carrier and with the premium it carried, so a gap between the
+report and the portal is accounted for line by line rather than guessed at.
+These diagnostics are stored with each import (`kennion.imports.diagnostics`;
+aggregates only). **Ask Claude what explains the gap** sends the report rows,
+the per-carrier portal totals and those diagnostics to Claude and shows a
+plain-language explanation of which rule differs from Employee Navigator's
+counting and what to change; no member data leaves the server.
+
 Who counts as enrolled follows the report: anyone still on a plan — active, on
 leave, on COBRA, a retiree with coverage — while a terminated employee is
 skipped, and an enrollment counts until its end date has passed.
