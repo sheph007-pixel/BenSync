@@ -86,6 +86,11 @@ Broker; the label can be flipped on any group in the Groups table or on its
 page, and the Groups table sorts and filters on it. Only the label is stored —
 never the outside broker's name.
 
+The Groups table has an **Export** button that downloads exactly the rows on
+screen — the current search, filters and sort — as a CSV that opens in Excel,
+with every column the table shows plus plans in force, monthly premium and all
+contacts. Filter first, then export, and the file is the report.
+
 ## Who is in the portal
 
 The 2027 program covers **EBPA, HealthEZ and BCBS of Alabama**. A group is in
