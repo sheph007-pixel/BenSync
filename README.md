@@ -91,9 +91,24 @@ default), **Sent**, **Renewed** or **Non-Renewed** — set from the Groups table
 or the company page and saved like the other labels.
 
 The Groups page opens with a dashboard that follows the filters: group count,
-enrolled employees and covered lives, and monthly premium for whatever is on
-screen — filter to a broker, a size band or a renewal state and the three
-numbers describe that slice, with its share of the whole block. The renewal
+enrolled employees and covered lives, and two premium figures for whatever is
+on screen — filter to a broker, a size band or a renewal state and the numbers
+describe that slice, with its share of the whole block. The two premiums are
+deliberately different things:
+
+- **Group health premium** is medical premium on **EBPA and HealthEZ only** —
+  the captive program Kennion earns on. A group's BCBS of Alabama medical is in
+  the portal but is *not* in this number.
+- **Total premium** is every active enrollment on every line: all medical (BCBS
+  included) plus dental, vision, life, disability and anything else in the
+  Employee Navigator export.
+
+Both count the same people the enrolled figure does — active employees with an
+open enrollment — and never a terminated or waived one. The shipped census
+carries medical only, so a group's supplemental lines (and therefore the gap
+between its medical and its total) appear once its Employee Navigator export
+has been imported again; until then the Total tile says so, and the CSV's
+"Supplemental loaded" column reads No. The renewal
 tile counts each state within the current slice; click one to filter to it. The table below keeps to eight
 columns — company and access code, location, contact, enrolled, **% of block**
 (that group's enrolled employees as a share of every enrolled employee in the
@@ -107,6 +122,12 @@ file is the report.
 Enrollment is counted the same way everywhere: a group's enrolled figure on the
 Groups page is the sum of the enrolled counts of its plans on Plans & Rates,
 and both pages apply the same roster rule, so their group counts agree.
+
+A company's page shows its medical **Plans in force** and, beneath them,
+**Other lines in force** — each dental, vision, life or disability plan with
+its carrier, enrolled count and monthly premium, and a one-line summary of
+group health / medical / supplemental / total. Only totals are kept for these
+lines; the portal never prices them.
 
 ## Who is in the portal
 
@@ -170,6 +191,16 @@ Navigator Data API export of 7/31/2026 and the UnitedHealthcare full-menu quotes
 of 8/28–8/31/2026: 68 groups and 1,318 employee records. Imported groups are
 layered over it.
 
+The census is medical only. The Groups dashboard's **group health premium** is
+the monthly premium of each group's medical plans whose carrier matches EBPA or
+HealthEZ — the same tolerant carrier match that decides program eligibility —
+so BCBS of Alabama medical never counts toward it. **Total premium** adds every
+other benefit line the export carries. Those lines are only captured when an
+export is imported (see below), so a group still on census data, or imported
+before supplemental lines were read, shows a total equal to its medical
+premium and is flagged as not yet loaded. Re-importing the Employee Navigator
+export once fills the supplemental figures in for every group in it.
+
 Three rules govern every rate, and the UI labels which applies:
 
 | Source | Shown as | Meaning |
@@ -198,11 +229,17 @@ export is a run of them; they are streamed and parsed one at a time, so a
 100 MB+ file never lands in memory whole (a 107 MB export parses in about six
 seconds under a 400 MB heap).
 
-The parser takes **active medical enrollments only** — `Benefit=Medical`,
-`EmploymentStatus=Active`, and no `EndDate` — and reads `CoverageLevel` as the
-tier, `PlanCost` as the billed rate, and `EmployeeCost`/`EmployerCost` as the
-actual split. Dependent ages come from the nested `<Dependent>` records; the
-carrier comes from the `<Plans>` catalog. The `<Company>` record supplies the
+The parser builds the group's members, plans and rates from **active medical
+enrollments only** — `Benefit=Medical`, `EmploymentStatus=Active`, and no
+`EndDate` — and reads `CoverageLevel` as the tier, `PlanCost` as the billed
+rate, and `EmployeeCost`/`EmployerCost` as the actual split. Every other
+benefit in the export (dental, vision, life, disability, accident, cancer …) is
+read under the same active / no-`EndDate` rule, but only as a per-line total —
+benefit, carrier, plan, enrolled count and the sum of `PlanCost` — for the
+Groups dashboard's total premium; no member detail is kept for those lines, and
+a waived or declined election is skipped. Dependent ages come from the nested
+`<Dependent>` records; the carrier for every line comes from the `<Plans>`
+catalog. The `<Company>` record supplies the
 full group identity — address, city, state, ZIP, SIC code, EIN, phone, situs
 state, corporation type and the named contacts. The one thing it lacks is the
 SIC *description*, which is carried across from the census on import rather

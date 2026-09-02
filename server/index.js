@@ -10,7 +10,7 @@ import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import crypto from "node:crypto";
-import { parseEnStream } from "./en-parse.js";
+import { parseEnStream, premiumBreakdown } from "./en-parse.js";
 import { createDb } from "./db.js";
 import { assignCodes, sizeFor, normalizeName } from "./group-id.js";
 import { eligibilityOf } from "./eligibility.js";
@@ -185,6 +185,11 @@ function rebuild() {
     lives: g.lives,
     plans: g.plans,
     rates: g.rates,
+    // Group health (EBPA + HealthEZ medical), all medical, supplemental lines
+    // and the total. Census rows and older imports carry no `lines`, so their
+    // supplemental is 0 and linesLoaded is false until the export is re-read.
+    ...premiumBreakdown(g),
+    lines: Array.isArray(g.lines) ? g.lines : [],
     imported: !!(imported.groups || {})[g.name],
     importedAt: importedAt[g.name] || null,
     archived: !!g.archived,

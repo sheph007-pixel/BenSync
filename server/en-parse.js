@@ -4,15 +4,20 @@
 // indistinguishable from one that came out of the original census build.
 //
 // Deliberate choices, each of which changes the numbers:
-//   - Only Benefit=Medical enrollments count. The exports also carry Dental,
-//     Vision, Life, Accident and Cancer.
+//   - Only Benefit=Medical enrollments make up the members, plans and rates the
+//     portal prices from. The exports also carry Dental, Vision, Life, Accident
+//     and Cancer; those are kept ONLY as per-line premium totals (`lines`) so
+//     the Groups dashboard can show total premium next to group health.
 //   - Only rows that are EmploymentStatus=Active AND have no EndDate. A
-//     terminated employee or a closed enrollment is not current coverage.
+//     terminated employee or a closed enrollment is not current coverage. The
+//     same rule applies to every benefit line.
 //   - CoverageLevel is used verbatim as the tier; EN's wording already matches
 //     the portal's ("Employee + Child(ren)" etc).
 //   - A tier's rate is PlanCost for that tier, which EN bills uniformly per
 //     plan+tier. Tiers nobody is enrolled in get no rate here; the portal
 //     calculates those at the program factors and marks them "calc.".
+
+import { programOf } from "./eligibility.js";
 
 const TIER_ORDER = ["Employee", "Employee + Spouse", "Employee + Child(ren)", "Employee + Family"];
 const TIER_KEY = {
@@ -52,6 +57,54 @@ const cleanPlan = (p) => (p || "").replace(/\s+(19|20)\d{2}\s*$/, "").trim();
 
 const round2 = (n) => Math.round(n * 100) / 100;
 
+/** Programs whose medical premium is "group health": the captive program. BCBS of Alabama is not. */
+export const GROUP_HEALTH_PROGRAMS = new Set(["EBPA", "HealthEZ"]);
+
+/**
+ * The premium figures the Groups page shows, from a group's `plans` (medical,
+ * always present) and `lines` (every other benefit, present only on groups
+ * imported since supplemental lines were captured).
+ *
+ *   groupHealthMonthly  medical plans on EBPA or HealthEZ only
+ *   medicalMonthly      every medical plan, BCBS included
+ *   supplementalMonthly dental, vision, life, disability … — 0 until loaded
+ *   totalMonthly        medical + supplemental
+ *   linesLoaded         whether the export this group came from was read for
+ *                       supplemental lines at all; false for the shipped
+ *                       census and for imports made before that was captured
+ */
+export function premiumBreakdown(group) {
+  const plans = Array.isArray(group.plans) ? group.plans : [];
+  const lines = Array.isArray(group.lines) ? group.lines : null;
+  const sum = (xs) => round2(xs.reduce((s, x) => s + (Number(x.monthly) || 0), 0));
+  const medicalMonthly = sum(plans);
+  const groupHealthMonthly = sum(plans.filter((p) => GROUP_HEALTH_PROGRAMS.has(programOf(p))));
+  const supplementalMonthly = lines ? sum(lines) : 0;
+  return {
+    groupHealthMonthly,
+    medicalMonthly,
+    supplementalMonthly,
+    totalMonthly: round2(medicalMonthly + supplementalMonthly),
+    linesLoaded: lines !== null,
+  };
+}
+
+/**
+ * A waived or declined election is not coverage. Employee Navigator may emit
+ * such a row as an enrollment whose plan or coverage level says so.
+ */
+const isWaived = (en) =>
+  /waiv|declin/i.test(
+    [text(en, "Plan"), text(en, "CoverageLevel"), text(en, "EnrollmentStatus")].filter(Boolean).join(" "),
+  );
+
+/** Dental and vision first, then the rest alphabetically. */
+const BENEFIT_ORDER = ["Dental", "Vision", "Life", "Disability"];
+const benefitRank = (b) => {
+  const i = BENEFIT_ORDER.findIndex((x) => new RegExp(x, "i").test(b));
+  return i === -1 ? BENEFIT_ORDER.length : i;
+};
+
 export function parseEmployeeNavigatorXml(xml) {
   if (typeof xml !== "string" || !/<Employee>/.test(xml)) {
     throw new Error("This does not look like an Employee Navigator XML export.");
@@ -70,13 +123,18 @@ const companyBlock = wholeCompany.slice(0, headEnd > 0 ? headEnd : 8000);
   // That is where the TPA comes from; the enrollment rows themselves do not
   // name a carrier.
   const planCarrier = new Map();
+  // Every other benefit's carrier, keyed by benefit + plan so a dental and a
+  // vision plan that happen to share a name cannot borrow each other's carrier.
+  const lineCarrier = new Map();
   const catalog = blocks(xml, "Plans")[0];
   if (catalog) {
     for (const pl of blocks(catalog, "Plan")) {
-      if (text(pl, "Benefit") !== "Medical") continue;
+      const benefit = text(pl, "Benefit");
       const pn = cleanPlan(text(pl, "PlanName"));
       const carrier = text(pl, "Carrier");
-      if (pn && carrier) planCarrier.set(pn, carrier);
+      if (!pn || !carrier) continue;
+      if (benefit === "Medical") planCarrier.set(pn, carrier);
+      else lineCarrier.set(`${benefit}||${pn}`, carrier);
     }
   }
 
@@ -95,13 +153,34 @@ const companyBlock = wholeCompany.slice(0, headEnd > 0 ? headEnd : 8000);
   let pyStart = null;
   let pyEnd = null;
   const carriers = new Map();
+  // Supplemental lines, aggregated per benefit + carrier + plan. No member
+  // detail is kept for these — only the enrolled count and billed premium.
+  const lineAgg = new Map();
 
   for (const emp of employees) {
     if (text(emp, "EmploymentStatus") !== "Active") continue;
 
-    const medical = blocks(emp, "Enrollment").filter(
-      (en) => text(en, "Benefit") === "Medical" && isNil(en, "EndDate"),
-    );
+    // Same currency rule for every benefit: an open enrollment (no EndDate) on
+    // an active employee.
+    const current = blocks(emp, "Enrollment").filter((en) => isNil(en, "EndDate"));
+
+    // Everything but medical goes to the per-line totals. An active employee
+    // on dental alone still counts here, even though they have no medical
+    // record and so never become a member below.
+    for (const en of current) {
+      const benefit = text(en, "Benefit");
+      if (!benefit || benefit === "Medical" || isWaived(en)) continue;
+      const plan = cleanPlan(text(en, "Plan"));
+      const carrier = lineCarrier.get(`${benefit}||${plan}`) || "";
+      const cost = text(en, "PlanCost");
+      const key = `${benefit}||${carrier}||${plan}`;
+      const a = lineAgg.get(key) || { benefit, carrier, plan, enrolled: 0, monthly: 0 };
+      a.enrolled++;
+      a.monthly += cost == null || cost === "" ? 0 : Number(cost) || 0;
+      lineAgg.set(key, a);
+    }
+
+    const medical = current.filter((en) => text(en, "Benefit") === "Medical");
     if (!medical.length) continue;
 
     // Dependents are nested in the employee record; only their ages are used.
@@ -187,6 +266,15 @@ const companyBlock = wholeCompany.slice(0, headEnd > 0 ? headEnd : 8000);
     members.length + members.reduce((s, m) => s + m.spAges.length + m.chAges.length, 0);
   const tpa = plans[0] ? plans[0].tpa : "";
 
+  const lines = [...lineAgg.values()]
+    .map((a) => ({ ...a, monthly: round2(a.monthly) }))
+    .sort(
+      (x, y) =>
+        benefitRank(x.benefit) - benefitRank(y.benefit) ||
+        x.benefit.localeCompare(y.benefit) ||
+        y.monthly - x.monthly,
+    );
+
   // Strip the working fields the portal does not consume.
   const cleanMembers = members.map((m) => ({
     first: m.first,
@@ -228,6 +316,9 @@ const companyBlock = wholeCompany.slice(0, headEnd > 0 ? headEnd : 8000);
       monthly,
       annual: round2(monthly * 12),
       plans,
+      /** Every non-medical benefit in force — dental, vision, life, disability … — with no member detail. */
+      lines,
+      ...premiumBreakdown({ plans, lines }),
       members: cleanMembers,
       rates,
     },
@@ -242,6 +333,7 @@ const companyBlock = wholeCompany.slice(0, headEnd > 0 ? headEnd : 8000);
       tierCounts: TIER_ORDER.reduce((o, t) => ({ ...o, [t]: members.filter((m) => m.tier === t).length }), {}),
       ratesFound: Object.values(rates).reduce((n, r) => n + Object.keys(r).length, 0),
       splitsFound: Object.values(splitPlans).reduce((n, r) => n + Object.keys(r).length, 0),
+      linesFound: lines.length,
     },
   };
 }
