@@ -16,12 +16,20 @@ export interface Proposal {
   extracted: Extraction | null;
   summary: string | null;
   confidence: number | null;
-  status: "analyzing" | "assigned" | "suggested" | "unassigned";
+  status: "analyzing" | "assigned" | "suggested" | "unassigned" | "container";
   assigned_by: string | null;
   error: string | null;
   uploaded_by: string | null;
   uploaded_at: string;
   updated_at: string;
+  /** file: uploaded directly · email: an uploaded email · attachment: pulled out of one */
+  kind?: "file" | "email" | "attachment";
+  /** Which of the group's proposal slots this fills. */
+  slot?: string | null;
+  /** Set when a newer proposal in the same slot replaced this one. */
+  superseded_by?: number | null;
+  parent_id?: number | null;
+  context?: { subject?: string; from?: string; date?: string | null; body?: string; emailFilename?: string } | null;
 }
 
 interface Extraction {
@@ -45,7 +53,16 @@ interface Extraction {
   audit_flags?: string[];
 }
 
-const ACCEPT = ".pdf,.csv,.txt,application/pdf,text/csv,text/plain";
+const ACCEPT =
+  ".pdf,.eml,.msg,.xlsx,.xlsm,.xls,.csv,.txt,.docx,.png,.jpg,.jpeg,.gif,.webp,application/pdf,message/rfc822,application/vnd.ms-outlook,text/csv,text/plain,image/*";
+
+/** Rows that are proposals in their own right — not an email wrapper. */
+const isProposal = (p: Proposal) => p.status !== "container";
+
+/** The slots a group can hold; the first four are the ones tracked per group. */
+export const SLOTS = ["UHC Fully Insured", "UHC Level Funded", "Gravie", "Nationwide", "Surest", "Other"] as const;
+const TRACKED = SLOTS.slice(0, 4);
+const isCurrent = (p: Proposal) => p.status === "assigned" && !p.superseded_by;
 
 const fmtSize = (n: number) => (n > 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Math.round(n / 1e3)} KB`);
 const fmtWhen = (s: string) =>
@@ -55,7 +72,9 @@ const money = (v: number | null | undefined) => (v == null ? "—" : `$${v.toFix
 
 /** The status pill: who assigned it, or what is still needed. */
 function StatusPill({ p }: { p: Proposal }) {
+  if (p.status === "container") return <span style={pill(C.body, "#f2f4f5", "#e0e4e6")}>Email</span>;
   if (p.status === "analyzing") return <span style={pill(C.blue, C.blueTint, C.blueEdge)}>Reading…</span>;
+  if (p.superseded_by) return <span style={pill(C.faint, "#f2f4f5", "#e0e4e6")}>Superseded</span>;
   if (p.error && !p.group_name) return <span style={pill(C.red, C.redTint, C.redEdge)}>Could not read</span>;
   if (p.status === "unassigned") return <span style={pill(C.amber, C.amberTint, C.amberEdge)}>Needs assignment</span>;
   if (p.status === "suggested") return <span style={pill(C.amber, C.amberTint, C.amberEdge)}>AI suggests — confirm</span>;
@@ -81,7 +100,13 @@ async function uploadFiles(
         body: f,
       });
       const j = await r.json().catch(() => ({ error: `Server returned ${r.status}.` }));
-      onEach(f.name, r.ok, r.ok ? undefined : j.error);
+      const n = Array.isArray(j.proposals) ? j.proposals.filter((p: Proposal) => p.status !== "container").length : 1;
+      const note = r.ok
+        ? (j.proposals?.some((p: Proposal) => p.kind === "email")
+            ? `email opened · ${n} attachment${n === 1 ? "" : "s"} to read`
+            : "uploaded") + (j.skipped?.length ? ` · skipped ${j.skipped.join(", ")}` : "")
+        : j.error;
+      onEach(f.name, r.ok, note);
     } catch (e) {
       onEach(f.name, false, (e as Error).message);
     }
@@ -242,9 +267,11 @@ interface RowProps {
   onChanged: () => void;
   /** When set, the row is on that company's page: no group column. */
   fixedGroup?: string;
+  /** For an email row: how many proposals came out of it. */
+  children?: number;
 }
 
-function ProposalRow({ p, token, groups, onChanged, fixedGroup }: RowProps) {
+function ProposalRow({ p, token, groups, onChanged, fixedGroup, children: childCount }: RowProps) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -266,6 +293,40 @@ function ProposalRow({ p, token, groups, onChanged, fixedGroup }: RowProps) {
   const x = p.extracted;
   const conf = p.confidence != null ? `${Math.round(p.confidence * 100)}%` : null;
 
+  // An email wrapper: the subject, who sent it, what came out of it.
+  if (p.status === "container") {
+    return (
+      <div style={{ padding: "10px 0", borderBottom: `1px solid ${C.hairline}`, opacity: busy ? 0.6 : 1 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "6px 14px" }}>
+          <StatusPill p={p} />
+          <button onClick={() => void openFile(p.id, token)} style={{ ...linkBtn, fontSize: 13, fontWeight: 500, color: C.body }} title="Open the email">
+            {p.context?.subject || p.filename}
+          </button>
+          <span style={{ fontSize: 12, color: C.ghost }}>
+            {p.context?.from ? `from ${p.context.from} · ` : ""}
+            {childCount ?? 0} attachment{childCount === 1 ? "" : "s"} listed below · {fmtWhen(p.uploaded_at)}
+          </span>
+          <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
+            {confirmDelete ? (
+              <>
+                <button onClick={() => void post(`/api/admin/proposals/${p.id}`, undefined, "DELETE")} style={{ ...linkBtn, color: C.red, fontWeight: 600 }}>
+                  Delete email and its attachments
+                </button>
+                <button onClick={() => setConfirmDelete(false)} style={linkBtn}>
+                  Keep
+                </button>
+              </>
+            ) : (
+              <button onClick={() => setConfirmDelete(true)} style={{ ...linkBtn, color: C.faint }}>
+                Delete
+              </button>
+            )}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ padding: "12px 0", borderBottom: `1px solid ${C.hairline}`, opacity: busy ? 0.6 : 1 }}>
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px 14px" }}>
@@ -278,6 +339,22 @@ function ProposalRow({ p, token, groups, onChanged, fixedGroup }: RowProps) {
           {p.uploaded_by ? ` · ${p.uploaded_by}` : ""}
         </span>
         <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
+          {p.status !== "analyzing" && (
+            <select
+              value={p.slot || ""}
+              onChange={(e) => void post(`/api/admin/proposals/${p.id}`, { slot: e.target.value || null })}
+              aria-label={`Slot for ${p.filename}`}
+              title="Which of the group's proposals this is"
+              style={{ ...selectStyle, maxWidth: 170, borderColor: p.slot ? C.inputEdge : C.amber }}
+            >
+              <option value="">— which proposal? —</option>
+              {SLOTS.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          )}
           {!fixedGroup && (
             <select
               value={p.group_name || ""}
@@ -337,6 +414,25 @@ function ProposalRow({ p, token, groups, onChanged, fixedGroup }: RowProps) {
           {p.assigned_by === "filename" && <span style={{ color: C.ghost }}> · guessed from the filename</span>}
         </div>
       )}
+      {p.context && (p.kind === "attachment" || p.kind === "email") && (
+        <div style={{ marginTop: 6, fontSize: 12.5, color: C.faint }}>
+          ✉ {p.kind === "attachment" ? "Attached to" : "Email"}: <span style={{ color: C.body }}>{p.context.subject || p.context.emailFilename || "(no subject)"}</span>
+          {p.context.from ? ` — from ${p.context.from}` : ""}
+          {p.parent_id != null && (
+            <>
+              {" · "}
+              <button onClick={() => void openFile(p.parent_id!, token)} style={linkBtn}>
+                open the email
+              </button>
+            </>
+          )}
+        </div>
+      )}
+      {p.superseded_by != null && (
+        <div style={{ marginTop: 6, fontSize: 12.5, color: C.faint }}>
+          Replaced by a newer {p.slot || ""} proposal for this group. Kept for the record.
+        </div>
+      )}
       {p.summary && p.status !== "analyzing" && (
         <div style={{ marginTop: 6, fontSize: 12.5, color: C.muted, lineHeight: 1.55, maxWidth: 900 }}>{p.summary}</div>
       )}
@@ -350,6 +446,30 @@ function ProposalRow({ p, token, groups, onChanged, fixedGroup }: RowProps) {
       )}
       {open && x && <Extracted x={x} />}
     </div>
+  );
+}
+
+/** Which of the tracked slots a group has a current proposal in. */
+function SlotChips({ rows }: { rows: Proposal[] }) {
+  return (
+    <span style={{ display: "inline-flex", flexWrap: "wrap", gap: 4, marginLeft: 4 }} aria-label="Proposal slots">
+      {TRACKED.map((s) => {
+        const have = rows.some((p) => p.slot === s && isCurrent(p));
+        return (
+          <span
+            key={s}
+            title={have ? `${s}: current proposal on file` : `${s}: nothing yet`}
+            style={{
+              ...(have ? pill(C.green, C.greenTint, C.greenEdge) : pill(C.ghost, "#fff", C.border)),
+              fontWeight: 500,
+            }}
+          >
+            {have ? "✓ " : "○ "}
+            {s.replace("UHC ", "UHC ")}
+          </span>
+        );
+      })}
+    </span>
   );
 }
 
@@ -402,10 +522,11 @@ function Uploader({
         style={{ ...dropZone(drag), padding: compact ? "14px 16px" : "22px 20px" }}
       >
         <div style={{ fontSize: compact ? 13 : 14, fontWeight: 500, color: C.ink }}>
-          {busy ? "Uploading…" : group ? `Drop proposals for ${group} here, or click to choose` : "Drop carrier proposals here, or click to choose"}
+          {busy ? "Uploading…" : group ? `Drop proposals or emails for ${group} here, or click to choose` : "Drop proposals or emails here, or click to choose"}
         </div>
         <div style={{ marginTop: 4, fontSize: 12.5, color: C.faint }}>
-          PDF or CSV · several at once is fine · each is read and {group ? "filed under this group" : "matched to its group"}
+          PDF, email (.eml or .msg), Excel, Word, CSV or a picture of a rate sheet · several at once is fine ·
+          attachments are pulled out of emails · each is read and {group ? "filed under this group" : "matched to its group"}
         </div>
         <input
           ref={inputRef}
@@ -421,7 +542,7 @@ function Uploader({
         <ul style={{ margin: "8px 0 0", paddingLeft: 18, fontSize: 12.5, lineHeight: 1.6 }}>
           {log.map((l, i) => (
             <li key={i} style={{ color: l.ok ? C.green : C.red }}>
-              {l.name}: {l.ok ? "uploaded" : l.msg || "failed"}
+              {l.name}: {l.ok ? l.msg || "uploaded" : l.msg || "failed"}
             </li>
           ))}
         </ul>
@@ -440,22 +561,43 @@ interface Props {
 export default function Proposals({ token, groups }: Props) {
   const { items, ai, durable, error, load } = useProposals(token);
   const [view, setView] = useState<"all" | "queue" | "assigned">("all");
+  const [layout, setLayout] = useState<"list" | "groups">("list");
   const [query, setQuery] = useState("");
 
   const q = query.trim().toLowerCase();
+  const matches = (p: Proposal) =>
+    !q ||
+    `${p.filename} ${p.carrier || ""} ${p.group_name || ""} ${p.summary || ""} ${p.context?.subject || ""} ${p.context?.from || ""}`
+      .toLowerCase()
+      .includes(q);
   const rows = items.filter(
     (p) =>
       (view === "all" ||
-        (view === "queue" ? p.status !== "assigned" : p.status === "assigned")) &&
-      (!q || `${p.filename} ${p.carrier || ""} ${p.group_name || ""} ${p.summary || ""}`.toLowerCase().includes(q)),
+        (view === "queue" ? isProposal(p) && p.status !== "assigned" : p.status === "assigned")) &&
+      matches(p),
   );
+  const proposals = items.filter(isProposal);
   const counts = {
-    queue: items.filter((p) => p.status === "unassigned" || p.status === "suggested").length,
-    reading: items.filter((p) => p.status === "analyzing").length,
-    assigned: items.filter((p) => p.status === "assigned").length,
+    queue: proposals.filter((p) => p.status === "unassigned" || p.status === "suggested").length,
+    reading: proposals.filter((p) => p.status === "analyzing").length,
+    assigned: proposals.filter((p) => p.status === "assigned").length,
   };
+  const childCounts: Record<number, number> = {};
+  items.forEach((p) => {
+    if (p.parent_id != null) childCounts[p.parent_id] = (childCounts[p.parent_id] || 0) + 1;
+  });
 
   const sortedGroups = [...groups].sort((a, b) => a.name.localeCompare(b.name));
+
+  // By group: every roster group with its proposals attached, the unassigned
+  // ones first, and the groups still waiting on a proposal at the end.
+  const byGroup = sortedGroups.map((g) => ({
+    g,
+    rows: proposals.filter((p) => p.group_name === g.name && matches(p)),
+  }));
+  const unassignedRows = proposals.filter((p) => !p.group_name && matches(p));
+  const withRows = byGroup.filter((x) => x.rows.length);
+  const without = byGroup.filter((x) => !x.rows.length && !proposals.some((p) => p.group_name === x.g.name));
 
   return (
     <>
@@ -465,7 +607,7 @@ export default function Proposals({ token, groups }: Props) {
             Proposals
           </h1>
           <span style={{ fontSize: 12.5, color: C.faint }}>
-            {items.length} on file · {counts.assigned} assigned · {counts.queue} to assign
+            {proposals.length} on file · {counts.assigned} assigned · {counts.queue} to assign
             {counts.reading ? ` · ${counts.reading} being read` : ""}
           </span>
         </div>
@@ -473,8 +615,11 @@ export default function Proposals({ token, groups }: Props) {
           Upload proposals as they come in from UnitedHealthcare, Gravie, Nationwide or anyone else —
           a whole batch at once. Each file is read: the carrier, the group named on it, the plans and
           tier rates. A clear match is assigned to its group; a doubtful one is suggested for you to
-          confirm; the rest wait here for you to assign. Every proposal can also be opened from its
-          company&rsquo;s page, where you can upload straight to that group.
+          confirm; the rest wait here for you to assign. Each group tracks four proposals — UHC Fully
+          Insured, UHC Level Funded, Gravie and Nationwide — and a newer proposal in the same slot
+          replaces the older one, which is kept. These are what the 2027 options for each group are
+          built from. Every proposal can also be opened from its company&rsquo;s page, where you can
+          upload straight to that group.
         </div>
         {ai === false && (
           <div
@@ -525,25 +670,24 @@ export default function Proposals({ token, groups }: Props) {
             aria-label="Search proposals"
             style={{ flex: "1 1 240px", minWidth: 200, padding: "8px 11px", fontSize: 13.5, color: C.ink, border: `1px solid ${C.inputEdge}`, borderRadius: 4, outline: "none" }}
           />
-          <div style={{ display: "flex", gap: 2 }} role="group" aria-label="Which proposals">
+          <div style={{ display: "flex", gap: 2 }} role="group" aria-label="Layout">
             {(
               [
-                ["all", `All (${items.length})`],
-                ["queue", `To assign (${counts.queue + counts.reading})`],
-                ["assigned", `Assigned (${counts.assigned})`],
+                ["list", "List"],
+                ["groups", "By group"],
               ] as const
             ).map(([k, label]) => (
               <button
                 key={k}
-                onClick={() => setView(k)}
-                aria-pressed={view === k}
+                onClick={() => setLayout(k)}
+                aria-pressed={layout === k}
                 style={{
                   padding: "7px 13px",
                   fontSize: 13,
                   borderRadius: 4,
                   cursor: "pointer",
-                  ...(view === k
-                    ? { color: "#fff", background: C.blue, border: `1px solid ${C.blue}`, fontWeight: 500 }
+                  ...(layout === k
+                    ? { color: "#fff", background: C.ink, border: `1px solid ${C.ink}`, fontWeight: 500 }
                     : { color: C.body, background: "#fff", border: `1px solid ${C.inputEdge}` }),
                 }}
               >
@@ -551,18 +695,99 @@ export default function Proposals({ token, groups }: Props) {
               </button>
             ))}
           </div>
+          {layout === "list" && (
+            <div style={{ display: "flex", gap: 2 }} role="group" aria-label="Which proposals">
+              {(
+                [
+                  ["all", `All (${proposals.length})`],
+                  ["queue", `To assign (${counts.queue + counts.reading})`],
+                  ["assigned", `Assigned (${counts.assigned})`],
+                ] as const
+              ).map(([k, label]) => (
+                <button
+                  key={k}
+                  onClick={() => setView(k)}
+                  aria-pressed={view === k}
+                  style={{
+                    padding: "7px 13px",
+                    fontSize: 13,
+                    borderRadius: 4,
+                    cursor: "pointer",
+                    ...(view === k
+                      ? { color: "#fff", background: C.blue, border: `1px solid ${C.blue}`, fontWeight: 500 }
+                      : { color: C.body, background: "#fff", border: `1px solid ${C.inputEdge}` }),
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         {error && (
           <div role="alert" style={{ margin: "12px 0", fontSize: 13, color: C.red }}>
             {error}
           </div>
         )}
-        {!rows.length ? (
+        {layout === "groups" ? (
+          <div>
+            {unassignedRows.length > 0 && (
+              <section style={{ padding: "12px 0 4px" }}>
+                <h2 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: C.amber }}>
+                  Not yet assigned <span style={{ fontWeight: 400, color: C.faint }}>· {unassignedRows.length}</span>
+                </h2>
+                {unassignedRows.map((p) => (
+                  <ProposalRow key={p.id} p={p} token={token} groups={sortedGroups} onChanged={() => void load()} />
+                ))}
+              </section>
+            )}
+            {withRows.map(({ g, rows: rs }) => (
+              <section key={g.name} style={{ padding: "12px 0 4px" }}>
+                <h2 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: C.ink, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
+                  <Link href={groupPath(g.name)}>{g.name}</Link>
+                  <span style={{ fontWeight: 400, fontSize: 12.5, color: C.faint }}>
+                    {g.enrolled} enrolled · {g.tpa || "—"} · {rs.length} proposal{rs.length === 1 ? "" : "s"}
+                  </span>
+                  <SlotChips rows={rs} />
+                </h2>
+                {[...rs]
+                  .sort((a, b) => Number(!!a.superseded_by) - Number(!!b.superseded_by))
+                  .map((p) => (
+                    <ProposalRow key={p.id} p={p} token={token} groups={sortedGroups} onChanged={() => void load()} fixedGroup={g.name} />
+                  ))}
+              </section>
+            ))}
+            {!withRows.length && !unassignedRows.length && (
+              <div style={{ padding: "26px 0", textAlign: "center", fontSize: 13, color: C.faint }}>
+                {items.length ? "Nothing matches." : "No proposals yet. Drop the first batch above."}
+              </div>
+            )}
+            {without.length > 0 && !q && (
+              <section style={{ padding: "14px 0 10px", borderTop: `1px solid ${C.border}`, marginTop: 8 }}>
+                <h2 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: C.faint }}>
+                  No proposal yet · {without.length} group{without.length === 1 ? "" : "s"}
+                </h2>
+                <div style={{ marginTop: 6, fontSize: 12.5, color: C.faint, lineHeight: 1.8 }}>
+                  {without.map(({ g }, i) => (
+                    <span key={g.name}>
+                      <Link href={groupPath(g.name)} style={{ color: C.body }}>
+                        {g.name}
+                      </Link>
+                      {i < without.length - 1 ? " · " : ""}
+                    </span>
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
+        ) : !rows.length ? (
           <div style={{ padding: "26px 0", textAlign: "center", fontSize: 13, color: C.faint }}>
             {items.length ? "Nothing matches." : "No proposals yet. Drop the first batch above."}
           </div>
         ) : (
-          rows.map((p) => <ProposalRow key={p.id} p={p} token={token} groups={sortedGroups} onChanged={() => void load()} />)
+          rows.map((p) => (
+            <ProposalRow key={p.id} p={p} token={token} groups={sortedGroups} onChanged={() => void load()} children={childCounts[p.id]} />
+          ))
         )}
       </div>
     </>
@@ -577,9 +802,10 @@ export function GroupProposals({ group, token }: { group: string; token: string 
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: 12 }}>
         <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: C.ink }}>Proposals</h3>
         <span style={{ fontSize: 12.5, color: C.faint }}>
-          {items.length ? `${items.length} on file` : "none yet"} ·{" "}
+          {items.filter(isProposal).length ? `${items.filter(isProposal).length} on file` : "none yet"} ·{" "}
           <Link href={PATHS.proposals}>all proposals</Link>
         </span>
+        <SlotChips rows={items} />
       </div>
       {error && (
         <div role="alert" style={{ marginTop: 10, fontSize: 13, color: C.red }}>
@@ -587,7 +813,15 @@ export function GroupProposals({ group, token }: { group: string; token: string 
         </div>
       )}
       {items.map((p) => (
-        <ProposalRow key={p.id} p={p} token={token} groups={[]} onChanged={() => void load()} fixedGroup={group} />
+        <ProposalRow
+          key={p.id}
+          p={p}
+          token={token}
+          groups={[]}
+          onChanged={() => void load()}
+          fixedGroup={group}
+          children={items.filter((c) => c.parent_id === p.id).length}
+        />
       ))}
       <div style={{ marginTop: 12 }}>
         <Uploader token={token} group={group} onDone={load} compact />

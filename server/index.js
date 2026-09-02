@@ -15,6 +15,7 @@ import { createDb } from "./db.js";
 import { assignCodes, sizeFor, normalizeName } from "./group-id.js";
 import { eligibilityOf } from "./eligibility.js";
 import { aiEnabled, analyzeProposal } from "./ai.js";
+import { expandUpload, prepareForModel } from "./intake.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.resolve(__dirname, "..", "dist", "public");
@@ -108,6 +109,8 @@ const defaultBroker = (name) =>
 let groups = [];
 let byCode = new Map();
 let adminGroups = [];
+/** Proposals filed under each group, so the Groups page can show coverage. */
+let proposalCounts = {};
 
 function rebuild() {
   const base = data.groups.filter((g) => (g.plans || []).length > 0);
@@ -171,6 +174,7 @@ function rebuild() {
     broker: g.broker,
     brokerIsSet: !!(meta[g.name] || {}).broker,
     renewal: g.renewal,
+    proposals: proposalCounts[g.name] || 0,
     address1: g.address1 || null,
     city: g.city || null,
     state: g.state || null,
@@ -547,6 +551,11 @@ const proposalStore = db
           uploaded_by: p.uploaded_by || null,
           uploaded_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
+          kind: p.kind || "file",
+          parent_id: p.parent_id || null,
+          context: p.context || null,
+          slot: p.slot || null,
+          superseded_by: null,
         };
         memProposals.unshift(row);
         return stripBytes(row);
@@ -567,19 +576,77 @@ const proposalStore = db
       async deleteProposal(id) {
         const i = memProposals.findIndex((r) => r.id === id);
         if (i < 0) return false;
-        memProposals.splice(i, 1);
+        for (let j = memProposals.length - 1; j >= 0; j--) {
+          if (memProposals[j].id === id || memProposals[j].parent_id === id) memProposals.splice(j, 1);
+        }
         return true;
       },
     };
+
+/**
+ * The proposal slots a group can hold. UnitedHealthcare quotes come as fully
+ * insured and level funded, tracked separately; the rest are one per carrier.
+ */
+const SLOTS = ["UHC Fully Insured", "UHC Level Funded", "Surest", "Gravie", "Nationwide", "Other"];
+function slotFor(carrier, funding) {
+  const c = String(carrier || "").toLowerCase();
+  const f = String(funding || "").toLowerCase();
+  if (/surest/.test(c)) return "Surest";
+  if (/united|uhc/.test(c)) {
+    if (/level/.test(f)) return "UHC Level Funded";
+    if (/fully/.test(f)) return "UHC Fully Insured";
+    return null; // UHC, funding unclear — leave for staff to say
+  }
+  if (/gravie/.test(c)) return "Gravie";
+  if (/nationwide/.test(c)) return "Nationwide";
+  return c ? "Other" : null;
+}
+
+/**
+ * After any change: recount proposals per group for the Groups page, and
+ * settle supersession — within a group and slot, the newest assigned proposal
+ * is current and older ones are marked as replaced by it. Nothing is deleted.
+ */
+async function proposalsChanged() {
+  try {
+    const rows = await proposalStore.listProposals();
+    const counts = {};
+    const bySlot = new Map();
+    rows.forEach((r) => {
+      if (r.status === "container" || !r.group_name) return;
+      counts[r.group_name] = (counts[r.group_name] || 0) + 1;
+      if (r.status !== "assigned" || !r.slot) return;
+      const k = `${r.group_name}||${r.slot}`;
+      bySlot.set(k, [...(bySlot.get(k) || []), r]);
+    });
+    const want = new Map(); // id -> superseded_by it should have
+    rows.forEach((r) => want.set(r.id, null));
+    for (const list of bySlot.values()) {
+      list.sort((a, b) => new Date(b.uploaded_at) - new Date(a.uploaded_at) || b.id - a.id);
+      const current = list[0];
+      list.slice(1).forEach((r) => want.set(r.id, current.id));
+    }
+    for (const r of rows) {
+      const should = want.get(r.id);
+      if ((r.superseded_by || null) !== should) await proposalStore.updateProposal(r.id, { superseded_by: should });
+    }
+    proposalCounts = counts;
+    rebuild();
+  } catch (e) {
+    console.error("could not settle proposals:", e.message);
+  }
+}
 
 const liveRoster = () =>
   groups
     .filter((g) => !g.archived && g.eligible)
     .map((g) => ({ name: g.name, enrolled: g.enrolled, tpa: g.tpa }));
 
-/** Cheap fallback when there is no AI: does the filename name a roster group? */
-function matchByFilename(filename) {
-  const hay = normalizeName(filename.replace(/\.[a-z0-9]+$/i, ""));
+/** Cheap fallback when there is no AI: does the filename, or the email it came in, name a roster group? */
+function matchByFilename(filename, context) {
+  const hay = normalizeName(
+    [filename.replace(/\.[a-z0-9]+$/i, ""), context?.subject || "", context?.body || ""].join(" "),
+  );
   const hits = liveRoster().filter((g) => {
     const n = normalizeName(g.name);
     return n.length >= 4 && hay.includes(n);
@@ -587,21 +654,27 @@ function matchByFilename(filename) {
   return hits.length === 1 ? hits[0].name : null;
 }
 
-/** Read the file, match it, and write the outcome back. Runs in the background. */
+/**
+ * Read the file, match it, and write the outcome back. Runs in the background.
+ * `file` is { filename, mime, buffer, context? } — context being the email it
+ * came out of, if any.
+ */
 async function runAnalysis(id, file, keepAssignment) {
   try {
     if (!aiEnabled()) {
-      const guess = keepAssignment ? null : matchByFilename(file.filename);
+      const guess = keepAssignment ? null : matchByFilename(file.filename, file.context);
       await proposalStore.updateProposal(id, {
         status: keepAssignment ? "assigned" : guess ? "suggested" : "unassigned",
         ...(guess ? { group_name: guess, confidence: 0.5, assigned_by: "filename" } : {}),
         summary: "AI reading is off (no ANTHROPIC_API_KEY). Assign the group by hand.",
         error: null,
       });
+      await proposalsChanged();
       return;
     }
     const roster = liveRoster();
-    const out = await analyzeProposal(file, roster);
+    const prepared = await prepareForModel(file);
+    const out = await analyzeProposal({ filename: file.filename, prepared, context: file.context || null }, roster);
     const flags = Array.isArray(out.audit_flags) ? [...out.audit_flags] : [];
     const matched = roster.find((g) => g.name === out.matched_group) || null;
     const conf = Math.max(0, Math.min(1, Number(out.confidence) || 0));
@@ -626,6 +699,8 @@ async function runAnalysis(id, file, keepAssignment) {
       confidence: conf,
       error: null,
     };
+    // The slot comes from what was read, unless staff already set one.
+    if (!current || !current.slot) fields.slot = slotFor(out.carrier, out.funding);
     if (keepAssignment) {
       // Uploaded straight onto a company page: the human already chose the
       // group. Note a disagreement rather than overriding them.
@@ -650,15 +725,19 @@ async function runAnalysis(id, file, keepAssignment) {
       error: e.message,
     });
   }
+  await proposalsChanged();
 }
 
-const PROPOSAL_TYPES = new Set(["application/pdf", "text/csv", "text/plain"]);
-
-/** Upload one proposal file. Raw body; filename and optional group in the query. */
+/**
+ * Upload one file — a proposal, or an email carrying proposals. Raw body;
+ * filename and optional group in the query. An email is stored as its own row
+ * and each usable attachment becomes a proposal of its own, read with the
+ * email's subject, sender and body as context.
+ */
 app.post(
   "/api/admin/proposals",
   requireStaff,
-  express.raw({ type: () => true, limit: "25mb" }),
+  express.raw({ type: () => true, limit: "40mb" }),
   async (req, res) => {
     const filename = String(req.query.filename || "proposal.pdf").slice(0, 200);
     const mime = (req.get("content-type") || "").split(";")[0].trim() || "application/octet-stream";
@@ -666,26 +745,67 @@ app.post(
     if (!Buffer.isBuffer(req.body) || !req.body.length) {
       return res.status(400).json({ error: "No file received." });
     }
-    if (!PROPOSAL_TYPES.has(mime)) {
-      return res.status(400).json({ error: `Upload a PDF or CSV — ${mime || "that type"} is not supported yet.` });
-    }
     if (group && !groups.some((g) => g.name === group)) {
       return res.status(404).json({ error: "No such group." });
     }
+    let expanded;
     try {
-      const row = await proposalStore.addProposal({
-        group_name: group || null,
-        filename,
-        mime,
-        size: req.body.length,
-        data: req.body,
-        status: "analyzing",
-        assigned_by: group ? req.staffEmail || "staff" : null,
-        uploaded_by: req.staffEmail || null,
+      expanded = await expandUpload({ buffer: req.body, mime, filename });
+    } catch (e) {
+      return res.status(400).json({ error: e.message });
+    }
+    const by = req.staffEmail || null;
+    const base = {
+      group_name: group || null,
+      assigned_by: group ? by || "staff" : null,
+      uploaded_by: by,
+    };
+    try {
+      const created = [];
+      let parent = null;
+      if (expanded.email) {
+        // The email itself: a container when it has attachments, otherwise
+        // the proposal is its body and it is read like any other file.
+        parent = await proposalStore.addProposal({
+          ...base,
+          filename: expanded.email.filename,
+          mime: expanded.email.mime,
+          size: req.body.length,
+          data: req.body,
+          kind: "email",
+          context: expanded.email.context,
+          status: expanded.bodyOnly ? "analyzing" : "container",
+        });
+        created.push(parent);
+        if (expanded.bodyOnly) {
+          void runAnalysis(parent.id, { buffer: req.body, mime: expanded.email.mime, filename: expanded.email.filename }, !!group);
+        }
+      }
+      for (const item of expanded.items) {
+        const row = await proposalStore.addProposal({
+          ...base,
+          filename: item.filename,
+          mime: item.mime,
+          size: item.buffer.length,
+          data: item.buffer,
+          kind: item.kind,
+          parent_id: parent ? parent.id : null,
+          context: item.context || null,
+          status: "analyzing",
+        });
+        created.push(row);
+        // Read it after replying; the screen polls until it is done.
+        void runAnalysis(row.id, { buffer: item.buffer, mime: item.mime, filename: item.filename, context: item.context || null }, !!group);
+      }
+      await proposalsChanged();
+      res.json({
+        ok: true,
+        proposals: created,
+        proposal: created[created.length - 1],
+        skipped: expanded.skipped || [],
+        ai: aiEnabled(),
+        durable: !!db,
       });
-      // Read it after replying; the screen polls until it is done.
-      void runAnalysis(row.id, { buffer: req.body, mime, filename }, !!group);
-      res.json({ ok: true, proposal: row, ai: aiEnabled(), durable: !!db });
     } catch (e) {
       res.status(500).json({ error: "Could not store the file: " + e.message });
     }
@@ -715,8 +835,14 @@ app.get("/api/admin/proposals/:id/file", requireStaff, async (req, res) => {
 /** Assign, reassign, confirm, or relabel a proposal. */
 app.post("/api/admin/proposals/:id", requireStaff, express.json({ limit: "16kb" }), async (req, res) => {
   const id = Number(req.params.id);
-  const { group, carrier, confirm } = req.body || {};
+  const { group, carrier, confirm, slot } = req.body || {};
   const fields = {};
+  if (slot !== undefined) {
+    if (slot != null && slot !== "" && !SLOTS.includes(slot)) {
+      return res.status(400).json({ error: `Slot must be one of: ${SLOTS.join(", ")}.` });
+    }
+    fields.slot = slot == null || slot === "" ? null : slot;
+  }
   if (group !== undefined) {
     const clean = group == null || group === "" ? null : String(group);
     if (clean && !groups.some((g) => g.name === clean)) {
@@ -734,6 +860,7 @@ app.post("/api/admin/proposals/:id", requireStaff, express.json({ limit: "16kb" 
   try {
     const row = await proposalStore.updateProposal(id, fields);
     if (!row) return res.status(404).json({ error: "No such proposal." });
+    await proposalsChanged();
     res.json({ ok: true, proposal: row });
   } catch (e) {
     res.status(500).json({ error: "Could not save: " + e.message });
@@ -746,15 +873,19 @@ app.post("/api/admin/proposals/:id/analyze", requireStaff, async (req, res) => {
   const f = await proposalStore.getProposalFile(id).catch(() => null);
   if (!f) return res.status(404).json({ error: "No such proposal." });
   const current = (await proposalStore.listProposals()).find((r) => r.id === id);
+  if (current && current.status === "container") {
+    return res.status(400).json({ error: "Re-read the attachments, not the email itself." });
+  }
   const keep = !!(current && current.group_name && current.assigned_by && current.assigned_by !== "ai" && current.assigned_by !== "filename");
   await proposalStore.updateProposal(id, { status: "analyzing", error: null });
-  void runAnalysis(id, { buffer: f.data, mime: f.mime, filename: f.filename }, keep);
+  void runAnalysis(id, { buffer: f.data, mime: f.mime, filename: f.filename, context: current?.context || null }, keep);
   res.json({ ok: true });
 });
 
 app.delete("/api/admin/proposals/:id", requireStaff, async (req, res) => {
   const ok = await proposalStore.deleteProposal(Number(req.params.id)).catch(() => false);
   if (!ok) return res.status(404).json({ error: "No such proposal." });
+  await proposalsChanged();
   res.json({ ok: true });
 });
 
@@ -800,6 +931,7 @@ async function boot() {
     }
   }
   rebuild();
+  await proposalsChanged();
 }
 
 await boot();

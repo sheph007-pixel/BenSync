@@ -29,6 +29,7 @@ const SCHEMA = {
   additionalProperties: false,
   required: [
     "carrier",
+    "funding",
     "group_name_on_document",
     "matched_group",
     "confidence",
@@ -45,6 +46,11 @@ const SCHEMA = {
       type: "string",
       description:
         "The carrier or vendor issuing the proposal, e.g. UnitedHealthcare, Surest, Gravie, Nationwide, EBPA, HealthEZ, BCBS of Alabama. 'Unknown' if it cannot be told.",
+    },
+    funding: {
+      type: "string",
+      description:
+        "How the quoted plan is funded: 'fully insured', 'level funded', 'self funded', or 'unknown'. UnitedHealthcare quotes are usually one of the first two — say which.",
     },
     group_name_on_document: {
       ...nullable("string"),
@@ -118,12 +124,13 @@ const SCHEMA = {
 
 const SYSTEM = `You read insurance carrier proposals for Kennion Benefit Advisors, a benefits brokerage in Alabama. Each proposal is a quote for one employer group's medical plan, sent by a carrier such as UnitedHealthcare (including Surest), Gravie, Nationwide, EBPA, HealthEZ or BCBS of Alabama.
 
-Your job: identify the carrier, read off the plans and tier rates, and decide which group on Kennion's roster the proposal is for. Match by the employer name on the document against the roster names. Treat legal-form words (LLC, Inc., Co., Corporation, Holdings) and punctuation loosely, but do not match on a shared common word alone — "Birmingham Steel" is not "Birmingham-Toledo". When two roster groups could both fit, pick neither and say so in the flags. Copy the matched roster name exactly as listed. Rates are monthly composite amounts per tier: EE (employee only), ES (employee + spouse), EC (employee + children), FAM (family). Leave a value null rather than guessing.`;
+Your job: identify the carrier, read off the plans and tier rates, and decide which group on Kennion's roster the proposal is for. Match by the employer name on the document against the roster names. Treat legal-form words (LLC, Inc., Co., Corporation, Holdings) and punctuation loosely, but do not match on a shared common word alone — "Birmingham Steel" is not "Birmingham-Toledo". When two roster groups could both fit, pick neither and say so in the flags. Copy the matched roster name exactly as listed. Say whether the quote is fully insured or level funded — UnitedHealthcare sends both kinds and Kennion tracks them as separate proposals. Rates are monthly composite amounts per tier: EE (employee only), ES (employee + spouse), EC (employee + children), FAM (family). Leave a value null rather than guessing.`;
 
 /**
- * Read one proposal. `file` is { buffer, mime, filename }. `roster` is
- * [{ name, enrolled, tpa }] for every live group. Returns the extraction, or
- * throws with a message the admin screen can show.
+ * Read one proposal. `file` is { filename, prepared, context } where `prepared`
+ * came from intake.prepareForModel and `context` is the email it arrived in,
+ * if any. `roster` is [{ name, enrolled, tpa }] for every live group. Returns
+ * the extraction, or throws with a message the admin screen can show.
  */
 export async function analyzeProposal(file, roster) {
   if (!aiEnabled()) throw new Error("AI matching is off: no ANTHROPIC_API_KEY is set.");
@@ -134,23 +141,34 @@ export async function analyzeProposal(file, roster) {
     .join("\n");
 
   const content = [];
-  if (file.mime === "application/pdf") {
+  const p = file.prepared;
+  if (p.kind === "pdf") {
     content.push({
       type: "document",
-      source: { type: "base64", media_type: "application/pdf", data: file.buffer.toString("base64") },
+      source: { type: "base64", media_type: "application/pdf", data: p.buffer.toString("base64") },
       title: file.filename,
     });
+  } else if (p.kind === "image") {
+    content.push({
+      type: "image",
+      source: { type: "base64", media_type: p.mime, data: p.buffer.toString("base64") },
+    });
   } else {
-    // CSV or plain text from a carrier portal export.
+    // Text: a CSV, a spreadsheet or Word file already flattened, or an email body.
     content.push({
       type: "document",
-      source: { type: "text", media_type: "text/plain", data: file.buffer.toString("utf8") },
+      source: { type: "text", media_type: "text/plain", data: p.text || "(empty)" },
       title: file.filename,
     });
   }
+
+  const ctx = file.context;
+  const emailNote = ctx
+    ? `\n\nThis file arrived as an attachment to an email, which is useful context for the match (the subject or body often names the group):\nFrom: ${ctx.from || "?"}\nSubject: ${ctx.subject || "?"}\nDate: ${ctx.date || "?"}\nBody:\n${ctx.body || "(empty)"}`
+    : "";
   content.push({
     type: "text",
-    text: `The file is named "${file.filename}".\n\nKennion's roster — the only groups a proposal can be matched to:\n${rosterText}\n\nRead the proposal and fill in the structured result.`,
+    text: `The file is named "${file.filename}".${emailNote}\n\nKennion's roster — the only groups a proposal can be matched to:\n${rosterText}\n\nRead the proposal and fill in the structured result.`,
   });
 
   const params = {
