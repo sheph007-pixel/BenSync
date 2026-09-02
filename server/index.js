@@ -143,6 +143,8 @@ function rebuild() {
     g.code = code;
     g.sizeCategory = m.sizeCategory || sizeFor(g.enrolled);
     g.broker = m.broker || defaultBroker(g.name);
+    // Renewal tracking: every group starts Open.
+    g.renewal = m.renewal || "open";
     // Archived, or not on a program carrier: the row stays for staff, but the
     // code is refused at sign-in.
     if (!g.archived && g.eligible) {
@@ -167,6 +169,7 @@ function rebuild() {
     codeIsSet: !!(meta[g.name] || {}).companyId,
     broker: g.broker,
     brokerIsSet: !!(meta[g.name] || {}).broker,
+    renewal: g.renewal,
     address1: g.address1 || null,
     city: g.city || null,
     state: g.state || null,
@@ -424,7 +427,7 @@ const EDITABLE_FIELDS = new Set([
 app.post("/api/admin/group-meta", requireStaff, express.json({ limit: "16kb" }), async (req, res) => {
   const { group, field, value } = req.body || {};
   const isCompanyField = EDITABLE_FIELDS.has(field);
-  if (!group || !(["companyId", "sizeCategory", "broker", "archived"].includes(field) || isCompanyField)) {
+  if (!group || !(["companyId", "sizeCategory", "broker", "renewal", "archived"].includes(field) || isCompanyField)) {
     return res.status(400).json({ error: "group and a valid field are required" });
   }
   if (!groups.some((g) => g.name === group)) {
@@ -469,6 +472,9 @@ app.post("/api/admin/group-meta", requireStaff, express.json({ limit: "16kb" }),
   }
   if (field === "broker" && clean && !["kennion", "outside"].includes(clean)) {
     return res.status(400).json({ error: "Broker must be kennion or outside." });
+  }
+  if (field === "renewal" && clean && !["open", "sent", "renewed", "non-renewed"].includes(clean)) {
+    return res.status(400).json({ error: "Renewal must be open, sent, renewed or non-renewed." });
   }
 
   meta[group] = { ...(meta[group] || {}), [field]: clean };

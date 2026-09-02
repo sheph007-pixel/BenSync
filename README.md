@@ -86,10 +86,23 @@ Broker; the label can be flipped on any group in the Groups table or on its
 page, and the Groups table sorts and filters on it. Only the label is stored —
 never the outside broker's name.
 
-The Groups table has an **Export** button that downloads exactly the rows on
-screen — the current search, filters and sort — as a CSV that opens in Excel,
-with every column the table shows plus plans in force, monthly premium and all
-contacts. Filter first, then export, and the file is the report.
+Each group also has a **2027 renewal** state for tracking — **Open** (the
+default), **Sent**, **Renewed** or **Non-Renewed** — set from the Groups table
+or the company page and saved like the other labels.
+
+The Groups page opens with a dashboard of the live roster: group count, enrolled
+employees and covered lives, monthly premium, outside-broker count, and the
+renewal states (click one to filter to it). The table below keeps to seven
+columns — company and access code, location, contact, enrolled, size, broker,
+renewal — with the rest of each group's details on its own page. A totals row
+at the foot adds up whatever is on screen and moves with every search, filter
+and sort. The **Export** button downloads exactly those rows as a CSV that opens
+in Excel, with every detail column included. Filter first, then export, and the
+file is the report.
+
+Enrollment is counted the same way everywhere: a group's enrolled figure on the
+Groups page is the sum of the enrolled counts of its plans on Plans & Rates,
+and both pages apply the same roster rule, so their group counts agree.
 
 ## Who is in the portal
 
