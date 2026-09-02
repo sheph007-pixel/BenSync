@@ -84,9 +84,26 @@ function legacyCodeFor(name) {
   return "KEN-" + letters + "-" + String(h).padStart(5, "0").slice(0, 4);
 }
 
-// Kennion staff sign-in. Defaults are the credentials Hunter asked for; both
-// are overridable by environment variable so the deployed values need not stay
-// in a public repository.
+/**
+ * Groups placed through an outside broker rather than directly by Kennion.
+ * The label is what matters to the portal; the broker's name is deliberately
+ * not recorded. Staff can change any group's label in Rate Administration,
+ * and a set label wins over this list.
+ */
+const OUTSIDE_BROKER_GROUPS = new Set(
+  [
+    "ARC Realty, LLC",
+    "Ashley Mac's Holdings, LLC",
+    "Electrical Repair Service Co., Inc.",
+    "Innova Zones, LLC",
+    "MesaPay, LLC",
+    "Parker's Heating and Air Conditioning, Inc.",
+    "R.E. Garrison Corporate",
+  ].map(normalizeName),
+);
+const defaultBroker = (name) =>
+  OUTSIDE_BROKER_GROUPS.has(normalizeName(name)) ? "outside" : "kennion";
+
 let groups = [];
 let byCode = new Map();
 let adminGroups = [];
@@ -125,6 +142,7 @@ function rebuild() {
     if (!m.companyId && claimed.has(code)) code = code.slice(0, 3) + "9" + code.slice(4);
     g.code = code;
     g.sizeCategory = m.sizeCategory || sizeFor(g.enrolled);
+    g.broker = m.broker || defaultBroker(g.name);
     // Archived, or not on a program carrier: the row stays for staff, but the
     // code is refused at sign-in.
     if (!g.archived && g.eligible) {
@@ -147,6 +165,8 @@ function rebuild() {
     sizeCategory: g.sizeCategory,
     sizeIsSet: !!(meta[g.name] || {}).sizeCategory,
     codeIsSet: !!(meta[g.name] || {}).companyId,
+    broker: g.broker,
+    brokerIsSet: !!(meta[g.name] || {}).broker,
     address1: g.address1 || null,
     city: g.city || null,
     state: g.state || null,
@@ -404,7 +424,7 @@ const EDITABLE_FIELDS = new Set([
 app.post("/api/admin/group-meta", requireStaff, express.json({ limit: "16kb" }), async (req, res) => {
   const { group, field, value } = req.body || {};
   const isCompanyField = EDITABLE_FIELDS.has(field);
-  if (!group || !(["companyId", "sizeCategory", "archived"].includes(field) || isCompanyField)) {
+  if (!group || !(["companyId", "sizeCategory", "broker", "archived"].includes(field) || isCompanyField)) {
     return res.status(400).json({ error: "group and a valid field are required" });
   }
   if (!groups.some((g) => g.name === group)) {
@@ -446,6 +466,9 @@ app.post("/api/admin/group-meta", requireStaff, express.json({ limit: "16kb" }),
   }
   if (field === "sizeCategory" && clean && !["2-50", "51+"].includes(clean)) {
     return res.status(400).json({ error: "Size must be 2-50 or 51+." });
+  }
+  if (field === "broker" && clean && !["kennion", "outside"].includes(clean)) {
+    return res.status(400).json({ error: "Broker must be kennion or outside." });
   }
 
   meta[group] = { ...(meta[group] || {}), [field]: clean };
