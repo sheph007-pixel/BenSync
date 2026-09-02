@@ -191,6 +191,26 @@ still stored and a filename that names a group is used as a hint; staff assign
 the rest by hand. Without `DATABASE_URL` proposals live in memory until the next
 deploy, and the screen says so.
 
+### The carrier stats report
+
+Employee Navigator's second file, the **Carrier Stats** report
+(`carrier_stats_report_yyyy_mm_dd.xls`), is uploaded on the Import tab beside
+the XML. It carries EN's own count per carrier — eligible and enrolled
+employees, companies, plans, employee cost and total plan cost — and is stored
+(`kennion.carrier_stats`, latest wins). The Import tab then shows every carrier
+in the report against what the XML import produced: enrolled, companies and
+monthly premium side by side with the difference, marked **Matches** within 1%
+or **Check** otherwise. EBPA and HealthEZ rows are compared to the medical
+plans on those carriers; BCBS of Alabama to its medical plans; every other
+carrier (Guardian, VSP, UNUM, Sun Life …) to the supplemental lines, which
+appear once the XML has been imported with line capture. Administrators with
+no premium (a COBRA or FSA vendor) are shown greyed. The Groups page
+group-health tile quotes the report's figure next to the portal's.
+
+Who counts as enrolled follows the report: anyone still on a plan — active, on
+leave, on COBRA, a retiree with coverage — while a terminated employee is
+skipped, and an enrollment counts until its end date has passed.
+
 ### Checking the premium figures
 
 **Existing Plans & Rates** opens with "Where the medical premium sits": every

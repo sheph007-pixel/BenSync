@@ -16,6 +16,7 @@ import { assignCodes, sizeFor, normalizeName } from "./group-id.js";
 import { eligibilityOf } from "./eligibility.js";
 import { aiEnabled, analyzeProposal } from "./ai.js";
 import { expandUpload, prepareForModel } from "./intake.js";
+import { parseCarrierStats } from "./carrier-stats.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.resolve(__dirname, "..", "dist", "public");
@@ -111,6 +112,8 @@ let byCode = new Map();
 let adminGroups = [];
 /** Proposals filed under each group, so the Groups page can show coverage. */
 let proposalCounts = {};
+/** The latest Employee Navigator carrier stats report, for reconciliation. */
+let carrierStats = null;
 
 function rebuild() {
   const base = data.groups.filter((g) => (g.plans || []).length > 0);
@@ -253,6 +256,7 @@ function adminPayload() {
   return {
     kind: "admin",
     ai: aiEnabled(),
+    carrierStats,
     durable: !!db || DURABLE,
     storage: db ? "postgres" : DURABLE ? "volume" : "ephemeral",
     overrides,
@@ -350,6 +354,37 @@ const summarise = (parsed) => {
     },
   };
 };
+
+/**
+ * Employee Navigator's Carrier Stats report — the second file, uploaded with
+ * each XML export. Stored, and shown against the import carrier by carrier.
+ */
+app.post(
+  "/api/admin/carrier-stats",
+  requireStaff,
+  express.raw({ type: () => true, limit: "10mb" }),
+  async (req, res) => {
+    const filename = String(req.query.filename || "carrier_stats_report.xls").slice(0, 200);
+    if (!Buffer.isBuffer(req.body) || !req.body.length) {
+      return res.status(400).json({ error: "No file received." });
+    }
+    let parsed;
+    try {
+      parsed = parseCarrierStats(req.body, filename);
+    } catch (e) {
+      return res.status(400).json({ error: e.message });
+    }
+    const rec = { ...parsed, filename, uploadedBy: req.staffEmail || null };
+    try {
+      carrierStats = db
+        ? await db.saveCarrierStats(rec)
+        : { filename, reportDate: parsed.reportDate, rows: parsed.rows, total: parsed.total, uploadedAt: new Date().toISOString(), uploadedBy: rec.uploadedBy };
+    } catch (e) {
+      return res.status(500).json({ error: "Could not save the report: " + e.message });
+    }
+    res.json({ ok: true, stats: carrierStats });
+  },
+);
 
 /** Preview: parse and report what would change. Saves nothing. */
 app.post("/api/admin/import/preview", requireStaff, async (req, res) => {
@@ -950,6 +985,7 @@ async function boot() {
       meta = state.meta || {};
       importedAt = state.importedAt || {};
       recentImports = await db.recentImports();
+      carrierStats = await db.latestCarrierStats();
       const st = await db.stats();
       console.log(`postgres connected — ${st.groups} imported groups, ${st.overrides} rate overrides`);
     } catch (e) {
