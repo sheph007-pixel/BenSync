@@ -191,6 +191,20 @@ still stored and a filename that names a group is used as a hint; staff assign
 the rest by hand. Without `DATABASE_URL` proposals live in memory until the next
 deploy, and the screen says so.
 
+### Checking the premium figures
+
+**Existing Plans & Rates** opens with "Where the medical premium sits": every
+medical plan's premium grouped by the carrier the export named, with the
+strings as they appeared, enrolled counts, and whether each row is counted as
+group health. Every dollar is in exactly one row, so the Groups page figure
+reconciles to it. A plan whose carrier the rule does not recognise is its own
+row rather than a silent omission; when such a plan sits in a group whose
+recognised plans are all EBPA or HealthEZ, it is counted as group health and
+flagged as assumed. Plans with people enrolled but no billed premium in the
+export are listed too. The importer also matches a plan to the catalog loosely
+(case, spacing, a stray year) and, when the whole catalog is one carrier, uses
+that carrier for any plan it could not find.
+
 ## Privacy
 
 The census carries names, ages, genders, ZIPs and premiums for over 1,300

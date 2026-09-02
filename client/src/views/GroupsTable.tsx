@@ -47,6 +47,12 @@ export interface AdminGroup {
   totalMonthly?: number;
   /** Whether supplemental lines were captured for this group at all. */
   linesLoaded?: boolean;
+  groupHealthEnrolled?: number;
+  bcbsMonthly?: number;
+  bcbsEnrolled?: number;
+  unrecognizedMonthly?: number;
+  unrecognizedEnrolled?: number;
+  assumedMonthly?: number;
   /** Every non-medical benefit in force, with no member detail. */
   lines?: AdminLine[];
 }
@@ -305,6 +311,11 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
     lives: rows.reduce((n, g) => n + (g.lives || 0), 0),
     monthly: rows.reduce((n, g) => n + monthlyOf(g), 0),
     groupHealth: rows.reduce((n, g) => n + groupHealthOf(g), 0),
+    groupHealthEnrolled: rows.reduce((n, g) => n + (g.groupHealthEnrolled ?? g.enrolled ?? 0), 0),
+    bcbs: rows.reduce((n, g) => n + (g.bcbsMonthly ?? 0), 0),
+    bcbsEnrolled: rows.reduce((n, g) => n + (g.bcbsEnrolled ?? 0), 0),
+    unrecognized: rows.reduce((n, g) => n + (g.unrecognizedMonthly ?? 0), 0),
+    unrecognizedEnrolled: rows.reduce((n, g) => n + (g.unrecognizedEnrolled ?? 0), 0),
     total: rows.reduce((n, g) => n + totalOf(g), 0),
     // Whether any row's export has been read for supplemental lines; until
     // one has, "total" is medical only and the tile says so.
@@ -392,7 +403,17 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
         {tile(
           "Group health premium",
           money0(shown.groupHealth),
-          `EBPA + HealthEZ medical · ${money0(shown.groupHealth * 12)} annualized${filtering ? ` · ${pct(shown.groupHealth, counts.groupHealth)} of block` : ""}`,
+          `EBPA + HealthEZ medical · ${shown.groupHealthEnrolled.toLocaleString()} enrolled · ${money0(shown.groupHealth * 12)} annualized${filtering ? ` · ${pct(shown.groupHealth, counts.groupHealth)} of block` : ""}`,
+          shown.bcbs > 0 || shown.unrecognized > 0
+            ? [
+                shown.bcbs > 0 ? `Excludes ${money0(shown.bcbs)} (${shown.bcbsEnrolled} enrolled) on BCBS of Alabama` : "",
+                shown.unrecognized > 0
+                  ? `${money0(shown.unrecognized)} (${shown.unrecognizedEnrolled} enrolled) on carriers not recognised — see Existing Plans & Rates`
+                  : "",
+              ]
+                .filter(Boolean)
+                .join(" · ")
+            : undefined,
         )}
         {tile(
           "Total premium",
