@@ -16,6 +16,14 @@ import { C, chip, h2, num, panel, sectionHead, textInput } from "@/lib/ui";
 
 export type SortKey = TierKey | "plan" | "monthly" | "delta" | "ded" | "oop" | "copays" | "rx" | "network";
 
+/** Sections on this page, in order, for the "On this page" links. */
+export const OPTIONS_SECTIONS = [
+  { id: "market", label: "Market summary" },
+  { id: "recommends", label: "Kennion recommends" },
+  { id: "all-options", label: "All options" },
+  { id: "shortlist", label: "Your shortlist" },
+];
+
 interface Props {
   data: KennionData;
   g: Group;
@@ -173,7 +181,8 @@ export default function Options({
   return (
     <div>
       <div
-        className="panel"
+        id="market"
+        className="panel anchor"
         style={{
           ...panel,
           marginTop: 16,
@@ -259,7 +268,7 @@ export default function Options({
         </div>
       </div>
 
-      <div style={sectionHead}>
+      <div id="recommends" className="anchor" style={sectionHead}>
         <h2 style={h2}>Kennion recommends</h2>
       </div>
 
@@ -365,6 +374,8 @@ export default function Options({
       </div>
 
       <div
+        id="all-options"
+        className="anchor"
         style={{
           ...sectionHead,
           display: "flex",
@@ -530,7 +541,7 @@ export default function Options({
         Gravie rates are in progress; Surest is quoted where UnitedHealthcare included it.
       </div>
 
-      <div className="panel" style={{ ...panel, marginTop: 24, padding: "18px 20px" }}>
+      <div id="shortlist" className="panel anchor" style={{ ...panel, marginTop: 24, padding: "18px 20px" }}>
         <h2 style={{ ...h2, margin: "0 0 4px" }}>Your shortlist</h2>
         <p style={{ margin: "0 0 12px", fontSize: 13, color: C.muted }}>
           {short.length

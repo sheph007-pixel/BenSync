@@ -215,6 +215,20 @@ app.use(express.json({ limit: "256kb" }));
 
 app.get("/healthz", (_req, res) => res.type("text/plain").send("ok"));
 
+/** What a staff session sees: the PII-free rate projection and its bookkeeping. */
+function adminPayload() {
+  return {
+    kind: "admin",
+    durable: !!db || DURABLE,
+    storage: db ? "postgres" : DURABLE ? "volume" : "ephemeral",
+    overrides,
+    imports: recentImports,
+    meta: data.meta,
+    groups: adminGroups,
+    planDesigns: data.planDesigns,
+  };
+}
+
 app.post("/api/signin", (req, res) => {
   const body = req.body || {};
 
@@ -226,17 +240,7 @@ app.post("/api/signin", (req, res) => {
     if (email !== ADMIN_EMAIL || code !== ADMIN_CODE) {
       return res.status(401).json({ error: "invalid credentials" });
     }
-    return res.json({
-      kind: "admin",
-      token: mintSession(email),
-      durable: !!db || DURABLE,
-      storage: db ? "postgres" : DURABLE ? "volume" : "ephemeral",
-      overrides,
-      imports: recentImports,
-      meta: data.meta,
-      groups: adminGroups,
-      planDesigns: data.planDesigns,
-    });
+    return res.json({ ...adminPayload(), token: mintSession(email) });
   }
 
   const code = String(body.code || "").trim().toUpperCase();
@@ -258,6 +262,13 @@ app.post("/api/signin", (req, res) => {
     overrides: overridesFor(g.name),
   });
 });
+
+/**
+ * Re-enter a staff session the browser still holds a token for — a reload, or
+ * a link to an admin page opened in the same tab. The token is checked the same
+ * way every admin call checks it; an expired one gets a 401 and the sign-in form.
+ */
+app.get("/api/admin/session", requireStaff, (_req, res) => res.json(adminPayload()));
 
 /**
  * Read an upload. The request body is streamed straight into the parser rather

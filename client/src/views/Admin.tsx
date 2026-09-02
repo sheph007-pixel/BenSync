@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
   TIERS,
   factorsHold,
@@ -8,6 +8,8 @@ import {
   type Overrides,
 } from "@/lib/model";
 import { C, chip, Logo, num, panel, pill, textInput, th } from "@/lib/ui";
+import Link from "@/lib/Link";
+import { PATHS, navigate } from "@/lib/router";
 import Footer from "@/views/Footer";
 import ImportPanel from "@/views/ImportPanel";
 import GroupsTable, { type AdminGroup } from "@/views/GroupsTable";
@@ -21,6 +23,10 @@ interface Props {
   saveState: "idle" | "saving" | "saved" | "error";
   onImported: (groups: unknown[], imports?: ImportRecord[]) => void;
   imports: ImportRecord[];
+  /** Which tab the address names. */
+  tab: AdminTab;
+  /** The company page open under /admin/groups/:name, if any. */
+  openGroup: string | null;
   overrides: Overrides;
   query: string;
   tpa: string;
@@ -45,6 +51,14 @@ const cellBase = {
   ...num,
 };
 
+export type AdminTab = "groups" | "rates" | "import";
+
+const TABS: { key: AdminTab; label: string; href: string }[] = [
+  { key: "groups", label: "Groups", href: PATHS.groups },
+  { key: "rates", label: "Plans & Rates", href: PATHS.rates },
+  { key: "import", label: "Import", href: PATHS.import },
+];
+
 export interface ImportRecord {
   filename: string | null;
   uploaded_at: string;
@@ -61,6 +75,8 @@ export default function Admin({
   saveState,
   onImported,
   imports,
+  tab,
+  openGroup,
   overrides,
   query,
   tpa,
@@ -205,9 +221,6 @@ export default function Admin({
     };
   }, [activeGroups, overrides]);
 
-  const [tab, setTab] = useState<"groups" | "rates" | "import">("groups");
-  const [openGroup, setOpenGroup] = useState<string | null>(null);
-
   const q = query.trim().toLowerCase();
   const rows = all.filter(
     (r) =>
@@ -254,10 +267,15 @@ export default function Admin({
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <img src={Logo} alt="Kennion Benefit Advisors" style={{ height: 30, display: "block" }} />
-            <span style={{ fontSize: 13.5, fontWeight: 600, color: C.ink }}>
+            <Link href={PATHS.groups} aria-label="Rate Administration home" style={{ display: "block" }}>
+              <img src={Logo} alt="Kennion Benefit Advisors" style={{ height: 30, display: "block" }} />
+            </Link>
+            <Link
+              href={PATHS.groups}
+              style={{ fontSize: 13.5, fontWeight: 600, color: C.ink, textDecoration: "none" }}
+            >
               Rate Administration
-            </span>
+            </Link>
           </div>
           <button
             onClick={onExit}
@@ -274,30 +292,29 @@ export default function Admin({
           </button>
         </div>
 
-        <div style={{ maxWidth: 1680, margin: "0 auto", display: "flex", gap: 2 }}>
-          {([
-            ["groups", "Groups"],
-            ["rates", "Plans & Rates"],
-            ["import", "Import"],
-          ] as const).map(([k, label]) => (
-            <button
-              key={k}
-              onClick={() => setTab(k)}
+        <nav
+          aria-label="Rate Administration"
+          style={{ maxWidth: 1680, margin: "0 auto", display: "flex", gap: 2 }}
+        >
+          {TABS.map((t) => (
+            <Link
+              key={t.key}
+              href={t.href}
+              aria-current={tab === t.key ? "page" : undefined}
               style={{
-                background: "none",
-                border: "none",
-                borderBottom: `3px solid ${tab === k ? C.orange : "transparent"}`,
+                display: "block",
+                borderBottom: `3px solid ${tab === t.key ? C.orange : "transparent"}`,
                 padding: "0 15px 11px",
                 fontSize: 13.5,
-                fontWeight: tab === k ? 600 : 400,
-                color: tab === k ? C.ink : C.body,
-                cursor: "pointer",
+                fontWeight: tab === t.key ? 600 : 400,
+                color: tab === t.key ? C.ink : C.body,
+                textDecoration: "none",
               }}
             >
-              {label}
-            </button>
+              {t.label}
+            </Link>
           ))}
-        </div>
+        </nav>
       </div>
 
       <div style={{ maxWidth: 1680, margin: "0 auto", padding: "20px 22px 60px" }}>
@@ -549,16 +566,32 @@ export default function Admin({
                   group={g}
                   token={token}
                   onChanged={(gs) => onImported(gs as unknown[])}
-                  onBack={() => setOpenGroup(null)}
+                  onBack={() => navigate(PATHS.groups)}
+                  onOpenRates={(name) => {
+                    onQuery(name);
+                    onTpa("All");
+                  }}
                 />
-              ) : null;
+              ) : (
+                <div style={{ ...panel, marginTop: 16, padding: "20px 22px" }}>
+                  <nav aria-label="Breadcrumb" style={{ fontSize: 13, marginBottom: 10 }}>
+                    <Link href={PATHS.groups}>Groups</Link>
+                  </nav>
+                  <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600, color: C.ink }}>
+                    No group called &ldquo;{openGroup}&rdquo;
+                  </h2>
+                  <div style={{ marginTop: 8, fontSize: 13, color: C.muted, lineHeight: 1.65 }}>
+                    The link may be out of date, or the company is filed under a different name.{" "}
+                    <Link href={PATHS.groups}>Back to the Groups list</Link> to find it.
+                  </div>
+                </div>
+              );
             })()
           ) : (
             <GroupsTable
               groups={data.groups as unknown as AdminGroup[]}
               token={token}
               onChanged={(gs) => onImported(gs as unknown[])}
-              onOpen={setOpenGroup}
             />
           ))}
 

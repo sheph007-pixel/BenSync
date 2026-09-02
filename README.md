@@ -16,6 +16,36 @@ with its access code and sees two things:
 Both sections print to a clean report, and every page carries the carrier
 disclaimer footer — including in print.
 
+## Pages and addresses
+
+The portal lives at **https://app.kennion.com**. Every page has its own address,
+so the browser's back and forward buttons work, a page can be bookmarked or sent
+as a link, and a reload comes back to the same place.
+
+| Address | Page |
+| --- | --- |
+| `/` | Group sign-in |
+| `/current` | Current Medical Plan(s) |
+| `/options` | 2027 Medical Plan Options |
+| `/admin` | Staff sign-in |
+| `/admin/groups` | Rate Administration — Groups |
+| `/admin/groups/<company name>` | One company's page |
+| `/admin/rates` | Rate Administration — Plans & Rates |
+| `/admin/import` | Rate Administration — Import |
+
+Sections within a page are `#hash` anchors — `/options#shortlist`, say — and
+each group page lists its sections under the heading as "On this page" links.
+The company page carries a breadcrumb back to the Groups list and a link into
+Plans & Rates filtered to that company.
+
+Opening an address without a session shows the matching sign-in form (the
+staff one for anything under `/admin`) and lands on that page afterwards. The
+session is kept in the tab's `sessionStorage` — the group's own access code, or
+the staff token, never any census data — so it survives a reload and ends when
+the tab closes. A group at a staff address, or staff at a group address, is
+sent to its own home page. The server answers every non-API path with the app,
+so deep links work on a fresh load.
+
 Kennion staff reach **Rate Administration** through the small "Admin" link under
 the sign-in card, with an email and code. It has three tabs: **Groups** (the
 roster, access codes, addresses and ALE buckets), **Plans & Rates** (every

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   TIERS,
   fmtDate,
@@ -10,11 +10,15 @@ import {
   type Overrides,
 } from "@/lib/model";
 import { C, Logo, panel, smallPrimaryBtn } from "@/lib/ui";
+import { PATHS, currentPage, navigate, parsePath, useRoute } from "@/lib/router";
+import Link from "@/lib/Link";
+import { clearSession, loadSession, saveSession } from "@/lib/session";
 import Login from "@/views/Login";
 import Footer from "@/views/Footer";
 import Admin, { type ImportRecord } from "@/views/Admin";
-import Current from "@/views/Current";
-import Options, { type SortKey } from "@/views/Options";
+import Current, { CURRENT_SECTIONS } from "@/views/Current";
+import Options, { OPTIONS_SECTIONS, type SortKey } from "@/views/Options";
+import SectionNav from "@/views/SectionNav";
 import BreakdownModal from "@/views/BreakdownModal";
 
 /**
@@ -25,15 +29,22 @@ import BreakdownModal from "@/views/BreakdownModal";
 const EE_PCT = 80;
 const DEP_PCT = 32;
 
+const SITE = "Kennion 2027 Renewal";
 
 export default function App() {
+  const route = useRoute();
+  const page = useMemo(() => parsePath(route.path), [route.path]);
+
   const [data, setData] = useState<KennionData | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [busy, setBusy] = useState(false);
+  // True while a session saved in this tab is being re-established, so a
+  // reload does not flash the sign-in screen on its way back to the page.
+  const [restoring, setRestoring] = useState(() => loadSession() != null);
+  const restoreStarted = useRef(false);
   const [code, setCode] = useState<string | null>(null);
   const [codeInput, setCodeInput] = useState("");
   const [codeError, setCodeError] = useState(false);
-  const [mode, setMode] = useState<"group" | "staff">("group");
   const [email, setEmail] = useState("");
   const [staffCode, setStaffCode] = useState("");
   const [staffError, setStaffError] = useState(false);
@@ -44,7 +55,6 @@ export default function App() {
   const [imports, setImports] = useState<ImportRecord[]>([]);
   const [durable, setDurable] = useState(false);
 
-  const [tab, setTab] = useState<"current" | "2027">("current");
   const [modalPlan, setModalPlan] = useState<string | null>(null);
   const [freq, setFreq] = useState<Freq["key"]>("M");
 
@@ -62,61 +72,116 @@ export default function App() {
   const [gapsOnly, setGapsOnly] = useState(false);
   const [overrides, setOverrides] = useState<Overrides>({});
 
+  /** Load a staff payload into state. `tok` is the bearer token to keep using. */
+  const applyAdmin = useCallback((p: Record<string, unknown>, tok: string) => {
+    setToken(tok);
+    tokenRef.current = tok;
+    setDurable(!!p.durable);
+    setStorage((p.storage as string) || "");
+    setOverrides((p.overrides as Overrides) || {});
+    setImports((p.imports as ImportRecord[]) || []);
+    setData({
+      meta: p.meta,
+      groups: p.groups,
+      planDesigns: p.planDesigns,
+      uhc: { detail: {}, summary: {}, menu: [], mapping: [] },
+      splits: {},
+    } as KennionData);
+    setAdmin(true);
+    saveSession({ kind: "admin", token: tok });
+  }, []);
+
+  /** Load one group's payload into state. */
+  const applyGroup = useCallback((p: Record<string, unknown>) => {
+    const group = p.group as KennionData["groups"][number];
+    setOverrides((p.overrides as Overrides) || {});
+    setData({
+      meta: p.meta,
+      groups: [group],
+      planDesigns: p.planDesigns,
+      uhc: p.uhc,
+      splits: p.splits,
+    } as KennionData);
+    setCode(group.code);
+    saveSession({ kind: "group", code: group.code });
+  }, []);
 
   /**
    * Sign in against the server. The census is not public, so a code buys
    * exactly one group's data (or, for the admin code, a PII-free rate table).
+   * On success the browser is sent to the page it asked for, if that page
+   * belongs to this kind of session, and otherwise to that session's home.
    */
-  const signIn = useCallback(async (payload: { code: string; email?: string }) => {
-    const staff = payload.email != null;
-    if (!payload.code.trim() && !staff) return;
-    setBusy(true);
-    setCodeError(false);
-    setStaffError(false);
-    try {
-      const r = await fetch("/api/signin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!r.ok) {
-        if (staff) setStaffError(true);
-        else setCodeError(true);
-        return;
+  const signIn = useCallback(
+    async (payload: { code: string; email?: string }) => {
+      const staff = payload.email != null;
+      if (!payload.code.trim() && !staff) return;
+      setBusy(true);
+      setCodeError(false);
+      setStaffError(false);
+      try {
+        const r = await fetch("/api/signin", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!r.ok) {
+          if (staff) setStaffError(true);
+          else setCodeError(true);
+          return;
+        }
+        const p = await r.json();
+        const asked = currentPage();
+        if (p.kind === "admin") {
+          applyAdmin(p, p.token || "");
+          if (asked.kind !== "admin") navigate(PATHS.groups, { replace: true });
+        } else {
+          applyGroup(p);
+          if (asked.kind !== "group") navigate(PATHS.current, { replace: true });
+        }
+      } catch {
+        setLoadError(true);
+      } finally {
+        setBusy(false);
       }
-      const p = await r.json();
-      if (p.kind === "admin") {
-        setToken(p.token || "");
-        tokenRef.current = p.token || "";
-        setDurable(!!p.durable);
-        setStorage(p.storage || "");
-        setOverrides(p.overrides || {});
-        setImports(p.imports || []);
-        setData({
-          meta: p.meta,
-          groups: p.groups,
-          planDesigns: p.planDesigns,
-          uhc: { detail: {}, summary: {}, menu: [], mapping: [] },
-          splits: {},
-        } as KennionData);
-        setAdmin(true);
-      } else {
-        setOverrides(p.overrides || {});
-        setData({
-          meta: p.meta,
-          groups: [p.group],
-          planDesigns: p.planDesigns,
-          uhc: p.uhc,
-          splits: p.splits,
-        } as KennionData);
-        setCode(p.group.code);
+    },
+    [applyAdmin, applyGroup],
+  );
+
+  /**
+   * Re-establish the session this tab already had. A group's code is simply
+   * signed in again; a staff token is checked against the server, which still
+   * holds it unless it expired or the server restarted.
+   */
+  useEffect(() => {
+    if (restoreStarted.current) return;
+    restoreStarted.current = true;
+    const s = loadSession();
+    if (!s) return;
+    (async () => {
+      try {
+        if (s.kind === "group") {
+          const r = await fetch("/api/signin", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ code: s.code }),
+          });
+          if (!r.ok) throw new Error("expired");
+          applyGroup(await r.json());
+        } else {
+          const r = await fetch("/api/admin/session", {
+            headers: { Authorization: `Bearer ${s.token}` },
+          });
+          if (!r.ok) throw new Error("expired");
+          applyAdmin(await r.json(), s.token);
+        }
+      } catch {
+        clearSession();
+      } finally {
+        setRestoring(false);
       }
-    } catch {
-      setLoadError(true);
-    } finally {
-      setBusy(false);
-    }
-  }, []);
+    })();
+  }, [applyAdmin, applyGroup]);
 
   /**
    * Hand-keyed rates are saved on the server, so they are shared with everyone
@@ -169,21 +234,68 @@ export default function App() {
     [rows],
   );
 
+  const session: "none" | "group" | "admin" = admin ? "admin" : g ? "group" : "none";
+
+  /**
+   * Keep the address and the session consistent. A group at an admin address
+   * (or the other way round) goes to its own home; an address that is not a
+   * page at all goes to sign-in. `replace` so the back button is not trapped.
+   */
+  useEffect(() => {
+    if (restoring) return;
+    if (session === "admin" && page.kind !== "admin") navigate(PATHS.groups, { replace: true });
+    else if (session === "group" && page.kind !== "group") navigate(PATHS.current, { replace: true });
+    else if (session === "none" && page.kind === "unknown") navigate(PATHS.signin, { replace: true });
+  }, [restoring, session, page.kind]);
+
+  /** Scroll: to the named section when there is a hash, else to the top. */
+  useEffect(() => {
+    if (restoring) return;
+    if (route.hash) {
+      const id = route.hash;
+      const raf = requestAnimationFrame(() => {
+        document.getElementById(id)?.scrollIntoView({ block: "start" });
+      });
+      return () => cancelAnimationFrame(raf);
+    }
+    window.scrollTo(0, 0);
+  }, [restoring, route.path, route.hash, session]);
+
+  /** A title per page, so tabs and history entries can be told apart. */
+  useEffect(() => {
+    let t = SITE;
+    if (page.kind === "signin") t = `${page.staff ? "Staff sign in" : "Sign in"} — ${SITE}`;
+    else if (page.kind === "group" && g)
+      t = `${page.tab === "current" ? "Current Medical Plan(s)" : "2027 Medical Plan Options"} — ${g.name}`;
+    else if (page.kind === "admin")
+      t = `${
+        page.group
+          ? page.group
+          : page.tab === "groups"
+            ? "Groups"
+            : page.tab === "rates"
+              ? "Plans & Rates"
+              : "Import"
+      } — Rate Administration`;
+    document.title = t;
+  }, [page, g]);
+
   const submit = () => void signIn({ code: codeInput });
   const staffSubmit = () => void signIn({ email, code: staffCode });
 
   const signOut = () => {
+    clearSession();
     setData(null);
-    setMode("group");
     setEmail("");
     setStaffCode("");
     setStaffError(false);
     setToken("");
+    tokenRef.current = "";
     setCode(null);
     setCodeInput("");
-    setTab("current");
     setModalPlan(null);
     setAdmin(false);
+    navigate(PATHS.signin);
   };
 
   const toggleSelected = (plan: string) => {
@@ -250,12 +362,35 @@ export default function App() {
     );
   }
 
+  if (restoring) {
+    return (
+      <div style={{ minHeight: "100vh", background: C.page }}>
+        <div style={{ background: "#fff", borderBottom: `1px solid ${C.border}`, padding: "0 22px" }}>
+          <div
+            style={{ maxWidth: 1400, margin: "0 auto", height: 56, display: "flex", alignItems: "center" }}
+          >
+            <img src={Logo} alt="Kennion Benefit Advisors" style={{ height: 30, display: "block" }} />
+          </div>
+        </div>
+        <div
+          role="status"
+          style={{ padding: "60px 20px", textAlign: "center", fontSize: 13.5, color: C.muted }}
+        >
+          Signing you back in…
+        </div>
+      </div>
+    );
+  }
+
   // No session yet: there is nothing to load until a code is entered, because
-  // the census is only handed out per-group in exchange for one.
+  // the census is only handed out per-group in exchange for one. The address
+  // decides which form shows — /admin, or any admin page, gets the staff form —
+  // and sign-in returns to that address.
   if (!data || (!admin && !g)) {
+    const staffMode = page.kind === "admin" || (page.kind === "signin" && page.staff);
     return (
       <Login
-        mode={mode}
+        mode={staffMode ? "staff" : "group"}
         codeInput={codeInput}
         email={email}
         staffCode={staffCode}
@@ -277,15 +412,18 @@ export default function App() {
         onSubmit={submit}
         onStaffSubmit={staffSubmit}
         onMode={(m) => {
-          setMode(m);
           setCodeError(false);
           setStaffError(false);
+          navigate(m === "staff" ? PATHS.staffSignin : PATHS.signin);
         }}
       />
     );
   }
 
   if (admin) {
+    // The redirect effect above is about to move an admin off a non-admin
+    // address; render nothing rather than a page for the wrong session.
+    if (page.kind !== "admin") return null;
     return (
       <Admin
         data={data}
@@ -294,6 +432,8 @@ export default function App() {
         storage={storage}
         saveState={saveState}
         imports={imports}
+        tab={page.tab}
+        openGroup={page.group}
         onImported={(gs, ims) => {
           setData((d) => (d ? ({ ...d, groups: gs } as KennionData) : d));
           if (ims) setImports(ims);
@@ -315,15 +455,18 @@ export default function App() {
   // Narrowing for TypeScript: a non-admin session always has a group, because
   // the guard above returns the sign-in screen otherwise.
   if (!g) return null;
+  if (page.kind !== "group") return null;
+
+  const tab = page.tab;
 
   const tabBase = {
-    background: "none",
-    border: "none",
+    display: "flex",
+    alignItems: "center",
     borderBottom: "3px solid transparent",
     padding: "0 15px",
     fontSize: 13.5,
     color: C.body,
-    cursor: "pointer",
+    textDecoration: "none",
   };
   const tabOn = {
     ...tabBase,
@@ -333,7 +476,7 @@ export default function App() {
   };
 
   const subline =
-    tab === "2027"
+    tab === "options"
       ? "Effective 01/01/2027"
       : `Dates ${fmtDate(g.pyStart)} - ${fmtDate(g.pyEnd)}`;
 
@@ -346,6 +489,11 @@ export default function App() {
       day: "numeric",
       year: "numeric",
     })}`;
+
+  const pages = [
+    [PATHS.current, "current", "Current Medical Plan(s)"],
+    [PATHS.options, "options", "2027 Medical Plan Options"],
+  ] as const;
 
   return (
     <div>
@@ -365,20 +513,26 @@ export default function App() {
           }}
         >
           <div style={{ display: "flex", alignItems: "center" }}>
-            <img
-              src={Logo}
-              alt="Kennion Benefit Advisors"
-              style={{ height: 28, display: "block" }}
-            />
+            <Link href={PATHS.current} aria-label="Home" style={{ display: "block" }}>
+              <img
+                src={Logo}
+                alt="Kennion Benefit Advisors"
+                style={{ height: 28, display: "block" }}
+              />
+            </Link>
           </div>
-          <div style={{ display: "flex", alignItems: "stretch", gap: 2 }}>
-            <button onClick={() => setTab("current")} style={tab === "current" ? tabOn : tabBase}>
-              Current Medical Plan(s)
-            </button>
-            <button onClick={() => setTab("2027")} style={tab === "2027" ? tabOn : tabBase}>
-              2027 Medical Plan Options
-            </button>
-          </div>
+          <nav aria-label="Pages" style={{ display: "flex", alignItems: "stretch", gap: 2 }}>
+            {pages.map(([href, key, label]) => (
+              <Link
+                key={key}
+                href={href}
+                aria-current={tab === key ? "page" : undefined}
+                style={tab === key ? tabOn : tabBase}
+              >
+                {label}
+              </Link>
+            ))}
+          </nav>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <button
               onClick={signOut}
@@ -423,7 +577,7 @@ export default function App() {
             gap: 20,
           }}
         >
-          <div style={{ maxWidth: 820 }}>
+          <div style={{ maxWidth: 820, flex: "1 1 420px" }}>
             <h1
               style={{
                 margin: 0,
@@ -438,6 +592,10 @@ export default function App() {
             <div style={{ marginTop: 8, fontSize: 13, color: C.muted, lineHeight: 1.65 }}>
               {subline}
             </div>
+            <SectionNav
+              sections={tab === "current" ? CURRENT_SECTIONS : OPTIONS_SECTIONS}
+              current={route.hash}
+            />
           </div>
           <div className="noprint" style={{ display: "flex", gap: 8 }}>
             <button onClick={() => window.print()} style={smallPrimaryBtn}>
@@ -484,6 +642,26 @@ export default function App() {
             onSend={() => setSent(true)}
           />
         )}
+
+        <nav
+          aria-label="Next page"
+          className="noprint"
+          style={{
+            marginTop: 26,
+            display: "flex",
+            justifyContent: tab === "current" ? "flex-end" : "flex-start",
+          }}
+        >
+          {tab === "current" ? (
+            <Link href={PATHS.options} style={{ fontSize: 13.5 }}>
+              Next: 2027 Medical Plan Options &rarr;
+            </Link>
+          ) : (
+            <Link href={PATHS.current} style={{ fontSize: 13.5 }}>
+              &larr; Back: Current Medical Plan(s)
+            </Link>
+          )}
+        </nav>
 
         <div
           className="noprint"

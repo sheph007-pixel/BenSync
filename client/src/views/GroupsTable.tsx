@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { C, panel } from "@/lib/importui";
+import Link from "@/lib/Link";
+import { groupPath } from "@/lib/router";
 
 export interface AdminGroup {
   name: string;
@@ -34,7 +36,6 @@ interface Props {
   groups: AdminGroup[];
   token: string;
   onChanged: (groups: AdminGroup[]) => void;
-  onOpen: (name: string) => void;
 }
 
 type SortKey =
@@ -51,7 +52,7 @@ const th = {
 };
 const td = { padding: "8px 10px", borderBottom: `1px solid ${C.hairline}`, color: C.ink };
 
-export default function GroupsTable({ groups, token, onChanged, onOpen }: Props) {
+export default function GroupsTable({ groups, token, onChanged }: Props) {
   const [query, setQuery] = useState("");
   const [size, setSize] = useState<"All" | "2-50" | "51+">("All");
   const [showArchived, setShowArchived] = useState(false);
@@ -299,20 +300,9 @@ export default function GroupsTable({ groups, token, onChanged, onOpen }: Props)
               return (
                 <tr key={g.name}>
                   <td style={{ ...td, lineHeight: 1.4 }}>
-                    <button
-                      onClick={() => onOpen(g.name)}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        padding: 0,
-                        font: "inherit",
-                        color: C.blue,
-                        cursor: "pointer",
-                        textAlign: "left",
-                      }}
-                    >
+                    <Link href={groupPath(g.name)} style={{ color: C.blue }}>
                       {g.name}
-                    </button>
+                    </Link>
                     {!!g.duplicateOf?.length && (
                       <div style={{ fontSize: 11.5, color: C.red, marginTop: 2 }}>
                         ⚠ duplicate of {g.duplicateOf.join(", ")}
