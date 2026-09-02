@@ -160,24 +160,14 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
           {counts.archived > 0 && ` · ${counts.archived} archived`}
         </span>
       </div>
-      <div style={{ marginTop: 8, fontSize: 13, color: C.muted, lineHeight: 1.65, maxWidth: 880 }}>
-        {view === "excluded" ? (
-          <>
-            These groups have no enrolled medical plan with EBPA, HealthEZ or BCBS of Alabama, so
-            they are not in the 2027 portal and their access codes are refused. The carriers found
-            on each are listed — if one of those <em>is</em> a program carrier under a name the
-            rule does not recognise, say so and it will be matched.
-          </>
-        ) : (
-          <>
-            Every group and the code it signs in with. Codes are generated from the company name —
-            four letters plus the plan year — and can be typed over. Size defaults from enrolled
-            headcount; set it explicitly where the ALE determination differs. Broker says whether
-            Kennion places the group directly or an outside broker does. Click a company to open
-            its page.
-          </>
-        )}
-      </div>
+      {view === "excluded" && (
+        <div style={{ marginTop: 8, fontSize: 13, color: C.muted, lineHeight: 1.65, maxWidth: 880 }}>
+          These groups have no enrolled medical plan with EBPA, HealthEZ or BCBS of Alabama, so
+          they are not in the 2027 portal and their access codes are refused. The carriers found
+          on each are listed — if one of those <em>is</em> a program carrier under a name the
+          rule does not recognise, say so and it will be matched.
+        </div>
+      )}
 
       <div style={{ marginTop: 14, display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
         <input
