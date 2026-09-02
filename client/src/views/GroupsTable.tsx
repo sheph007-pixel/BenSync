@@ -48,6 +48,59 @@ type SortKey =
 export const BROKER_LABEL = { kennion: "Kennion", outside: "Outside Broker" } as const;
 type Broker = keyof typeof BROKER_LABEL;
 
+/**
+ * The rows on screen, as a CSV Excel opens cleanly. Exports exactly what the
+ * table shows — same search, filters and sort — so a filtered view is a report.
+ */
+function groupsCsv(rows: AdminGroup[]): string {
+  const cols: [string, (g: AdminGroup) => unknown][] = [
+    ["Company", (g) => g.name],
+    ["Company ID", (g) => g.code],
+    ["Employee Navigator name", (g) => g.enName],
+    ["Broker", (g) => BROKER_LABEL[g.broker || "kennion"]],
+    ["Size", (g) => g.sizeCategory],
+    ["Enrolled", (g) => g.enrolled],
+    ["Covered lives", (g) => g.lives],
+    ["TPA", (g) => g.tpa],
+    ["Program carriers", (g) => (g.programs || []).join("; ")],
+    ["Plans in force", (g) => (g.plans || []).map((p) => p.plan).join("; ")],
+    ["Monthly premium", (g) => (g.plans || []).reduce((n, p) => n + (p.monthly || 0), 0).toFixed(2)],
+    ["Address", (g) => g.address1],
+    ["City", (g) => g.city],
+    ["State", (g) => g.state],
+    ["ZIP", (g) => g.zip],
+    ["SIC", (g) => g.sic],
+    ["SIC description", (g) => g.sicDesc],
+    ["EIN", (g) => g.taxId],
+    ["Phone", (g) => g.phone],
+    ["Contact", (g) => g.contacts?.[0]?.name],
+    ["Contact email", (g) => g.contacts?.[0]?.email],
+    ["Contact phone", (g) => g.contacts?.[0]?.phone],
+    ["Other contacts", (g) => (g.contacts || []).slice(1).map((c) => c.name).filter(Boolean).join("; ")],
+    ["In program", (g) => (g.eligible === false ? "No" : "Yes")],
+    ["Carriers found", (g) => (g.carriersSeen || []).join("; ")],
+    ["Archived", (g) => (g.archived ? "Yes" : "No")],
+    ["Data from", (g) => (g.importedAt ? `XML import ${new Date(g.importedAt).toLocaleDateString()}` : "Census 7/31/2026")],
+  ];
+  const cell = (v: unknown) => {
+    const t = v == null ? "" : String(v);
+    return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+  };
+  const lines = [cols.map(([h]) => cell(h)).join(",")];
+  rows.forEach((g) => lines.push(cols.map(([, f]) => cell(f(g))).join(",")));
+  // BOM so Excel reads the file as UTF-8 (names with apostrophes and accents).
+  return "\ufeff" + lines.join("\r\n");
+}
+
+function download(filename: string, text: string) {
+  const blob = new Blob([text], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
 const th = {
   textAlign: "left" as const,
   padding: "11px 10px",
@@ -258,6 +311,36 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
           </button>
         )}
         <span style={{ fontSize: 12.5, color: C.faint }}>{rows.length} shown</span>
+        <button
+          onClick={() => {
+            const tag = [
+              view === "excluded" ? "not-in-program" : showArchived ? "archived" : "",
+              broker === "All" ? "" : broker === "outside" ? "outside-broker" : "kennion",
+              size === "All" ? "" : size.replace("+", "plus"),
+              q ? "search" : "",
+            ]
+              .filter(Boolean)
+              .join("-");
+            const stamp = new Date().toISOString().slice(0, 10);
+            download(`kennion-groups${tag ? "-" + tag : ""}-${stamp}.csv`, groupsCsv(rows));
+          }}
+          disabled={!rows.length}
+          title="Download the rows shown, with the current search, filters and sort, as a CSV for Excel"
+          style={{
+            padding: "7px 14px",
+            fontSize: 13,
+            fontWeight: 500,
+            color: "#fff",
+            background: C.blue,
+            border: `1px solid ${C.blue}`,
+            borderRadius: 4,
+            cursor: rows.length ? "pointer" : "default",
+            opacity: rows.length ? 1 : 0.5,
+            whiteSpace: "nowrap",
+          }}
+        >
+          Export {rows.length === 1 ? "1 group" : `${rows.length} groups`}
+        </button>
       </div>
 
       {counts.dupes > 0 && (
