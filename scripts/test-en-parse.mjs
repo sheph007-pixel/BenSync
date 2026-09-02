@@ -120,11 +120,43 @@ assert.equal(companies[0].stats.linesFound, 2);
 const legacy = premiumBreakdown({ plans: g.plans });
 assert.deepEqual(legacy, {
   groupHealthMonthly: 500,
+  groupHealthEnrolled: 1,
   medicalMonthly: 1600,
+  bcbsMonthly: 1100,
+  bcbsEnrolled: 1,
+  unrecognizedMonthly: 0,
+  unrecognizedEnrolled: 0,
+  assumedMonthly: 0,
   supplementalMonthly: 0,
   totalMonthly: 1600,
   linesLoaded: false,
 });
+
+// A plan whose carrier could not be read, in a group that is otherwise all
+// EBPA: counted as group health and flagged as assumed …
+const assumed = premiumBreakdown({
+  plans: [
+    { plan: "EBPA Freedom Gold", tpa: "EBPA", enrolled: 3, monthly: 1500 },
+    { plan: "Freedom Silver", tpa: "", enrolled: 2, monthly: 800 },
+  ],
+});
+assert.equal(assumed.groupHealthMonthly, 2300, "unnamed carrier in an all-EBPA group counts");
+assert.equal(assumed.assumedMonthly, 800);
+assert.equal(assumed.unrecognizedMonthly, 0);
+assert.equal(assumed.groupHealthEnrolled, 5);
+
+// … but not when the group also has BCBS: then it is unrecognised and excluded.
+const mixed = premiumBreakdown({
+  plans: [
+    { plan: "EBPA Freedom Gold", tpa: "EBPA", enrolled: 3, monthly: 1500 },
+    { plan: "Blue Secure Silver", tpa: "BCBS AL", enrolled: 1, monthly: 900 },
+    { plan: "Freedom Silver", tpa: "", enrolled: 2, monthly: 800 },
+  ],
+});
+assert.equal(mixed.groupHealthMonthly, 1500);
+assert.equal(mixed.bcbsMonthly, 900);
+assert.equal(mixed.unrecognizedMonthly, 800);
+assert.equal(mixed.unrecognizedEnrolled, 2);
 
 console.log("en-parse: all assertions passed");
 console.log({

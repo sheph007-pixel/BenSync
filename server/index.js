@@ -10,7 +10,7 @@ import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import crypto from "node:crypto";
-import { parseEnStream, premiumBreakdown } from "./en-parse.js";
+import { parseEnStream, premiumBreakdown, classifyPlans } from "./en-parse.js";
 import { createDb } from "./db.js";
 import { assignCodes, sizeFor, normalizeName } from "./group-id.js";
 import { eligibilityOf } from "./eligibility.js";
@@ -187,7 +187,7 @@ function rebuild() {
     tpa: g.tpa,
     enrolled: g.enrolled,
     lives: g.lives,
-    plans: g.plans,
+    plans: classifyPlans(g),
     rates: g.rates,
     // Group health (EBPA + HealthEZ medical), all medical, supplemental lines
     // and the total. Census rows and older imports carry no `lines`, so their

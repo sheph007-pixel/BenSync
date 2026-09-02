@@ -73,20 +73,67 @@ export const GROUP_HEALTH_PROGRAMS = new Set(["EBPA", "HealthEZ"]);
  *                       supplemental lines at all; false for the shipped
  *                       census and for imports made before that was captured
  */
-export function premiumBreakdown(group) {
+/**
+ * Each medical plan with how it is classified:
+ *   program      "EBPA" | "HealthEZ" | "BCBS-AL" | null (carrier not recognised)
+ *   groupHealth  counted in the captive group-health figure
+ *   assumed      the carrier could not be read, but every recognised plan in
+ *                this group is EBPA/HealthEZ and none is BCBS, so it is taken
+ *                as group health rather than dropped — and flagged
+ */
+export function classifyPlans(group) {
   const plans = Array.isArray(group.plans) ? group.plans : [];
+  const programs = new Set(plans.map(programOf).filter(Boolean));
+  const captiveOnly = programs.size > 0 && [...programs].every((k) => GROUP_HEALTH_PROGRAMS.has(k));
+  return plans.map((p) => {
+    const program = programOf(p);
+    const assumed = !program && captiveOnly;
+    return { ...p, program, groupHealth: GROUP_HEALTH_PROGRAMS.has(program) || assumed, assumed };
+  });
+}
+
+export function premiumBreakdown(group) {
+  const plans = classifyPlans(group);
   const lines = Array.isArray(group.lines) ? group.lines : null;
   const sum = (xs) => round2(xs.reduce((s, x) => s + (Number(x.monthly) || 0), 0));
+  const count = (xs) => xs.reduce((s, x) => s + (Number(x.enrolled) || 0), 0);
+  const gh = plans.filter((p) => p.groupHealth);
+  const bcbs = plans.filter((p) => p.program === "BCBS-AL");
+  const unknown = plans.filter((p) => !p.program && !p.assumed);
   const medicalMonthly = sum(plans);
-  const groupHealthMonthly = sum(plans.filter((p) => GROUP_HEALTH_PROGRAMS.has(programOf(p))));
+  const groupHealthMonthly = sum(gh);
   const supplementalMonthly = lines ? sum(lines) : 0;
   return {
     groupHealthMonthly,
+    groupHealthEnrolled: count(gh),
     medicalMonthly,
+    bcbsMonthly: sum(bcbs),
+    bcbsEnrolled: count(bcbs),
+    unrecognizedMonthly: sum(unknown),
+    unrecognizedEnrolled: count(unknown),
+    assumedMonthly: sum(plans.filter((p) => p.assumed)),
     supplementalMonthly,
     totalMonthly: round2(medicalMonthly + supplementalMonthly),
     linesLoaded: lines !== null,
   };
+}
+
+/**
+ * The catalog names plans slightly differently from the enrollment rows now
+ * and then — a stray space, different case, a year in one place and not the
+ * other. Try the exact name, then a loose one, and finally, when the whole
+ * catalog is on a single carrier, that carrier.
+ */
+const loose = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+function carrierFor(planCarrier, plan) {
+  if (planCarrier.has(plan)) return planCarrier.get(plan);
+  const want = loose(plan);
+  for (const [name, carrier] of planCarrier) {
+    const have = loose(name);
+    if (have === want || have.startsWith(want) || want.startsWith(have)) return carrier;
+  }
+  const all = new Set(planCarrier.values());
+  return all.size === 1 ? [...all][0] : null;
 }
 
 /**
@@ -199,7 +246,10 @@ const companyBlock = wholeCompany.slice(0, headEnd > 0 ? headEnd : 8000);
       if (ends && (!pyEnd || ends > pyEnd)) pyEnd = ends;
 
       const plan = cleanPlan(text(en, "Plan"));
-      if (planCarrier.has(plan)) carriers.set(plan, planCarrier.get(plan));
+      if (!carriers.has(plan)) {
+        const carrier = carrierFor(planCarrier, plan);
+        if (carrier) carriers.set(plan, carrier);
+      }
 
       // Ages are as of the plan-year start, so they don't drift with the clock.
       const asOf = starts ? new Date(starts) : new Date();
