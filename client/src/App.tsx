@@ -17,6 +17,7 @@ import Login from "@/views/Login";
 import Footer from "@/views/Footer";
 import Admin, { type ImportRecord } from "@/views/Admin";
 import type { CarrierStats } from "@/views/Reconciliation";
+import type { FundingInfo } from "@/views/Funding";
 import Current, { CURRENT_SECTIONS } from "@/views/Current";
 import Options, { OPTIONS_SECTIONS, type SortKey } from "@/views/Options";
 import SectionNav from "@/views/SectionNav";
@@ -55,6 +56,7 @@ export default function App() {
   const [storage, setStorage] = useState("");
   const [imports, setImports] = useState<ImportRecord[]>([]);
   const [carrierStats, setCarrierStats] = useState<CarrierStats | null>(null);
+  const [funding, setFunding] = useState<FundingInfo | null>(null);
   const [ai, setAi] = useState(false);
   const [durable, setDurable] = useState(false);
 
@@ -84,6 +86,7 @@ export default function App() {
     setOverrides((p.overrides as Overrides) || {});
     setImports((p.imports as ImportRecord[]) || []);
     setCarrierStats((p.carrierStats as CarrierStats | null) || null);
+    setFunding((p.funding as FundingInfo | null) || null);
     setAi(!!p.ai);
     setData({
       meta: p.meta,
@@ -441,6 +444,12 @@ export default function App() {
         imports={imports}
         carrierStats={carrierStats}
         onCarrierStats={setCarrierStats}
+        funding={funding}
+        onFunding={(f, gs) => {
+          setFunding(f);
+          if (gs) setData((d) => (d ? ({ ...d, groups: gs } as KennionData) : d));
+        }}
+        onOverrides={(o) => setOverrides(o as Overrides)}
         ai={ai}
         tab={page.tab}
         openGroup={page.group}

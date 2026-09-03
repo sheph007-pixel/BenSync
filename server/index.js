@@ -17,6 +17,7 @@ import { eligibilityOf } from "./eligibility.js";
 import { aiEnabled, analyzeProposal, explainReconciliation } from "./ai.js";
 import { expandUpload, prepareForModel } from "./intake.js";
 import { parseCarrierStats } from "./carrier-stats.js";
+import { parseFunding, assignInvoices, summariseFunding, bandTier } from "./funding.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.resolve(__dirname, "..", "dist", "public");
@@ -114,6 +115,51 @@ let adminGroups = [];
 let proposalCounts = {};
 /** The latest Employee Navigator carrier stats report, for reconciliation. */
 let carrierStats = null;
+/**
+ * The latest monthly funding workbook: `lines` stays here on the server (it
+ * names people); `view` is what the screens get.
+ */
+let funding = null;
+const fundingView = (f) =>
+  f
+    ? {
+        month: f.month,
+        filename: f.filename,
+        fileStamp: f.fileStamp,
+        uploadedAt: f.uploadedAt,
+        uploadedBy: f.uploadedBy,
+        byInvoice: f.byInvoice,
+        summary: f.summary,
+        totals: fundingTotals(f),
+      }
+    : null;
+function fundingTotals(f) {
+  const invoices = Object.keys(f.byInvoice).length;
+  const unassigned = Object.values(f.byInvoice).filter((a) => !a.group).length;
+  const medical = f.lines.filter((l) => l.medical);
+  const current = medical.filter((l) => l.kind === "current");
+  const sum = (arr) => Math.round(arr.reduce((n, l) => n + l.rate, 0) * 100) / 100;
+  const assigned = Object.values(f.summary);
+  return {
+    lines: f.lines.length,
+    medicalLines: current.length,
+    /** The month's own medical billing, every invoice, filed or not. */
+    medicalMonthly: sum(current),
+    /** Retro adds and credits on top of it. */
+    adjustments: sum(medical.filter((l) => l.kind !== "current")),
+    retroLines: medical.filter((l) => l.kind === "retro").length,
+    creditLines: medical.filter((l) => l.kind === "credit").length,
+    otherMonthly: sum(f.lines.filter((l) => !l.medical)),
+    /** Distinct people billed medical this month, every invoice. */
+    participantsAll: new Set(current.map((l) => `${l.invoice}|${l.familyId || l.participant}`)).size,
+    /** …and on the invoices filed under a group. */
+    participants: assigned.reduce((n, g) => n + g.medical.participants, 0),
+    assignedMedicalMonthly: Math.round(assigned.reduce((n, g) => n + g.medical.monthly, 0) * 100) / 100,
+    invoices,
+    assigned: invoices - unassigned,
+    unassigned,
+  };
+}
 
 function rebuild() {
   const base = data.groups.filter((g) => (g.plans || []).length > 0);
@@ -193,6 +239,8 @@ function rebuild() {
     plans: classifyPlans(g),
     carrierHeads: g.carrierHeads || null,
     ancillaryOnly: !!g.ancillaryOnly,
+    /** This month's billing for the group, from the funding workbook. */
+    funding: (funding && funding.summary[g.name]) || null,
     rates: g.rates,
     // Group health (EBPA + HealthEZ medical), all medical, supplemental lines
     // and the total. Census rows and older imports carry no `lines`, so their
@@ -259,6 +307,7 @@ function adminPayload() {
     kind: "admin",
     ai: aiEnabled(),
     carrierStats,
+    funding: fundingView(funding),
     durable: !!db || DURABLE,
     storage: db ? "postgres" : DURABLE ? "volume" : "ephemeral",
     overrides,
@@ -417,6 +466,123 @@ app.post("/api/admin/reconcile/explain", requireStaff, express.json({ limit: "25
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
+});
+
+/**
+ * The month's funding workbook from Employee Navigator. Every invoice is filed
+ * under the group most of its billed people belong to (their names against
+ * the groups' members), summarised per group, and kept — names and all — on
+ * the server only.
+ */
+async function storeFunding(rec) {
+  if (db) {
+    const row = await db.saveFunding(rec);
+    return { ...rec, id: row.id, uploadedAt: row.uploaded_at };
+  }
+  return { ...rec, id: Date.now(), uploadedAt: new Date().toISOString() };
+}
+
+app.post(
+  "/api/admin/funding",
+  requireStaff,
+  express.raw({ type: () => true, limit: "40mb" }),
+  async (req, res) => {
+    const filename = String(req.query.filename || "funding.xlsx").slice(0, 200);
+    if (!Buffer.isBuffer(req.body) || !req.body.length) return res.status(400).json({ error: "No file received." });
+    let parsed;
+    try {
+      parsed = parseFunding(req.body, filename);
+    } catch (e) {
+      return res.status(400).json({ error: e.message });
+    }
+    const { byInvoice } = assignInvoices(parsed.lines, groups);
+    // A group the staff filed an invoice under last time keeps it.
+    if (funding) {
+      for (const [inv, a] of Object.entries(funding.byInvoice)) {
+        if (a.by === "staff" && byInvoice[inv]) byInvoice[inv] = { ...byInvoice[inv], group: a.group, by: "staff" };
+      }
+    }
+    const summary = summariseFunding(parsed.lines, byInvoice);
+    try {
+      funding = await storeFunding({
+        month: parsed.month,
+        filename,
+        fileStamp: parsed.fileStamp,
+        lines: parsed.lines,
+        byInvoice,
+        summary,
+        uploadedBy: req.staffEmail || null,
+      });
+    } catch (e) {
+      return res.status(500).json({ error: "Could not save the workbook: " + e.message });
+    }
+    rebuild();
+    res.json({ ok: true, funding: fundingView(funding), groups: adminGroups });
+  },
+);
+
+/** File an invoice under a group by hand (or take it out of one). */
+app.post("/api/admin/funding/assign", requireStaff, express.json({ limit: "16kb" }), async (req, res) => {
+  if (!funding) return res.status(400).json({ error: "Upload the funding workbook first." });
+  const { invoice, group } = req.body || {};
+  const inv = String(invoice || "");
+  if (!funding.byInvoice[inv]) return res.status(404).json({ error: "No such invoice in the workbook." });
+  const clean = group == null || group === "" ? null : String(group);
+  if (clean && !groups.some((g) => g.name === clean)) return res.status(404).json({ error: "No such group." });
+  funding.byInvoice[inv] = { ...funding.byInvoice[inv], group: clean, by: clean ? "staff" : null };
+  funding.summary = summariseFunding(funding.lines, funding.byInvoice);
+  try {
+    if (db) await db.updateFunding(funding.id, funding.byInvoice, funding.summary);
+  } catch (e) {
+    return res.status(500).json({ error: "Could not save: " + e.message });
+  }
+  rebuild();
+  res.json({ ok: true, funding: fundingView(funding), groups: adminGroups });
+});
+
+/**
+ * Set tier rates from billing: for each plan and tier the workbook bills,
+ * where the XML has no billed rate for that tier or a different one, write a
+ * hand-keyed override with the billed amount. Plans the group's XML does not
+ * carry are skipped — a billed plan the census has never seen is a question,
+ * not a rate.
+ */
+app.post("/api/admin/funding/apply-rates", requireStaff, express.json({ limit: "16kb" }), async (req, res) => {
+  if (!funding) return res.status(400).json({ error: "Upload the funding workbook first." });
+  const { group, all } = req.body || {};
+  const targets = all ? Object.keys(funding.summary) : group ? [String(group)] : [];
+  if (!targets.length) return res.status(400).json({ error: "Say which group, or all." });
+  let applied = 0;
+  let skipped = 0;
+  const touched = new Set();
+  try {
+    for (const name of targets) {
+      const f = funding.summary[name];
+      const g = groups.find((x) => x.name === name);
+      if (!f || !g) continue;
+      const xmlPlans = new Set((g.plans || []).map((p) => p.plan));
+      for (const [plan, p] of Object.entries(f.medical.byPlan)) {
+        if (!xmlPlans.has(plan)) {
+          skipped++;
+          continue;
+        }
+        for (const [tier, t] of Object.entries(p.byTier)) {
+          if (t.rate == null || t.rate <= 0 || !bandTier(tier) && tier === "(unknown)") continue;
+          const billed = ((g.rates || {})[plan] || {})[tier];
+          const key = `${name}||${plan}||${tier}`;
+          const current = overrides[key] != null ? Number(overrides[key]) : billed;
+          if (current != null && Math.abs(current - t.rate) <= 0.01) continue;
+          overrides[key] = String(t.rate);
+          if (db) await db.setOverride(name, plan, tier, t.rate, req.staffEmail || "funding");
+          applied++;
+          touched.add(name);
+        }
+      }
+    }
+  } catch (e) {
+    return res.status(500).json({ error: "Could not save: " + e.message });
+  }
+  res.json({ ok: true, applied, skipped, groups: touched.size, overrides });
 });
 
 /**
@@ -1103,6 +1269,10 @@ async function boot() {
       importedAt = state.importedAt || {};
       recentImports = await db.recentImports();
       carrierStats = await db.latestCarrierStats();
+      const fr = await db.latestFunding();
+      if (fr) {
+        funding = { id: fr.id, month: fr.month, filename: fr.filename, fileStamp: fr.file_stamp, lines: fr.lines, byInvoice: fr.by_invoice, summary: fr.summary, uploadedBy: fr.uploaded_by, uploadedAt: fr.uploaded_at };
+      }
       const st = await db.stats();
       console.log(`postgres connected — ${st.groups} imported groups, ${st.overrides} rate overrides`);
     } catch (e) {
