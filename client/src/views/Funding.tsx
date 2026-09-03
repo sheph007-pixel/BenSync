@@ -191,8 +191,10 @@ export default function FundingPanel({ token, funding, groups, onFunding, onOver
     return gs
       .map((g) => {
         const f = funding.summary[g.name] || null;
-        const xmlN = g.enrolled || 0;
-        const xml$ = g.medicalMonthly ?? (g.plans || []).reduce((n, p) => n + (p.monthly || 0), 0);
+        // The workbook is the captives' billing, so the XML side is the
+        // group's EBPA/HealthEZ medical; a Blue Cross plan is billed elsewhere.
+        const xmlN = g.groupHealthEnrolled ?? g.enrolled ?? 0;
+        const xml$ = g.groupHealthMonthly ?? (g.plans || []).reduce((n, p) => n + (p.monthly || 0), 0);
         const billN = f ? f.medical.participants : 0;
         const bill$ = f ? f.medical.monthly : 0;
         const ok = f ? close(bill$, xml$, 0.01, 50) && close(billN, xmlN, 0.02, 2) : null;
