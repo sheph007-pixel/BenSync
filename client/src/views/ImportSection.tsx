@@ -64,7 +64,7 @@ export default function ImportSection({ step, title, what, accept, ariaLabel, in
       </div>
 
       <div style={{ marginTop: settled ? 8 : 12, display: "grid", gridTemplateColumns: settled ? "1fr" : "110px 1fr", rowGap: 6, columnGap: 12, fontSize: 13, alignItems: "center" }}>
-        {!settled && <span style={{ color: C.muted }}>Upload</span>}
+        {!settled && <span style={{ color: C.muted, fontWeight: 600 }}>Upload</span>}
         <span style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, order: settled ? 3 : 0 }}>
           <label
             title={what}
@@ -109,7 +109,7 @@ export default function ImportSection({ step, title, what, accept, ariaLabel, in
           )}
         </span>
 
-        {!settled && <span style={{ color: C.muted }}>Last upload</span>}
+        {!settled && <span style={{ color: C.muted, fontWeight: 600 }}>Last Upload</span>}
         <span style={{ color: last ? C.ink : C.faint }}>
           {last
             ? `${last.filename || "(unnamed)"} · ${new Date(last.when).toLocaleString()}${last.by ? ` · ${last.by}` : ""}`
@@ -118,7 +118,7 @@ export default function ImportSection({ step, title, what, accept, ariaLabel, in
 
         {summary && (
           <>
-            {!settled && <span style={{ color: C.muted }}>Result</span>}
+            {!settled && <span style={{ color: C.muted, fontWeight: 600 }}>Result</span>}
             <span style={{ color: settled ? C.body : C.ink }}>{summary}</span>
           </>
         )}

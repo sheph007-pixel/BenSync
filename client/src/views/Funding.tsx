@@ -240,13 +240,13 @@ export default function FundingPanel({ token, funding, groups, onFunding, onOver
         <>
           <div style={{ marginTop: 16, display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: 12 }}>
             {[
-              ["Medical participants billed", funding.totals.participantsAll.toLocaleString(), `${funding.totals.participants.toLocaleString()} on invoices filed under a group`],
-              ["Medical premium billed", money0(funding.totals.medicalMonthly), `the month's own lines · ${signed(funding.totals.adjustments)} in ${funding.totals.retroLines} retro and ${funding.totals.creditLines} credit lines`],
-              ["Other lines billed", money0(funding.totals.otherMonthly), "dental, vision, life, disability …"],
+              ["Medical Participants Billed", funding.totals.participantsAll.toLocaleString(), `${funding.totals.participants.toLocaleString()} on invoices filed under a group`],
+              ["Medical Premium Billed", money0(funding.totals.medicalMonthly), `the month's own lines · ${signed(funding.totals.adjustments)} in ${funding.totals.retroLines} retro and ${funding.totals.creditLines} credit lines`],
+              ["Other Lines Billed", money0(funding.totals.otherMonthly), "dental, vision, life, disability …"],
               ["Invoices", `${funding.totals.assigned} of ${funding.totals.invoices}`, funding.totals.unassigned ? `${funding.totals.unassigned} need a group` : "all filed under a group"],
             ].map(([label, value, note]) => (
               <div key={label} style={{ padding: "10px 12px", background: C.zebra, border: `1px solid ${C.hairline}`, borderRadius: 4 }}>
-                <div style={{ fontSize: 12, color: C.muted }}>{label}</div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: C.body }}>{label}</div>
                 <div style={{ marginTop: 3, fontSize: 20, fontWeight: 600, color: C.ink, fontVariantNumeric: "tabular-nums" }}>{value}</div>
                 <div style={{ fontSize: 11.5, color: C.faint }}>{note}</div>
               </div>
@@ -256,7 +256,7 @@ export default function FundingPanel({ token, funding, groups, onFunding, onOver
           {unassigned.length > 0 && (
             <div style={{ marginTop: 16 }}>
               <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: C.amber }}>
-                Invoices not filed under a group · {unassigned.length}
+                Invoices Not Filed Under A Group · {unassigned.length}
               </h3>
               <div style={{ marginTop: 4, fontSize: 12.5, color: C.muted, lineHeight: 1.6, maxWidth: 880 }}>
                 None of the people billed on these invoices appear in any group&rsquo;s XML members, and the billing
@@ -298,7 +298,7 @@ export default function FundingPanel({ token, funding, groups, onFunding, onOver
           )}
 
           <div style={{ marginTop: 18, display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: 12 }}>
-            <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: C.ink }}>Billing against the XML, group by group</h3>
+            <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: C.ink }}>Billing Against The XML, Group By Group</h3>
             <span style={{ fontSize: 12.5, color: C.faint }}>
               {rows.length} groups · {mismatches ? `${mismatches} differ by more than 1% or 2 people` : "all within 1%"}
               {noBilling ? ` · ${noBilling} with medical in the XML but no billing this month` : ""}
@@ -404,7 +404,7 @@ export function GroupBilling({ token, group, month, onOverrides }: BillingProps)
   return (
     <div style={{ ...panel, marginTop: 16, padding: "18px 22px" }}>
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: 12 }}>
-        <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: C.ink }}>{monthLabel(month)} billing</h3>
+        <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: C.ink }}>{monthLabel(month)} Billing</h3>
         <span style={{ fontSize: 12.5, color: C.faint }}>
           {f.medical.participants} medical participants · {money0(f.medical.monthly)} medical
           {f.medical.adjustments ? ` (${signed(f.medical.adjustments)} in ${[f.medical.retro ? `${f.medical.retro} retro` : "", f.medical.credits ? `${f.medical.credits} credit${f.medical.credits === 1 ? "" : "s"}` : ""].filter(Boolean).join(" and ")})` : ""}

@@ -266,22 +266,22 @@ export default function Admin({
       note: `${all.length} plans in force`,
     },
     {
-      label: "Rates billed",
+      label: "Rates Billed",
       value: String(stats.nBilled),
       note: `of ${stats.totalCells} tier rates, from Employee Navigator`,
     },
     {
-      label: "Entered by hand",
+      label: "Entered By Hand",
       value: String(stats.nManual),
       note: stats.nManual ? (storage === "postgres" ? "saved to the database" : "saved on the server") : "none yet",
     },
     {
-      label: "Still calculated",
+      label: "Still Calculated",
       value: String(stats.nCalc + stats.nNone),
       note: "at the tier schedule, until a real rate is keyed",
     },
     {
-      label: "On the tier schedule",
+      label: "On The Tier Schedule",
       value: stats.nOff ? `${stats.nOnSchedule} of ${stats.nOnSchedule + stats.nOff}` : String(stats.nOnSchedule),
       note: stats.nOff
         ? `${stats.nOff} plan${stats.nOff === 1 ? "" : "s"} priced off it — key the real rates`
@@ -378,7 +378,7 @@ export default function Admin({
                 letterSpacing: "-0.2px",
               }}
             >
-              Existing 2026 rates &mdash; all groups, all plans
+              Existing 2026 Rates &mdash; All Groups, All Plans
             </h1>
           </div>
           <button
@@ -409,7 +409,7 @@ export default function Admin({
         >
           {kpis.map((k) => (
             <div key={k.label} style={{ ...panel, padding: "15px 16px" }}>
-              <div style={{ fontSize: 12.5, color: C.muted }}>{k.label}</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: C.body }}>{k.label}</div>
               <div
                 style={{
                   marginTop: 6,
@@ -428,7 +428,7 @@ export default function Admin({
         </div>
 
         <div style={{ ...panel, marginTop: 16, padding: "12px 16px", fontSize: 12.5, color: C.body, lineHeight: 1.6 }}>
-          <strong style={{ color: C.ink }}>Tier schedule</strong> — Employee 1.00 · Employee + Child(ren) 1.85 · Employee
+          <strong style={{ color: C.ink }}>Tier Schedule</strong> — Employee 1.00 · Employee + Child(ren) 1.85 · Employee
           + Spouse 2.00 · Employee + Family 2.85. Every calculated rate on this page is the plan&rsquo;s employee rate at
           these factors.{" "}
           {stats.nOff
@@ -678,7 +678,7 @@ export default function Admin({
 
             <details style={{ ...panel, marginTop: 16, padding: "14px 22px" }}>
               <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 600, color: C.ink }}>
-                XML import history{imports?.length ? ` (${imports.length})` : ""}
+                XML Import History{imports?.length ? ` (${imports.length})` : ""}
               </summary>
               {!imports?.length ? (
                 <div style={{ marginTop: 10, fontSize: 13, color: C.faint }}>

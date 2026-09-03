@@ -49,6 +49,8 @@ ALTER TABLE kennion.group_meta ADD COLUMN IF NOT EXISTS fields jsonb NOT NULL DE
 -- Who brokers the group: Kennion directly, or an outside broker. Only the
 -- label is stored, never the broker's name.
 ALTER TABLE kennion.group_meta ADD COLUMN IF NOT EXISTS broker text CHECK (broker IN ('kennion','outside'));
+-- The Kennion account manager who looks after the group.
+ALTER TABLE kennion.group_meta ADD COLUMN IF NOT EXISTS manager text CHECK (manager IN ('debbie','tracy'));
 -- Where the 2027 renewal stands, for tracking. Null means Open.
 ALTER TABLE kennion.group_meta ADD COLUMN IF NOT EXISTS renewal text CHECK (renewal IN ('open','sent','renewed','non-renewed'));
 
@@ -193,7 +195,7 @@ export function createDb(url) {
 
       const meta = {};
       const mrows = await pool.query(
-        "SELECT group_name, company_id, size_category, archived, fields, broker, renewal FROM kennion.group_meta",
+        "SELECT group_name, company_id, size_category, archived, fields, broker, renewal, manager FROM kennion.group_meta",
       );
       for (const r of mrows.rows) {
         meta[r.group_name] = {
@@ -202,6 +204,7 @@ export function createDb(url) {
           archived: r.archived,
           fields: r.fields || {},
           broker: r.broker || null,
+          manager: r.manager || null,
           renewal: r.renewal || null,
         };
       }
@@ -244,6 +247,8 @@ export function createDb(url) {
             ? "archived"
             : field === "broker"
               ? "broker"
+              : field === "manager"
+                ? "manager"
               : field === "renewal"
                 ? "renewal"
                 : "size_category";

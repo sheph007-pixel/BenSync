@@ -34,6 +34,8 @@ export interface Proposal {
 
 interface Extraction {
   carrier?: string;
+  /** False for an ancillary-only document — it fills no slot. */
+  quotes_medical?: boolean;
   group_name_on_document?: string | null;
   matched_group?: string | null;
   confidence?: number;
@@ -60,8 +62,14 @@ const ACCEPT =
 const isProposal = (p: Proposal) => p.status !== "container";
 
 /** The slots a group can hold; the first four are the ones tracked per group. */
-export const SLOTS = ["UHC Fully Insured", "UHC Level Funded", "Gravie", "Nationwide", "Surest", "Other"] as const;
-const TRACKED = SLOTS.slice(0, 4);
+/**
+ * The four medical proposals a group can hold, and nothing else. Surest is a
+ * UnitedHealthcare product, so a Surest quote is that group's UHC proposal; an
+ * ancillary-only document fills no slot. A newer proposal in a slot replaces
+ * the older one, which is kept for the record.
+ */
+export const SLOTS = ["UHC Fully Insured", "UHC Level Funded", "Gravie", "Nationwide"] as const;
+const TRACKED = SLOTS;
 const isCurrent = (p: Proposal) => p.status === "assigned" && !p.superseded_by;
 
 const fmtSize = (n: number) => (n > 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Math.round(n / 1e3)} KB`);
@@ -292,6 +300,9 @@ function ProposalRow({ p, token, groups, onChanged, fixedGroup, children: childC
 
   const x = p.extracted;
   const conf = p.confidence != null ? `${Math.round(p.confidence * 100)}%` : null;
+  // Read, but not one of the four medical proposals: an ancillary-only
+  // document, or a carrier the portal does not track. Kept, never in a slot.
+  const untracked = !!x && !p.slot && (x.quotes_medical === false || !/united|uhc|surest|optum|gravie|nationwide/i.test(p.carrier || x.carrier || ""));
 
   // An email wrapper: the subject, who sent it, what came out of it.
   if (p.status === "container") {
@@ -334,9 +345,8 @@ function ProposalRow({ p, token, groups, onChanged, fixedGroup, children: childC
         <button onClick={() => void openFile(p.id, token)} style={{ ...linkBtn, fontSize: 13.5, fontWeight: 500 }} title="Open the file">
           {p.filename}
         </button>
-        <span style={{ fontSize: 12, color: C.ghost }}>
-          {p.carrier || "Carrier unknown"} · {fmtSize(p.size)} · {fmtWhen(p.uploaded_at)}
-          {p.uploaded_by ? ` · ${p.uploaded_by}` : ""}
+        <span style={{ fontSize: 12, color: C.ghost }} title={`${fmtSize(p.size)}${p.uploaded_by ? ` · uploaded by ${p.uploaded_by}` : ""}`}>
+          {p.carrier || "Carrier unknown"} · {fmtWhen(p.uploaded_at)}
         </span>
         <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
           {p.status !== "analyzing" && (
@@ -345,9 +355,9 @@ function ProposalRow({ p, token, groups, onChanged, fixedGroup, children: childC
               onChange={(e) => void post(`/api/admin/proposals/${p.id}`, { slot: e.target.value || null })}
               aria-label={`Slot for ${p.filename}`}
               title="Which of the group's proposals this is"
-              style={{ ...selectStyle, maxWidth: 170, borderColor: p.slot ? C.inputEdge : C.amber }}
+              style={{ ...selectStyle, maxWidth: 180, borderColor: p.slot ? C.inputEdge : untracked ? C.inputEdge : C.amber }}
             >
-              <option value="">— which proposal? —</option>
+              <option value="">{untracked ? "— not one of the four —" : "— which proposal? —"}</option>
               {SLOTS.map((s) => (
                 <option key={s} value={s}>
                   {s}
@@ -430,10 +440,15 @@ function ProposalRow({ p, token, groups, onChanged, fixedGroup, children: childC
       )}
       {p.superseded_by != null && (
         <div style={{ marginTop: 6, fontSize: 12.5, color: C.faint }}>
-          Replaced by a newer {p.slot || ""} proposal for this group. Kept for the record.
+          Replaced by a newer {p.slot} proposal for this group. Kept for the record.
         </div>
       )}
-      {p.summary && p.status !== "analyzing" && (
+      {untracked && (
+        <div style={{ marginTop: 6, fontSize: 12.5, color: C.faint }}>
+          Not one of the four medical proposals{x?.quotes_medical === false ? " — no medical rates quoted" : ""}. Kept on file, out of the group&rsquo;s 2027 options.
+        </div>
+      )}
+      {open && p.summary && p.status !== "analyzing" && (
         <div style={{ marginTop: 6, fontSize: 12.5, color: C.muted, lineHeight: 1.55, maxWidth: 900 }}>{p.summary}</div>
       )}
       {p.error && (
@@ -724,7 +739,7 @@ export default function Proposals({ token, groups }: Props) {
             {unassignedRows.length > 0 && (
               <section style={{ padding: "12px 0 4px" }}>
                 <h2 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: C.amber }}>
-                  Not yet assigned <span style={{ fontWeight: 400, color: C.faint }}>· {unassignedRows.length}</span>
+                  Not Yet Assigned <span style={{ fontWeight: 400, color: C.faint }}>· {unassignedRows.length}</span>
                 </h2>
                 {unassignedRows.map((p) => (
                   <ProposalRow key={p.id} p={p} token={token} groups={sortedGroups} onChanged={() => void load()} />
@@ -755,7 +770,7 @@ export default function Proposals({ token, groups }: Props) {
             {without.length > 0 && !q && (
               <section style={{ padding: "14px 0 10px", borderTop: `1px solid ${C.border}`, marginTop: 8 }}>
                 <h2 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: C.faint }}>
-                  No proposal yet · {without.length} group{without.length === 1 ? "" : "s"}
+                  No Proposal Yet · {without.length} group{without.length === 1 ? "" : "s"}
                 </h2>
                 <div style={{ marginTop: 6, fontSize: 12.5, color: C.faint, lineHeight: 1.8 }}>
                   {without.map(({ g }, i) => (

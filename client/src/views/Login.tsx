@@ -168,7 +168,7 @@ export default function Login({
                     letterSpacing: "-0.2px",
                   }}
                 >
-                  Kennion staff sign in
+                  Kennion Staff Sign In
                 </h1>
 
                 <label htmlFor="staff-email" style={labelStyle}>

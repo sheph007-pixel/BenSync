@@ -432,7 +432,7 @@ export default function Reconciliation({ token, stats, groups, onStats, diagnost
       {diagnostics && (
         <div style={{ marginTop: 16, paddingTop: 14, borderTop: `1px solid ${C.rule}` }}>
           <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: 12 }}>
-            <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: C.ink }}>What the last XML import left out</h3>
+            <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: C.ink }}>What The Last XML Import Left Out</h3>
             {lastImport && (
               <span style={{ fontSize: 12.5, color: C.faint }}>
                 {lastImport.filename || "export"} · {new Date(lastImport.when).toLocaleString()} ·{" "}

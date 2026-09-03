@@ -109,6 +109,26 @@ const OUTSIDE_BROKER_GROUPS = new Set(
 const defaultBroker = (name) =>
   OUTSIDE_BROKER_GROUPS.has(normalizeName(name)) ? "outside" : "kennion";
 
+/**
+ * Which account manager looks after each group, from Kennion's own list. The
+ * list names companies its own way, so the match is on the normalised name
+ * with a single-candidate prefix fallback — the same rule an import uses. A
+ * manager set by hand wins over this.
+ */
+const MANAGER_LIST = JSON.parse(
+  fs.readFileSync(path.join(__dirname, "data", "account-managers.json"), "utf8"),
+);
+export const MANAGERS = MANAGER_LIST.managers;
+const MANAGER_BY_NAME = new Map(MANAGER_LIST.list.map((r) => [normalizeName(r.group), r.manager]));
+function defaultManager(name) {
+  const k = normalizeName(name);
+  if (!k) return null;
+  const exact = MANAGER_BY_NAME.get(k);
+  if (exact) return exact;
+  const hits = [...MANAGER_BY_NAME.entries()].filter(([n]) => n.startsWith(k) || k.startsWith(n));
+  return hits.length === 1 ? hits[0][1] : null;
+}
+
 let groups = [];
 let byCode = new Map();
 let adminGroups = [];
@@ -203,6 +223,7 @@ function rebuild() {
     g.code = code;
     g.sizeCategory = m.sizeCategory || sizeFor(g.enrolled);
     g.broker = m.broker || defaultBroker(g.name);
+    g.manager = m.manager || defaultManager(g.name);
     // Renewal tracking: every group starts Open.
     g.renewal = m.renewal || "open";
     // Archived, or not on a program carrier: the row stays for staff, but the
@@ -229,6 +250,7 @@ function rebuild() {
     codeIsSet: !!(meta[g.name] || {}).companyId,
     broker: g.broker,
     brokerIsSet: !!(meta[g.name] || {}).broker,
+    manager: g.manager || null,
     renewal: g.renewal,
     proposals: proposalCounts[g.name] || 0,
     address1: g.address1 || null,
@@ -391,6 +413,7 @@ function adminPayload() {
     audit,
     carrierStats,
     funding: fundingView(funding),
+    managers: MANAGERS,
     durable: !!db || DURABLE,
     storage: db ? "postgres" : DURABLE ? "volume" : "ephemeral",
     overrides,
@@ -955,7 +978,7 @@ const EDITABLE_FIELDS = new Set([
 app.post("/api/admin/group-meta", requireStaff, express.json({ limit: "16kb" }), async (req, res) => {
   const { group, field, value } = req.body || {};
   const isCompanyField = EDITABLE_FIELDS.has(field);
-  if (!group || !(["companyId", "sizeCategory", "broker", "renewal", "archived"].includes(field) || isCompanyField)) {
+  if (!group || !(["companyId", "sizeCategory", "broker", "renewal", "archived", "manager"].includes(field) || isCompanyField)) {
     return res.status(400).json({ error: "group and a valid field are required" });
   }
   if (!groups.some((g) => g.name === group)) {
@@ -1000,6 +1023,9 @@ app.post("/api/admin/group-meta", requireStaff, express.json({ limit: "16kb" }),
   }
   if (field === "broker" && clean && !["kennion", "outside"].includes(clean)) {
     return res.status(400).json({ error: "Broker must be kennion or outside." });
+  }
+  if (field === "manager" && clean && !Object.keys(MANAGERS).includes(clean)) {
+    return res.status(400).json({ error: `Manager must be one of: ${Object.keys(MANAGERS).join(", ")}.` });
   }
   if (field === "renewal" && clean && !["open", "sent", "renewed", "non-renewed"].includes(clean)) {
     return res.status(400).json({ error: "Renewal must be open, sent, renewed or non-renewed." });
@@ -1106,22 +1132,24 @@ const proposalStore = db
     };
 
 /**
- * The proposal slots a group can hold. UnitedHealthcare quotes come as fully
- * insured and level funded, tracked separately; the rest are one per carrier.
+ * The four medical proposals a group can hold, and nothing else. A newer one
+ * in the same slot replaces the older, which is kept. Surest is a
+ * UnitedHealthcare product, so a Surest quote is that group's UHC proposal;
+ * an ancillary-only document (dental, vision, life) fills no slot at all.
  */
-const SLOTS = ["UHC Fully Insured", "UHC Level Funded", "Surest", "Gravie", "Nationwide", "Other"];
-function slotFor(carrier, funding) {
+const SLOTS = ["UHC Fully Insured", "UHC Level Funded", "Gravie", "Nationwide"];
+function slotFor(carrier, funding, quotesMedical) {
+  if (quotesMedical === false) return null;
   const c = String(carrier || "").toLowerCase();
   const f = String(funding || "").toLowerCase();
-  if (/surest/.test(c)) return "Surest";
-  if (/united|uhc/.test(c)) {
+  if (/united|uhc|surest|optum/.test(c)) {
     if (/level/.test(f)) return "UHC Level Funded";
     if (/fully/.test(f)) return "UHC Fully Insured";
-    return null; // UHC, funding unclear — leave for staff to say
+    return null; // UnitedHealthcare, funding unclear — leave for staff to say
   }
   if (/gravie/.test(c)) return "Gravie";
   if (/nationwide/.test(c)) return "Nationwide";
-  return c ? "Other" : null;
+  return null; // not one of the four: kept on file, but it fills no slot
 }
 
 /**
@@ -1131,7 +1159,18 @@ function slotFor(carrier, funding) {
  */
 async function proposalsChanged() {
   try {
-    const rows = await proposalStore.listProposals();
+    let rows = await proposalStore.listProposals();
+    // A slot that is no longer one of the four — a Surest or "Other" filed
+    // before the list was cut back — is re-derived from what was read.
+    let remapped = false;
+    for (const r of rows) {
+      if (!r.slot || SLOTS.includes(r.slot)) continue;
+      const x = r.extracted || {};
+      const slot = slotFor(r.carrier || x.carrier, x.funding, x.quotes_medical);
+      await proposalStore.updateProposal(r.id, { slot });
+      remapped = true;
+    }
+    if (remapped) rows = await proposalStore.listProposals();
     const counts = {};
     const bySlot = new Map();
     rows.forEach((r) => {
@@ -1251,7 +1290,7 @@ async function runAnalysis(id, file, keepAssignment) {
       error: null,
     };
     // The slot comes from what was read, unless staff already set one.
-    if (!current || !current.slot) fields.slot = slotFor(out.carrier, out.funding);
+    if (!current || !current.slot) fields.slot = slotFor(out.carrier, out.funding, out.quotes_medical);
     if (keepAssignment) {
       // Uploaded straight onto a company page: the human already chose the
       // group. Note a disagreement rather than overriding them.

@@ -155,8 +155,8 @@ want the whole book rather than the block the portal serves.
 
 ## Proposals
 
-Carrier proposals — UnitedHealthcare, Surest, Gravie, Nationwide, EBPA, HealthEZ,
-BCBS of Alabama — are uploaded on the **Proposals** tab, a whole batch at once,
+Carrier proposals — UnitedHealthcare (Surest included), Gravie and Nationwide —
+are uploaded on the **Proposals** tab, a whole batch at once,
 or one at a time from a company's page. The drop zone takes the proposal in
 whatever form it came: a PDF, a spreadsheet, a Word file, a CSV, a picture of
 a rate sheet — or the **email itself** (`.eml` from Gmail or Apple Mail, `.msg`
@@ -171,10 +171,14 @@ document, the effective date, every plan with its tier rates, and which roster
 group it belongs to, with a confidence. A match at 85% or better is **assigned**
 to the group; between 50% and 85% it is **suggested** and waits for a click to
 confirm; below that the proposal sits in the **to assign** queue with a group
-dropdown. Any assignment can be changed. Each group tracks four **slots** — UHC Fully
-Insured, UHC Level Funded, Gravie and Nationwide (plus Surest and Other) — and
-Claude fills the slot from the carrier and the funding type it reads; staff can
-change it. When a newer proposal lands in a slot a group already has, the older
+dropdown. Any assignment can be changed. Each group holds exactly four **slots** — UHC
+Fully Insured, UHC Level Funded, Gravie and Nationwide — and nothing else.
+Surest is a UnitedHealthcare product, so a Surest quote fills that group's
+UnitedHealthcare slot for the funding it is written on. Claude fills the slot
+from the carrier and funding it reads; staff can change it. A document that
+quotes no medical rates (an ancillary proposal for dental, vision or life) or
+comes from a carrier outside those three fills no slot: it is kept on file,
+marked "not one of the four", and stays out of the group's 2027 options. When a newer proposal lands in a slot a group already has, the older
 one is marked **superseded** and kept, so the current set is always the latest
 from each carrier. That current set, stored in the database, is what the 2027
 options for each group will be built from. The extraction is shown under
@@ -233,6 +237,15 @@ server, for instance by attaching it to a Claude Code chat.
 Who counts as enrolled follows the report: anyone still on a plan — active, on
 leave, on COBRA, a retiree with coverage — while a terminated employee is
 skipped, and an enrollment counts until its end date has passed.
+
+### Account managers
+
+Each group carries the Kennion **account manager** who looks after it, Debbie
+or Tracy, seeded from `server/data/account-managers.json` (Kennion's own 2026
+list) by matching the normalised company name, with a single-candidate prefix
+fallback. A manager set by hand in the Groups table wins over the list and is
+stored in `kennion.group_meta`. The column sorts, the filter narrows to one
+manager or to the groups with none, and the CSV export carries the full name.
 
 ### The monthly funding workbook
 
