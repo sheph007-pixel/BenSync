@@ -23,6 +23,10 @@ export interface ImportDiagnostics {
     noPremium: { n: number; byProgram: Record<string, number> };
     endDates: { nil: number; absent: number; past: number; future: number };
   };
+  /** Every non-medical benefit line, by the same rules. Absent on older imports. */
+  lines?: { kept: { n: number; premium: number }; excluded: Record<"terminatedEmployee" | "ended" | "waived", number>; noPremium: number };
+  /** Company records the parser could not use, and why. Absent on older imports. */
+  rejected?: { name: string; reason: string }[];
 }
 
 const REASON_LABEL: Record<string, string> = {
@@ -62,7 +66,7 @@ const total = (s: Side) => s.medical + s.lines;
 export interface Recon {
   carrier: string;
   program: string | null;
-  report: { enrolled: number; companies: number; monthly: number };
+  report: { enrolled: number; companies: number; monthly: number ; rows?: number };
   live: Side;
   archived: Side;
   service: boolean; // no premium either side — an administrator, not a carrier
@@ -104,10 +108,26 @@ const close = (a: number, b: number, tolFrac: number, tolAbs: number) => Math.ab
 /** Every carrier in the report against what the portal holds from the XML. */
 export function reconcile(stats: CarrierStats, groups: AdminGroup[]): Recon[] {
   const gs = groups as G[];
-  return stats.rows.map((r) => {
+  // The report can name one carrier twice ("Blue Cross Blue Shield" with
+  // nothing on it beside "Blue Cross Blue Shield of Alabama"); both map to the
+  // same program here, so they are read as one row, under the larger name.
+  const merged = new Map<string, { carrier: string; enrolled: number; companies: number; planCosts: number; rows: number }>();
+  stats.rows.forEach((r) => {
+    const k = matchCarrier(r.carrier) || carrierKey(r.carrier);
+    const m = merged.get(k);
+    if (!m) merged.set(k, { carrier: r.carrier, enrolled: r.enrolled, companies: r.companies, planCosts: r.planCosts, rows: 1 });
+    else {
+      if (r.planCosts > m.planCosts) m.carrier = r.carrier;
+      m.enrolled += r.enrolled;
+      m.companies += r.companies;
+      m.planCosts += r.planCosts;
+      m.rows++;
+    }
+  });
+  return [...merged.values()].map((r) => {
     const program = matchCarrier(r.carrier);
     const key = carrierKey(r.carrier);
-    const report = { enrolled: r.enrolled, companies: r.companies, monthly: r.planCosts };
+    const report = { enrolled: r.enrolled, companies: r.companies, monthly: Math.round(r.planCosts * 100) / 100, rows: r.rows };
     const planMatches = (p: Plan) => (program ? p.program === program || (!!p.assumed && program !== "BCBS-AL") : carrierKey(p.tpa) === key);
     const nameMatches = (c: string) => (program ? matchCarrier(c) === program : carrierKey(c) === key);
 
@@ -482,6 +502,24 @@ export default function Reconciliation({ token, stats, groups, onStats, diagnost
             {" "}Employees by status: {Object.entries(diagnostics.employees.byStatus).map(([k, n]) => `${k} ${n}`).join(" · ")}.
             {" "}Medical EndDate: {diagnostics.medical.endDates.nil} nil · {diagnostics.medical.endDates.absent} absent · {diagnostics.medical.endDates.future} future · {diagnostics.medical.endDates.past} past.
           </div>
+          {diagnostics.lines && (
+            <div style={{ marginTop: 6, fontSize: 12, color: C.faint, lineHeight: 1.6 }}>
+              Other benefit lines (dental, vision, life, disability…): counted {diagnostics.lines.kept.n.toLocaleString()} · {money0(diagnostics.lines.kept.premium)} / mo
+              {diagnostics.lines.noPremium ? ` (${diagnostics.lines.noPremium} with no PlanCost, adding $0)` : ""}.
+              {" "}Left out: {diagnostics.lines.excluded.terminatedEmployee} on terminated employees · {diagnostics.lines.excluded.ended} ended · {diagnostics.lines.excluded.waived} waived.
+            </div>
+          )}
+          {diagnostics.rejected && diagnostics.rejected.length > 0 && (
+            <div style={{ marginTop: 6, fontSize: 12, color: C.amber, lineHeight: 1.6 }}>
+              {diagnostics.rejected.length} company record{diagnostics.rejected.length === 1 ? "" : "s"} in the file could not be used and hold nothing in the portal:{" "}
+              {diagnostics.rejected.map((r) => `${r.name} (${r.reason})`).join("; ")}.
+            </div>
+          )}
+          {!diagnostics.lines && (
+            <div style={{ marginTop: 6, fontSize: 12, color: C.faint, lineHeight: 1.6 }}>
+              This import predates line-level diagnostics and per-carrier head counts; re-importing the same export fills them in.
+            </div>
+          )}
         </div>
       )}
 
