@@ -163,7 +163,7 @@ interface Props {
   token: string;
   onChanged: (groups: AdminGroup[]) => void;
   /** Group health as Employee Navigator's carrier stats report states it. */
-  enReport?: { enrolled: number; monthly: number } | null;
+  enReport?: { enrolled: number; monthly: number; comparable: number } | null;
 }
 
 const th: CSSProperties = {
@@ -409,9 +409,9 @@ export default function GroupsTable({ groups, token, onChanged, enReport }: Prop
           shown.bcbs > 0 || shown.unrecognized > 0 || (enReport && !filtering)
             ? [
                 enReport && !filtering
-                  ? `Employee Navigator reports ${enReport.enrolled.toLocaleString()} enrolled · ${money0(enReport.monthly)} (${
-                      Math.abs(shown.groupHealth - enReport.monthly) <= Math.max(50, 0.01 * enReport.monthly) ? "matches" : `portal is ${shown.groupHealth < enReport.monthly ? "−" : "+"}${money0(Math.abs(shown.groupHealth - enReport.monthly))}`
-                    })`
+                  ? `Employee Navigator reports ${money0(enReport.monthly)} for EBPA + HealthEZ across every line and every company; on that basis the portal has ${money0(enReport.comparable)} (${
+                      Math.abs(enReport.comparable - enReport.monthly) <= Math.max(50, 0.01 * enReport.monthly) ? "matches" : `${enReport.comparable < enReport.monthly ? "−" : "+"}${money0(Math.abs(enReport.comparable - enReport.monthly))}`
+                    }) — this tile is medical only, live groups`
                   : "",
                 shown.bcbs > 0 ? `Excludes ${money0(shown.bcbs)} (${shown.bcbsEnrolled} enrolled) on BCBS of Alabama` : "",
                 shown.unrecognized > 0

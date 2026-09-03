@@ -313,7 +313,19 @@ const companyBlock = wholeCompany.slice(0, headEnd > 0 ? headEnd : 8000);
     return isNaN(d) ? "absent" : d > today ? "future" : "past";
   };
 
-  for (const emp of employees) {
+  // Distinct employees on any current line, per carrier as the export named
+  // it. Employee Navigator's Carrier Stats report counts people this way —
+  // an employee on a carrier's medical and its dental is one person — so the
+  // portal can be reconciled to it.
+  const heads = new Map();
+  const headOf = (carrier, idx) => {
+    if (!carrier) return;
+    const s = heads.get(carrier) || new Set();
+    s.add(idx);
+    heads.set(carrier, s);
+  };
+
+  for (const [empIdx, emp] of employees.entries()) {
     // Employee Navigator counts anyone still enrolled — on leave, on COBRA,
     // a retiree with coverage — so only a terminated (or otherwise gone)
     // employee is skipped here; their enrollments carry end dates anyway.
@@ -357,6 +369,7 @@ const companyBlock = wholeCompany.slice(0, headEnd > 0 ? headEnd : 8000);
       const cost = text(en, "PlanCost");
       const key = `${benefit}||${carrier}||${plan}`;
       const a = lineAgg.get(key) || { benefit, carrier, plan, enrolled: 0, monthly: 0 };
+      headOf(carrier, empIdx);
       a.enrolled++;
       a.monthly += cost == null || cost === "" ? 0 : Number(cost) || 0;
       lineAgg.set(key, a);
@@ -405,6 +418,7 @@ const companyBlock = wholeCompany.slice(0, headEnd > 0 ? headEnd : 8000);
         const carrier = carrierFor(planCarrier, plan);
         if (carrier) carriers.set(plan, carrier);
       }
+      headOf(carriers.get(plan) || "", empIdx);
 
       // Ages are as of the plan-year start, so they don't drift with the clock.
       const asOf = starts ? new Date(starts) : new Date();
@@ -432,8 +446,13 @@ const companyBlock = wholeCompany.slice(0, headEnd > 0 ? headEnd : 8000);
     }
   }
 
-  if (!members.length) {
-    throw new Error("No active medical enrollments found in the export.");
+  // A company with no medical but with dental, vision or life in force is
+  // still a company Employee Navigator reports on. It is kept — with no
+  // members, no plans and no access to the portal — so its lines count in
+  // the premium totals and the carrier reconciliation.
+  const ancillaryOnly = !members.length && lineAgg.size > 0;
+  if (!members.length && !ancillaryOnly) {
+    throw new Error("No current enrollments found for this company.");
   }
 
   // Rates and splits: EN bills one amount per plan + tier.
@@ -525,6 +544,10 @@ const companyBlock = wholeCompany.slice(0, headEnd > 0 ? headEnd : 8000);
       plans,
       /** Every non-medical benefit in force — dental, vision, life, disability … — with no member detail. */
       lines,
+      /** Distinct employees on any line, per carrier as the export named it. */
+      carrierHeads: Object.fromEntries([...heads].map(([c, s]) => [c, s.size])),
+      /** No medical in force; kept for its other lines. Not a portal group. */
+      ancillaryOnly,
       ...premiumBreakdown({ plans, lines }),
       members: cleanMembers,
       rates,
