@@ -49,6 +49,7 @@ const few = (names: string[]) => (names.length <= 12 ? names.join(", ") : `${nam
 export default function AuditPanel({ token, version, ai }: Props) {
   const [audit, setAudit] = useState<Audit | null>(null);
   const [showRows, setShowRows] = useState(false);
+  const [showRead, setShowRead] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -105,9 +106,15 @@ export default function AuditPanel({ token, version, ai }: Props) {
 
       {audit.complete && (
         <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.hairline}` }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: C.ink }}>Claude&rsquo;s read</div>
+          <button
+            onClick={() => setShowRead((s) => !s)}
+            aria-expanded={showRead || !audit.read}
+            style={{ background: "none", border: "none", padding: 0, fontSize: 13, fontWeight: 600, color: audit.read ? C.blue : C.ink, cursor: "pointer" }}
+          >
+            Claude&rsquo;s read{audit.read ? (showRead ? " ▾" : " ▸") : ""}
+          </button>
           {audit.read ? (
-            <div style={{ marginTop: 6, fontSize: 13, color: C.body, lineHeight: 1.65, whiteSpace: "pre-wrap", maxWidth: 900 }}>{audit.read}</div>
+            showRead && <div style={{ marginTop: 6, fontSize: 13, color: C.body, lineHeight: 1.65, whiteSpace: "pre-wrap", maxWidth: 900 }}>{audit.read}</div>
           ) : audit.reading ? (
             <div style={{ marginTop: 6, fontSize: 13, color: C.blue }}>Reading the three files now…</div>
           ) : audit.readError ? (

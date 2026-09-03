@@ -40,6 +40,9 @@ interface Props {
 export default function ImportSection({ step, title, what, accept, ariaLabel, inputRef, disabled, onFile, busy, last, status, summary, error, done, open, children }: Props) {
   const [show, setShow] = useState(false);
   const isOpen = !!open || show;
+  // Once the file is in and nothing is happening, the section is one line:
+  // what is in, when, the result, and a way to replace it.
+  const settled = !!last && !busy && !error && !done && !open;
   const tone =
     status.kind === "ok"
       ? pill(C.green, C.greenTint, C.greenEdge)
@@ -60,22 +63,27 @@ export default function ImportSection({ step, title, what, accept, ariaLabel, in
         <span style={{ ...tone, marginLeft: "auto" }}>{status.label}</span>
       </div>
 
-      <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "110px 1fr", rowGap: 8, columnGap: 12, fontSize: 13, alignItems: "center" }}>
-        <span style={{ color: C.muted }}>Upload</span>
-        <span style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
+      <div style={{ marginTop: settled ? 8 : 12, display: "grid", gridTemplateColumns: settled ? "1fr" : "110px 1fr", rowGap: 6, columnGap: 12, fontSize: 13, alignItems: "center" }}>
+        {!settled && <span style={{ color: C.muted }}>Upload</span>}
+        <span style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, order: settled ? 3 : 0 }}>
           <label
-            style={{
-              padding: "7px 14px",
-              fontSize: 13,
-              fontWeight: 500,
-              color: "#fff",
-              background: disabled ? C.muted : C.blue,
-              border: `1px solid ${disabled ? C.muted : C.blue}`,
-              borderRadius: 4,
-              cursor: disabled ? "default" : "pointer",
-            }}
+            title={what}
+            style={
+              settled
+                ? { fontSize: 12.5, color: C.blue, cursor: disabled ? "default" : "pointer" }
+                : {
+                    padding: "7px 14px",
+                    fontSize: 13,
+                    fontWeight: 500,
+                    color: "#fff",
+                    background: disabled ? C.muted : C.blue,
+                    border: `1px solid ${disabled ? C.muted : C.blue}`,
+                    borderRadius: 4,
+                    cursor: disabled ? "default" : "pointer",
+                  }
+            }
           >
-            Choose file…
+            {settled ? "Replace file…" : "Choose file…"}
             <input
               ref={inputRef}
               type="file"
@@ -89,10 +97,19 @@ export default function ImportSection({ step, title, what, accept, ariaLabel, in
               style={{ position: "absolute", width: 1, height: 1, opacity: 0, overflow: "hidden" }}
             />
           </label>
-          <span style={{ color: busy ? C.blue : C.body }}>{busy || what}</span>
+          {!settled && <span style={{ color: busy ? C.blue : C.body }}>{busy || what}</span>}
+          {settled && children && (
+            <button
+              onClick={() => setShow((v) => !v)}
+              aria-expanded={isOpen}
+              style={{ background: "none", border: "none", padding: 0, fontSize: 12.5, color: C.blue, cursor: "pointer" }}
+            >
+              {isOpen ? "Hide details" : "Details"}
+            </button>
+          )}
         </span>
 
-        <span style={{ color: C.muted }}>Last upload</span>
+        {!settled && <span style={{ color: C.muted }}>Last upload</span>}
         <span style={{ color: last ? C.ink : C.faint }}>
           {last
             ? `${last.filename || "(unnamed)"} · ${new Date(last.when).toLocaleString()}${last.by ? ` · ${last.by}` : ""}`
@@ -101,8 +118,8 @@ export default function ImportSection({ step, title, what, accept, ariaLabel, in
 
         {summary && (
           <>
-            <span style={{ color: C.muted }}>Result</span>
-            <span style={{ color: C.ink }}>{summary}</span>
+            {!settled && <span style={{ color: C.muted }}>Result</span>}
+            <span style={{ color: settled ? C.body : C.ink }}>{summary}</span>
           </>
         )}
       </div>
@@ -119,8 +136,8 @@ export default function ImportSection({ step, title, what, accept, ariaLabel, in
       )}
 
       {children && (
-        <div style={{ marginTop: 12 }}>
-          {!open && (
+        <div style={{ marginTop: settled ? 0 : 12 }}>
+          {!open && !settled && (
             <button
               onClick={() => setShow((s) => !s)}
               aria-expanded={isOpen}
