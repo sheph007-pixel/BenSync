@@ -246,6 +246,30 @@ export async function analyzeProposal(file, roster) {
  * what the import produced, with what the import left out and why. Aggregates
  * only — no member data leaves the server. Returns plain text for the screen.
  */
+/**
+ * Claude's read of the whole audit — the carrier reconciliation and the
+ * billing check together — written for a benefits advisor. Aggregates only.
+ */
+export async function explainAudit(payload) {
+  if (fakeAi()) return "Canned audit read (KENNION_FAKE_AI).";
+  if (!aiEnabled()) throw new Error("AI is off: no ANTHROPIC_API_KEY is set.");
+  const client = apiKey() ? new Anthropic({ apiKey: apiKey() }) : new Anthropic();
+  const response = await client.messages.create({
+    model: MODEL,
+    max_tokens: 4000,
+    output_config: { effort: "medium" },
+    system:
+      "You are a benefits data analyst auditing a brokerage's renewal portal, which holds a snapshot in time built from three Employee Navigator files: the XML export (every company's enrollments and premiums), the Carrier Stats report (Employee Navigator's own count and plan cost per carrier, counting every line a carrier writes, distinct employees, every company including archived ones), and the month's funding workbook (what each group was actually billed, per participant per product). The payload has: per carrier, the report's figure against the portal's on the same basis, with the difference; per group, the XML's enrolled and medical premium against the month's billed participants and premium; the import diagnostics (what the parser left out and why, medical and other lines, and company records it could not use); and the invoices not filed under any group. Write for a benefits advisor in plain language, no code, under 350 words: first a one-sentence overall verdict on whether the snapshot can be trusted for client renewals; then, for each carrier off by more than about 1% and for the groups whose billing differs from the XML, the most likely cause, citing the specific bucket or group and the numbers; then what, if anything, a person should do. Where a gap is explained by a known cause (companies not in the export, a group that has left, a plan renewed since the export), say so plainly rather than raising alarm.",
+    messages: [{ role: "user", content: JSON.stringify(payload) }],
+  });
+  if (response.stop_reason === "refusal") throw new Error("The model declined this request.");
+  return response.content
+    .filter((b) => b.type === "text")
+    .map((b) => b.text)
+    .join("\n")
+    .trim();
+}
+
 export async function explainReconciliation(payload) {
   if (fakeAi()) return "Canned explanation (KENNION_FAKE_AI).";
   if (!aiEnabled()) throw new Error("AI is off: no ANTHROPIC_API_KEY is set.");

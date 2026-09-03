@@ -127,6 +127,17 @@ CREATE TABLE IF NOT EXISTS kennion.funding (
   updated_at    timestamptz NOT NULL DEFAULT now()
 );
 
+-- The audit that runs itself once the three files are in: the computed
+-- result and Claude's read of it, keyed by which uploads it covered, so a
+-- restart or a second look never re-runs the model for the same files.
+CREATE TABLE IF NOT EXISTS kennion.audits (
+  fingerprint   text PRIMARY KEY,
+  result        jsonb NOT NULL,
+  read          text,
+  created_at    timestamptz NOT NULL DEFAULT now(),
+  updated_at    timestamptz NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS kennion.rate_overrides (
   group_name   text NOT NULL,
   plan         text NOT NULL,
@@ -140,7 +151,7 @@ CREATE TABLE IF NOT EXISTS kennion.rate_overrides (
 
 const shapeStats = (r) => ({
   filename: r.filename,
-  reportDate: r.report_date ? String(r.report_date).slice(0, 10) : null,
+  reportDate: r.report_date instanceof Date ? r.report_date.toISOString().slice(0, 10) : r.report_date ? String(r.report_date).slice(0, 10) : null,
   rows: r.rows,
   total: r.total,
   uploadedAt: r.uploaded_at,
@@ -366,6 +377,19 @@ export function createDb(url) {
     },
 
     /** Keep a carrier stats report. Returns it in the shape the client uses. */
+    async saveAudit(fingerprint, result, read) {
+      await pool.query(
+        `INSERT INTO kennion.audits (fingerprint, result, read) VALUES ($1,$2,$3)
+         ON CONFLICT (fingerprint) DO UPDATE SET result = EXCLUDED.result, read = COALESCE(EXCLUDED.read, kennion.audits.read), updated_at = now()`,
+        [fingerprint, JSON.stringify(result), read || null],
+      );
+    },
+
+    async getAudit(fingerprint) {
+      const { rows } = await pool.query("SELECT result, read, created_at FROM kennion.audits WHERE fingerprint = $1", [fingerprint]);
+      return rows[0] ? { result: rows[0].result, read: rows[0].read, createdAt: rows[0].created_at } : null;
+    },
+
     async saveCarrierStats(rec) {
       const { rows } = await pool.query(
         `INSERT INTO kennion.carrier_stats (filename, report_date, rows, total, uploaded_by)
