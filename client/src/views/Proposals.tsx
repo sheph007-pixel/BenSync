@@ -611,16 +611,6 @@ export default function Proposals({ token, groups }: Props) {
             {counts.reading ? ` · ${counts.reading} being read` : ""}
           </span>
         </div>
-        <div style={{ marginTop: 8, fontSize: 13, color: C.muted, lineHeight: 1.65, maxWidth: 880 }}>
-          Upload proposals as they come in from UnitedHealthcare, Gravie, Nationwide or anyone else —
-          a whole batch at once. Each file is read: the carrier, the group named on it, the plans and
-          tier rates. A clear match is assigned to its group; a doubtful one is suggested for you to
-          confirm; the rest wait here for you to assign. Each group tracks four proposals — UHC Fully
-          Insured, UHC Level Funded, Gravie and Nationwide — and a newer proposal in the same slot
-          replaces the older one, which is kept. These are what the 2027 options for each group are
-          built from. Every proposal can also be opened from its company&rsquo;s page, where you can
-          upload straight to that group.
-        </div>
         {ai === false && (
           <div
             style={{

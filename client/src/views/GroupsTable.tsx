@@ -169,7 +169,6 @@ interface Props {
   token: string;
   onChanged: (groups: AdminGroup[]) => void;
   /** Group health as Employee Navigator's carrier stats report states it. */
-  enReport?: { enrolled: number; monthly: number; comparable: number } | null;
 }
 
 const th: CSSProperties = {
@@ -216,7 +215,7 @@ const filterSelect: CSSProperties = {
   fontWeight: 400,
 };
 
-export default function GroupsTable({ groups, token, onChanged, enReport }: Props) {
+export default function GroupsTable({ groups, token, onChanged }: Props) {
   const [query, setQuery] = useState("");
   const [size, setSize] = useState<"All" | "2-50" | "51+">("All");
   const [broker, setBroker] = useState<"All" | Broker>("All");
@@ -371,13 +370,13 @@ export default function GroupsTable({ groups, token, onChanged, enReport }: Prop
   };
 
   const tile = (label: string, value: string, note: string, aside?: string) => (
-    <div key={label} style={{ ...panel, padding: "14px 16px" }}>
-      <div style={{ fontSize: 12.5, color: C.muted }}>{label}</div>
-      <div style={{ marginTop: 5, fontSize: 24, fontWeight: 600, color: C.ink, letterSpacing: "-0.4px", ...num }}>
+    <div key={label} style={{ ...panel, padding: "11px 13px" }}>
+      <div style={{ fontSize: 12, color: C.muted }}>{label}</div>
+      <div style={{ marginTop: 4, fontSize: 20, fontWeight: 600, color: C.ink, letterSpacing: "-0.3px", ...num }}>
         {value}
       </div>
-      <div style={{ marginTop: 3, fontSize: 12, color: C.faint }}>{note}</div>
-      {aside && <div style={{ marginTop: 5, fontSize: 11.5, color: C.ghost, lineHeight: 1.4 }}>{aside}</div>}
+      <div style={{ marginTop: 2, fontSize: 11.5, color: C.faint }}>{note}</div>
+      {aside && <div style={{ marginTop: 4, fontSize: 11, color: C.ghost, lineHeight: 1.4 }}>{aside}</div>}
     </div>
   );
 
@@ -386,14 +385,14 @@ export default function GroupsTable({ groups, token, onChanged, enReport }: Prop
       {/* Dashboard: four numbers for whatever is on screen. They move with
           every search and filter, so a slice of the book reads as a block of
           its own; unfiltered, they describe the whole live roster. Premium is
-          shown twice: group health (EBPA + HealthEZ medical, the captive
-          program) and the total across every line, supplemental included. */}
+          shown twice, monthly and annual: group health (EBPA + HealthEZ
+          medical, the captive program) and the total across every line. */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))",
-          gap: 14,
-          marginTop: 16,
+          gridTemplateColumns: "repeat(auto-fit,minmax(165px,1fr))",
+          gap: 10,
+          marginTop: 14,
         }}
       >
         {tile(
@@ -410,28 +409,13 @@ export default function GroupsTable({ groups, token, onChanged, enReport }: Prop
         )}
         {tile(
           "Group health premium",
-          money0(shown.groupHealth),
-          `EBPA + HealthEZ medical · ${shown.groupHealthEnrolled.toLocaleString()} enrolled · ${money0(shown.groupHealth * 12)} annualized${filtering ? ` · ${pct(shown.groupHealth, counts.groupHealth)} of block` : ""}`,
-          shown.bcbs > 0 || shown.unrecognized > 0 || (enReport && !filtering)
-            ? [
-                enReport && !filtering
-                  ? `Employee Navigator reports ${money0(enReport.monthly)} for EBPA + HealthEZ across every line and every company; on that basis the portal has ${money0(enReport.comparable)} (${
-                      Math.abs(enReport.comparable - enReport.monthly) <= Math.max(50, 0.01 * enReport.monthly) ? "matches" : `${enReport.comparable < enReport.monthly ? "−" : "+"}${money0(Math.abs(enReport.comparable - enReport.monthly))}`
-                    }) — this tile is medical only, live groups`
-                  : "",
-                shown.bcbs > 0 ? `Excludes ${money0(shown.bcbs)} (${shown.bcbsEnrolled} enrolled) on BCBS of Alabama` : "",
-                shown.unrecognized > 0
-                  ? `${money0(shown.unrecognized)} (${shown.unrecognizedEnrolled} enrolled) on carriers not recognised — see Existing Plans & Rates`
-                  : "",
-              ]
-                .filter(Boolean)
-                .join(" · ")
-            : undefined,
+          `${money0(shown.groupHealth)} / mo`,
+          `${money0(shown.groupHealth * 12)} / yr · ${shown.groupHealthEnrolled.toLocaleString()} enrolled${filtering ? ` · ${pct(shown.groupHealth, counts.groupHealth)} of block` : ""}`,
         )}
         {tile(
           "Total premium",
-          money0(shown.total),
-          `all lines incl. supplemental · ${money0(shown.total * 12)} annualized${filtering ? ` · ${pct(shown.total, counts.total)} of block` : ""}`,
+          `${money0(shown.total)} / mo`,
+          `${money0(shown.total * 12)} / yr · all lines${filtering ? ` · ${pct(shown.total, counts.total)} of block` : ""}`,
           rows.length && !shown.linesLoaded
             ? "Supplemental lines appear after the next Employee Navigator import."
             : undefined,

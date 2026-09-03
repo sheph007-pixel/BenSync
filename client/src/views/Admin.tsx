@@ -16,7 +16,7 @@ import ImportPanel from "@/views/ImportPanel";
 import GroupsTable, { type AdminGroup } from "@/views/GroupsTable";
 import GroupDetail from "@/views/GroupDetail";
 import Proposals from "@/views/Proposals";
-import Reconciliation, { portalComparable, reportGroupHealth, type CarrierStats, type ImportDiagnostics } from "@/views/Reconciliation";
+import Reconciliation, { type CarrierStats, type ImportDiagnostics } from "@/views/Reconciliation";
 import FundingPanel, { type FundingInfo } from "@/views/Funding";
 import AuditPanel from "@/views/AuditPanel";
 
@@ -406,23 +406,6 @@ export default function Admin({
             >
               Existing 2026 rates &mdash; all groups, all plans
             </h1>
-            <div
-              style={{
-                marginTop: 8,
-                fontSize: 13,
-                color: C.muted,
-                lineHeight: 1.65,
-                textWrap: "pretty",
-              }}
-            >
-              Every tier rate Kennion has on file. Rates billed through Employee Navigator are
-              locked in black. Empty boxes show the schedule-calculated rate in grey — type over any
-              of them to enter the real rate from the carrier sheet. Edits are saved
-              {storage === "postgres"
-                ? " to the database and shared with everyone at Kennion"
-                : " on the server"}
-              , and flow straight into the client-facing pages.
-            </div>
           </div>
           <button
             onClick={onExport}
@@ -718,10 +701,6 @@ export default function Admin({
               groups={data.groups as unknown as AdminGroup[]}
               token={token}
               onChanged={(gs) => onImported(gs as unknown[])}
-              enReport={(() => {
-                const r = reportGroupHealth(carrierStats);
-                return r ? { ...r, comparable: portalComparable(data.groups as unknown as AdminGroup[]).monthly } : null;
-              })()}
             />
           ))}
 
