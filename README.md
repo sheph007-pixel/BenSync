@@ -171,7 +171,18 @@ document, the effective date, every plan with its tier rates, and which roster
 group it belongs to, with a confidence. A match at 85% or better is **assigned**
 to the group; between 50% and 85% it is **suggested** and waits for a click to
 confirm; below that the proposal sits in the **to assign** queue with a group
-dropdown. Any assignment can be changed. Each group holds exactly four **slots** — UHC
+dropdown. Any assignment can be changed.
+
+The tab opens on a **grid**: one row per group, one column per slot, so the
+whole book reads at a glance — a filled slot shows the plan count and the
+effective date and opens the file; an empty one takes a drop or a click and
+uploads straight into that slot. Uploading over a filled slot is how a
+proposal is replaced. The grid filters by account manager and by what is
+missing (any slot, a named slot, or the groups with all four in). Proposals
+still waiting for a group, and those filling no slot, sit under it. **List**
+and **By group** remain for working through a batch one file at a time.
+
+Each group holds exactly four **slots** — UHC
 Fully Insured, UHC Level Funded, Gravie and Nationwide — and nothing else.
 Surest is a UnitedHealthcare product, so a Surest quote fills that group's
 UnitedHealthcare slot for the funding it is written on. Claude fills the slot
