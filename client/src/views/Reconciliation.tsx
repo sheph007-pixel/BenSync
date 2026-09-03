@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
-import { C, money0, panel } from "@/lib/importui";
+import ImportSection from "@/views/ImportSection";
+import { C, money0 } from "@/lib/importui";
 import { pill } from "@/lib/ui";
 import { carrierKey, matchCarrier } from "@/lib/carriers";
 import type { AdminGroup } from "@/views/GroupsTable";
@@ -279,47 +280,33 @@ export default function Reconciliation({ token, stats, groups, onStats, diagnost
   const linesLoaded = (groups as G[]).some((g) => g.linesLoaded);
   const archivedCount = (groups as G[]).filter((g) => g.archived).length;
 
+  const okCount = checked.length - mismatches.length;
   return (
-    <div style={{ ...panel, marginTop: 16, padding: "20px 22px" }}>
-      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: 12 }}>
-        <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600, color: C.ink }}>Carrier stats report</h2>
-        {stats && (
-          <span style={{ fontSize: 12.5, color: C.faint }}>
-            {stats.filename}
-            {stats.reportDate ? ` · report of ${stats.reportDate}` : ""} · uploaded {new Date(stats.uploadedAt).toLocaleString()}
-            {stats.uploadedBy ? ` by ${stats.uploadedBy}` : ""}
-          </span>
-        )}
-      </div>
-      <div style={{ marginTop: 8, fontSize: 13, color: C.muted, lineHeight: 1.65, maxWidth: 880 }}>
-        The second file from Employee Navigator: its own count per carrier. That report counts{" "}
-        <strong>every line</strong> a carrier has — medical, dental, vision, life, disability — with
-        &ldquo;enrolled&rdquo; meaning distinct employees on any of them, and it includes every
-        company, archived here or not. The portal is added up the same way below, so the two can be
-        checked against each other carrier by carrier.
-      </div>
-
-      <div style={{ marginTop: 14, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
-        <input
-          ref={ref}
-          type="file"
-          accept=".xls,.xlsx,.csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) void upload(f);
-          }}
-          aria-label="Upload the carrier stats report"
-          disabled={busy}
-          style={{ fontSize: 13 }}
-        />
-        <span style={{ fontSize: 12.5, color: C.faint }}>{busy ? "Reading…" : "carrier_stats_report_….xls, as Employee Navigator exports it"}</span>
-      </div>
-      {error && (
-        <div role="alert" style={{ marginTop: 10, padding: "9px 12px", background: C.redTint, border: `1px solid ${C.redEdge}`, borderRadius: 4, fontSize: 13, color: C.red }}>
-          {error}
-        </div>
-      )}
-
+    <ImportSection
+      step={2}
+      title="Carrier stats report"
+      what="carrier_stats_report_yyyy_mm_dd.xls — Employee Navigator's own count per carrier"
+      accept=".xls,.xlsx,.csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
+      ariaLabel="Upload the carrier stats report"
+      inputRef={ref}
+      disabled={busy}
+      onFile={(f) => void upload(f)}
+      busy={busy ? "Reading…" : ""}
+      last={stats ? { filename: stats.filename, when: stats.uploadedAt, by: stats.uploadedBy } : null}
+      status={
+        !stats
+          ? { kind: "none", label: "Not uploaded yet" }
+          : mismatches.length
+            ? { kind: "warn", label: `${mismatches.length} carrier${mismatches.length === 1 ? "" : "s"} to check` }
+            : { kind: "ok", label: "Matches Employee Navigator" }
+      }
+      summary={
+        stats
+          ? `Report of ${stats.reportDate || "—"} · ${checked.length} carriers checked · ${okCount} match${mismatches.length ? ` · ${mismatches.length} off by more than 1%: ${mismatches.map((r) => r.carrier).join(", ")}` : ""}`
+          : "Once uploaded, every carrier is checked against the XML side by side."
+      }
+      error={error}
+    >
       {stats && gh && (
         <>
           <div
@@ -567,11 +554,6 @@ export default function Reconciliation({ token, stats, groups, onStats, diagnost
           {explanation}
         </div>
       )}
-      {!stats && (
-        <div style={{ marginTop: 12, fontSize: 12.5, color: C.faint }}>
-          No report uploaded yet. Once it is, this panel shows every carrier side by side with the XML.
-        </div>
-      )}
-    </div>
+    </ImportSection>
   );
 }

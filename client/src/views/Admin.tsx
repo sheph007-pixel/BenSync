@@ -731,11 +731,31 @@ export default function Admin({
 
         {tab === "import" && (
           <>
+            <div style={{ marginTop: 16, fontSize: 13, color: C.muted, lineHeight: 1.6, maxWidth: 840 }}>
+              Three files from Employee Navigator keep the portal current. Upload each one when a new one comes
+              out; the portal reads it, files it and checks it against the others.
+              {storage === "postgres"
+                ? " Uploads are stored in Postgres and shared across the team."
+                : durable
+                  ? ""
+                  : " No database is connected, so uploads are lost on the next deploy."}
+            </div>
             <ImportPanel
               token={token}
               durable={durable}
               storage={storage}
               onImported={(gs, ims) => onImported(gs, ims as ImportRecord[] | undefined)}
+              last={
+                imports[0]
+                  ? {
+                      filename: imports[0].filename,
+                      when: imports[0].uploaded_at,
+                      by: imports[0].uploaded_by,
+                      companies: imports[0].companies_applied,
+                      enrolled: activeGroups.reduce((n, g) => n + (g.enrolled || 0), 0),
+                    }
+                  : null
+              }
             />
 
             <Reconciliation
@@ -756,10 +776,10 @@ export default function Admin({
               onOverrides={onOverrides}
             />
 
-            <div style={{ ...panel, marginTop: 16, padding: "20px 22px" }}>
-              <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600, color: C.ink }}>
-                Import history
-              </h2>
+            <details style={{ ...panel, marginTop: 16, padding: "14px 22px" }}>
+              <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 600, color: C.ink }}>
+                XML import history{imports?.length ? ` (${imports.length})` : ""}
+              </summary>
               {!imports?.length ? (
                 <div style={{ marginTop: 10, fontSize: 13, color: C.faint }}>
                   Nothing imported yet. The portal is serving the shipped census.
@@ -831,7 +851,7 @@ export default function Admin({
                   </tbody>
                 </table>
               )}
-            </div>
+            </details>
           </>
         )}
       </div>
