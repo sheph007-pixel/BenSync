@@ -113,6 +113,12 @@ let byCode = new Map();
 let adminGroups = [];
 /** Proposals filed under each group, so the Groups page can show coverage. */
 let proposalCounts = {};
+/**
+ * Each group's current proposals — the newest assigned one per slot, with
+ * what Claude read off it (plans and tier rates) — keyed by group name. This
+ * is what a group's 2027 Options page prices from; no file bytes, no flags.
+ */
+let currentProposals = {};
 /** The latest Employee Navigator carrier stats report, for reconciliation. */
 let carrierStats = null;
 /**
@@ -349,8 +355,31 @@ app.post("/api/signin", (req, res) => {
     // Only this group's contribution split, when Employee Navigator has one.
     splits: splitFor(g.name) ? { [g.name]: splitFor(g.name) } : {},
     overrides: overridesFor(g.name),
+    // The carrier proposals on file for this group — plans and tier rates as
+    // read off the documents — and this month's billing, counts and rates only.
+    proposals: currentProposals[g.name] || [],
+    funding: fundingSnapshot(g.name),
   });
 });
+
+/** A group's slice of the month's billing for its own pages: counts and rates, no people. */
+function fundingSnapshot(name) {
+  const f = funding && funding.summary[name];
+  if (!f) return null;
+  const byPlan = {};
+  for (const [plan, p] of Object.entries(f.medical.byPlan)) {
+    byPlan[plan] = { monthly: p.monthly, byTier: Object.fromEntries(Object.entries(p.byTier).map(([t, x]) => [t, { n: x.n, rate: x.rate }])) };
+  }
+  return {
+    month: funding.month,
+    participants: f.medical.participants,
+    monthly: f.medical.monthly,
+    adjustments: f.medical.adjustments,
+    billed: f.medical.billed,
+    otherMonthly: f.other.monthly,
+    byPlan,
+  };
+}
 
 /**
  * Re-enter a staff session the browser still holds a token for — a reload, or
@@ -976,6 +1005,35 @@ async function proposalsChanged() {
       const should = want.get(r.id);
       if ((r.superseded_by || null) !== should) await proposalStore.updateProposal(r.id, { superseded_by: should });
     }
+    const current = {};
+    for (const list of bySlot.values()) {
+      const r = list[0];
+      const x = r.extracted || {};
+      (current[r.group_name] = current[r.group_name] || []).push({
+        id: r.id,
+        slot: r.slot,
+        carrier: r.carrier || x.carrier || null,
+        funding: x.funding || null,
+        effectiveDate: x.effective_date || null,
+        proposalType: x.proposal_type || null,
+        enrolledOnDocument: x.enrolled_on_document ?? null,
+        plans: Array.isArray(x.plans)
+          ? x.plans.map((pl) => ({
+              name: pl.name,
+              planType: pl.plan_type || null,
+              deductible: pl.deductible || null,
+              oopMax: pl.oop_max || null,
+              rates: pl.rates || { EE: null, ES: null, EC: null, FAM: null },
+              monthlyTotal: pl.monthly_total ?? null,
+            }))
+          : [],
+        totalMonthly: x.total_monthly ?? null,
+        summary: r.summary || null,
+        filename: r.filename,
+        uploadedAt: r.uploaded_at,
+      });
+    }
+    currentProposals = current;
     proposalCounts = counts;
     rebuild();
   } catch (e) {

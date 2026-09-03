@@ -18,7 +18,39 @@ const apiKey = () =>
   process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY || process.env.CLAUDE || "";
 
 /** Set when the deployment has an Anthropic credential to call with. */
-export const aiEnabled = () => !!(apiKey() || process.env.ANTHROPIC_AUTH_TOKEN);
+export const aiEnabled = () => !!(apiKey() || process.env.ANTHROPIC_AUTH_TOKEN || fakeAi());
+
+/**
+ * Local end-to-end runs only (KENNION_FAKE_AI=1): no key, no network. A text
+ * upload whose body is a JSON extraction is returned as the reading, so the
+ * whole path after the model — filing, slots, the group's Options page — can
+ * be exercised. Never set in a deployment.
+ */
+const fakeAi = () => process.env.KENNION_FAKE_AI === "1";
+function fakeReading(file) {
+  const p = file.prepared || {};
+  const text = p.text || (p.buffer ? p.buffer.toString("utf8") : "");
+  try {
+    const j = JSON.parse(text);
+    return {
+      carrier: "Unknown",
+      funding: "unknown",
+      group_name_on_document: null,
+      matched_group: null,
+      confidence: 0,
+      effective_date: null,
+      proposal_type: "unknown",
+      enrolled_on_document: null,
+      plans: [],
+      total_monthly: null,
+      summary: "Canned reading (KENNION_FAKE_AI).",
+      audit_flags: [],
+      ...j,
+    };
+  } catch {
+    return { carrier: "Unknown", funding: "unknown", group_name_on_document: null, matched_group: null, confidence: 0, effective_date: null, proposal_type: "unknown", enrolled_on_document: null, plans: [], total_monthly: null, summary: "Canned reading: not JSON.", audit_flags: ["unreadable"] };
+  }
+}
 
 const MODEL = "claude-opus-5";
 
@@ -133,6 +165,7 @@ Your job: identify the carrier, read off the plans and tier rates, and decide wh
  * the extraction, or throws with a message the admin screen can show.
  */
 export async function analyzeProposal(file, roster) {
+  if (fakeAi()) return fakeReading(file);
   if (!aiEnabled()) throw new Error("AI matching is off: no ANTHROPIC_API_KEY is set.");
   const client = apiKey() ? new Anthropic({ apiKey: apiKey() }) : new Anthropic();
 
@@ -214,6 +247,7 @@ export async function analyzeProposal(file, roster) {
  * only — no member data leaves the server. Returns plain text for the screen.
  */
 export async function explainReconciliation(payload) {
+  if (fakeAi()) return "Canned explanation (KENNION_FAKE_AI).";
   if (!aiEnabled()) throw new Error("AI is off: no ANTHROPIC_API_KEY is set.");
   const client = apiKey() ? new Anthropic({ apiKey: apiKey() }) : new Anthropic();
   const response = await client.messages.create({
