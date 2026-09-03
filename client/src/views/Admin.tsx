@@ -736,15 +736,11 @@ export default function Admin({
 
         {tab === "import" && (
           <>
-            <div style={{ marginTop: 16, fontSize: 13, color: C.muted, lineHeight: 1.6, maxWidth: 840 }}>
-              The snapshot is taken once: three files from Employee Navigator. Upload each one; the portal reads it,
-              files it, checks it against the others and audits the whole.
-              {storage === "postgres"
-                ? " Uploads are stored in Postgres and shared across the team."
-                : durable
-                  ? ""
-                  : " No database is connected, so uploads are lost on the next deploy."}
-            </div>
+            {storage !== "postgres" && !durable && (
+              <div style={{ marginTop: 16, fontSize: 13, color: C.amber, lineHeight: 1.6, maxWidth: 840 }}>
+                No database is connected, so uploads are lost on the next deploy.
+              </div>
+            )}
             <AuditPanel token={token} version={auditVersion} ai={ai} />
             <ImportPanel
               token={token}
