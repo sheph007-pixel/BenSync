@@ -13,6 +13,11 @@ on:
         description: Portal base URL
         default: https://app.kennion.com
         required: true
+  # A change to .github/snapshot-request on main also runs it, so a session
+  # that can push but cannot call the Actions API can still ask for a snapshot.
+  push:
+    branches: [main]
+    paths: [".github/snapshot-request"]
 
 permissions:
   contents: write
@@ -25,7 +30,7 @@ jobs:
 
       - name: Pull the reconciliation file from the live site
         env:
-          SITE: ${{ inputs.site }}
+          SITE: ${{ inputs.site || 'https://app.kennion.com' }}
           ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL || 'hunter@kennion.com' }}
           ADMIN_CODE: ${{ secrets.ADMIN_CODE || '87878787' }}
         run: |
