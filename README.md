@@ -247,17 +247,28 @@ staff to file by hand or leave out.
 Enrollment and rates come from the month's own lines: one current line per
 participant per plan. A prior month billed late (a retro add) or reversed (a
 credit, a negative rate) changes the invoice, not who is enrolled, so those are
-kept as adjustments beside the count. EBPA's dental plans appear on the
-workbook's "(HEALTH)" sheets and are treated as lines, not medical, the same as
-the XML treats them.
+kept as adjustments beside the count. A tier's billed rate is the amount most
+of its full-month lines carry; a prorated mid-month line counts as a person
+but never sets the rate. A line with no rate band is filed under the tier
+billed at that amount when exactly one is, and reported as untiered otherwise.
+EBPA's dental plans appear on the workbook's "(HEALTH)" sheets and are treated
+as lines, not medical, the same as the XML treats them. Billed product names
+carry the plan year mid-string and are cut at 50 characters; they are matched
+to the XML's plan names with the year dropped and a prefix accepted. A billing
+org that is a group's name outright (a typo or two allowed) files the invoice
+there even when the people billed match a sister company.
 
 The Import tab then shows, group by group, what the XML says against what the
 month's billing says — participants and medical premium, with the difference —
 and each company page has a billing panel: every plan and tier with the number
-billed and the billed rate, beside the XML's billed rate for that tier. **Use
-billed rates** (per group, or for every group at once) writes the billed amount
-as the tier's rate wherever the XML had none or a different one, so the rates
-the client sees are the ones actually being billed.
+billed and the billed rate, beside the XML's billed rate for that tier. On
+upload, and again whenever an invoice is filed by hand, the billed amount is
+written as the tier's rate wherever the XML had none or a different one, so the
+rates a client sees are the ones actually being billed; **Use billed rates**
+(per group, or for every group at once) re-runs that. A billed plan the
+group's XML does not carry is left alone and flagged — a question, not a rate.
+The client's Current page says the rates shown are the billed rates only when
+every billed tier on a census plan is in fact shown at the billed amount.
 
 ### 2027 options from the proposals on file
 
