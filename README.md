@@ -149,7 +149,9 @@ rates export, so the tabs cannot disagree about how many groups there are.
 An unmatched group is never silently dropped. It stays in Rate Administration
 behind a **"Not in program"** filter, listing the carriers actually found on it,
 so a program carrier under an unrecognised name is visible and can be added to
-the rule.
+the rule. The same picker holds **"All groups"**, which shows every company on
+file — live, archived and not in program together, each marked — for when you
+want the whole book rather than the block the portal serves.
 
 ## Proposals
 
@@ -210,8 +212,7 @@ enrolled, companies and monthly premium side by side with the difference,
 marked **Matches** within 1% or **Check** otherwise. A company with no medical
 but with other lines in force is imported too (flagged ancillary-only; it is
 not a portal group and cannot sign in) so its lines count. Administrators with
-no premium (a COBRA or FSA vendor) are shown greyed. The Groups page
-group-health tile quotes the report's figure next to the portal's.
+no premium (a COBRA or FSA vendor) are shown greyed.
 
 Under the table, **What the last XML import left out** lists every medical
 enrollment the parser did not count — a terminated employee whose coverage has
@@ -292,17 +293,14 @@ and other lines — so what the client sees as "today" is the September snapshot
 
 ### Checking the premium figures
 
-**Existing Plans & Rates** opens with "Where the medical premium sits": every
-medical plan's premium grouped by the carrier the export named, with the
-strings as they appeared, enrolled counts, and whether each row is counted as
-group health. Every dollar is in exactly one row, so the Groups page figure
-reconciles to it. A plan whose carrier the rule does not recognise is its own
-row rather than a silent omission; when such a plan sits in a group whose
-recognised plans are all EBPA or HealthEZ, it is counted as group health and
-flagged as assumed. Plans with people enrolled but no billed premium in the
-export are listed too. The importer also matches a plan to the catalog loosely
-(case, spacing, a stray year) and, when the whole catalog is one carrier, uses
-that carrier for any plan it could not find.
+**Existing Plans & Rates** is the rate sheet: every group's plans with the
+four tier rates, and a tier-schedule check at the top. Billed rates from
+Employee Navigator are locked in black; an empty box shows the rate calculated
+at the program tier factors — Employee 1.00, Employee + Child(ren) 1.85,
+Employee + Spouse 2.00, Employee + Family 2.85 — in grey, and typing over it
+saves a hand-keyed rate to the database. The check counts the plans with two or
+more billed tiers whose rates hold those factors; the ones that do not are
+flagged "Off schedule" and want the real rates from the carrier sheet.
 
 ## Privacy
 
