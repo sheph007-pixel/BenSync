@@ -668,6 +668,11 @@ app.get("/api/admin/reconcile/export", requireStaff, (_req, res) => {
     storage: db ? "postgres" : DURABLE ? "volume" : "ephemeral",
     carrierStats,
     lastImport: recentImports[0] || null,
+    // The month's funding workbook, totals only: enough to see the billing
+    // side of the reconciliation without any participant line.
+    funding: funding
+      ? { month: funding.month, filename: funding.filename, fileStamp: funding.fileStamp, uploadedAt: funding.uploadedAt, totals: fundingTotals(funding), unassigned: Object.entries(funding.byInvoice).filter(([, a]) => !a.group).map(([inv, a]) => ({ invoice: inv, orgs: a.orgs, lines: a.total })) }
+      : null,
     importHistory: recentImports.map((r) => ({ filename: r.filename, uploaded_at: r.uploaded_at, companies_found: r.companies_found, companies_applied: r.companies_applied })),
     portalByProgram: Object.fromEntries(
       Object.entries(byProgram).map(([k, t]) => [k, { groups: t.groups.size, plans: t.plans, enrolled: t.enrolled, monthly: Math.round(t.monthly * 100) / 100, carriers: [...t.carriers].sort() }]),
