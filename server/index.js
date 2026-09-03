@@ -1332,11 +1332,19 @@ app.post(
     const filename = String(req.query.filename || "proposal.pdf").slice(0, 200);
     const mime = (req.get("content-type") || "").split(";")[0].trim() || "application/octet-stream";
     const group = String(req.query.group || "").trim();
+    // Uploaded straight into one of a group's four slots, from the grid.
+    const slot = String(req.query.slot || "").trim();
     if (!Buffer.isBuffer(req.body) || !req.body.length) {
       return res.status(400).json({ error: "No file received." });
     }
     if (group && !groups.some((g) => g.name === group)) {
       return res.status(404).json({ error: "No such group." });
+    }
+    if (slot && !SLOTS.includes(slot)) {
+      return res.status(400).json({ error: `Slot must be one of: ${SLOTS.join(", ")}.` });
+    }
+    if (slot && !group) {
+      return res.status(400).json({ error: "A slot needs a group." });
     }
     let expanded;
     try {
@@ -1349,6 +1357,7 @@ app.post(
       group_name: group || null,
       assigned_by: group ? by || "staff" : null,
       uploaded_by: by,
+      slot: slot || null,
     };
     try {
       const created = [];

@@ -72,6 +72,34 @@ export const SLOTS = ["UHC Fully Insured", "UHC Level Funded", "Gravie", "Nation
 const TRACKED = SLOTS;
 const isCurrent = (p: Proposal) => p.status === "assigned" && !p.superseded_by;
 
+/** "2027-01-01" → "1/1/27", for a grid cell. */
+const fmtDay = (s: string) => {
+  const d = new Date(`${s.slice(0, 10)}T00:00:00`);
+  return isNaN(+d) ? s : d.toLocaleDateString("en-US", { month: "numeric", day: "numeric", year: "2-digit" });
+};
+
+const gridTh: CSSProperties = {
+  padding: "8px 6px",
+  fontSize: 11.5,
+  fontWeight: 600,
+  color: C.muted,
+  textTransform: "uppercase",
+  letterSpacing: ".3px",
+  textAlign: "center",
+  borderBottom: `1px solid ${C.border}`,
+  whiteSpace: "nowrap",
+};
+
+const gridFilter: CSSProperties = {
+  padding: "7px 10px",
+  fontSize: 13,
+  color: C.ink,
+  border: `1px solid ${C.inputEdge}`,
+  borderRadius: 4,
+  background: "#fff",
+  cursor: "pointer",
+};
+
 const fmtSize = (n: number) => (n > 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Math.round(n / 1e3)} KB`);
 const fmtWhen = (s: string) =>
   new Date(s).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
@@ -96,11 +124,13 @@ async function uploadFiles(
   token: string,
   group: string | null,
   onEach: (name: string, ok: boolean, msg?: string) => void,
+  slot?: string | null,
 ) {
   for (const f of files) {
     const mime = f.type || (f.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "text/plain");
     const q = new URLSearchParams({ filename: f.name });
     if (group) q.set("group", group);
+    if (group && slot) q.set("slot", slot);
     try {
       const r = await fetch(`/api/admin/proposals?${q}`, {
         method: "POST",
@@ -566,6 +596,94 @@ function Uploader({
   );
 }
 
+/**
+ * One cell of the grid: the group's current proposal in that slot, or an empty
+ * box that takes a file straight into it. Uploading over a filled slot is the
+ * ordinary way to replace one — the newer proposal supersedes the older.
+ */
+function SlotCell({
+  group,
+  slot,
+  current,
+  token,
+  onChanged,
+}: {
+  group: string;
+  slot: string;
+  current: Proposal | undefined;
+  token: string;
+  onChanged: () => void;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const send = async (files: File[]) => {
+    if (!files.length) return;
+    setBusy(true);
+    await uploadFiles(files, token, group, () => undefined, slot);
+    setBusy(false);
+    onChanged();
+    if (ref.current) ref.current.value = "";
+  };
+  const plans = current?.extracted?.plans?.length || 0;
+  const when = current?.extracted?.effective_date || current?.uploaded_at?.slice(0, 10) || "";
+
+  return (
+    <td style={{ padding: "5px 6px", borderBottom: `1px solid ${C.hairline}`, verticalAlign: "top" }}>
+      <div
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          e.preventDefault();
+          void send(Array.from(e.dataTransfer.files));
+        }}
+        style={{
+          border: `1px solid ${current ? C.greenEdge : C.border}`,
+          background: current ? C.greenTint : "#fff",
+          borderRadius: 4,
+          padding: "6px 8px",
+          minHeight: 40,
+          opacity: busy ? 0.6 : 1,
+        }}
+      >
+        <input
+          ref={ref}
+          type="file"
+          multiple
+          accept={ACCEPT}
+          aria-label={`${slot} proposal for ${group}`}
+          onChange={(e) => void send(Array.from(e.target.files || []))}
+          style={{ position: "absolute", width: 1, height: 1, opacity: 0, overflow: "hidden" }}
+        />
+        {current ? (
+          <>
+            <button
+              onClick={() => void openFile(current.id, token)}
+              title={current.filename}
+              style={{ ...linkBtn, fontSize: 12.5, fontWeight: 600, color: C.green, textAlign: "left", maxWidth: 170, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" }}
+            >
+              ✓ {plans ? `${plans} plan${plans === 1 ? "" : "s"}` : "on file"}
+            </button>
+            <div style={{ fontSize: 11, color: C.ghost, display: "flex", gap: 8 }}>
+              <span>{when ? fmtDay(when) : ""}</span>
+              <button onClick={() => ref.current?.click()} style={{ ...linkBtn, fontSize: 11 }} disabled={busy}>
+                {busy ? "…" : "replace"}
+              </button>
+            </div>
+          </>
+        ) : (
+          <button
+            onClick={() => ref.current?.click()}
+            disabled={busy}
+            style={{ ...linkBtn, fontSize: 12, color: C.faint }}
+            title={`Upload the ${slot} proposal for ${group}`}
+          >
+            {busy ? "uploading…" : "+ add"}
+          </button>
+        )}
+      </div>
+    </td>
+  );
+}
+
 interface Props {
   token: string;
   /** Live roster: what a proposal can be assigned to. */
@@ -576,8 +694,10 @@ interface Props {
 export default function Proposals({ token, groups }: Props) {
   const { items, ai, durable, error, load } = useProposals(token);
   const [view, setView] = useState<"all" | "queue" | "assigned">("all");
-  const [layout, setLayout] = useState<"list" | "groups">("list");
+  const [layout, setLayout] = useState<"grid" | "list" | "groups">("grid");
   const [query, setQuery] = useState("");
+  const [manager, setManager] = useState<"All" | "debbie" | "tracy">("All");
+  const [need, setNeed] = useState<"All" | "missing" | "complete" | string>("All");
 
   const q = query.trim().toLowerCase();
   const matches = (p: Proposal) =>
@@ -611,6 +731,33 @@ export default function Proposals({ token, groups }: Props) {
     rows: proposals.filter((p) => p.group_name === g.name && matches(p)),
   }));
   const unassignedRows = proposals.filter((p) => !p.group_name && matches(p));
+
+  // The grid: one row per group, one column per slot, holding that group's
+  // current proposal in it. Everything the page is for, on one screen.
+  const currentBySlot = new Map<string, Proposal>();
+  proposals.forEach((p) => {
+    if (isCurrent(p) && p.group_name && p.slot) currentBySlot.set(`${p.group_name}||${p.slot}`, p);
+  });
+  const gridRows = sortedGroups
+    .map((g) => {
+      const slots = SLOTS.map((s) => currentBySlot.get(`${g.name}||${s}`));
+      return { g, slots, have: slots.filter(Boolean).length };
+    })
+    .filter(({ g, have }) => {
+      if (q && !`${g.name} ${g.code ?? ""}`.toLowerCase().includes(q)) return false;
+      if (manager !== "All" && g.manager !== manager) return false;
+      if (need === "missing" && have === SLOTS.length) return false;
+      if (need === "complete" && have !== SLOTS.length) return false;
+      if (SLOTS.includes(need as (typeof SLOTS)[number])) {
+        const i = SLOTS.indexOf(need as (typeof SLOTS)[number]);
+        if (currentBySlot.get(`${g.name}||${SLOTS[i]}`)) return false;
+      }
+      return true;
+    });
+  const filled = gridRows.reduce((n, r) => n + r.have, 0);
+  // Read but filling no slot: an ancillary document, or a carrier outside the
+  // four. Listed under the grid so it can be filed by hand or deleted.
+  const untrackedRows = proposals.filter((p) => p.group_name && !p.slot && p.status !== "analyzing" && matches(p));
   const withRows = byGroup.filter((x) => x.rows.length);
   const without = byGroup.filter((x) => !x.rows.length && !proposals.some((p) => p.group_name === x.g.name));
 
@@ -678,6 +825,7 @@ export default function Proposals({ token, groups }: Props) {
           <div style={{ display: "flex", gap: 2 }} role="group" aria-label="Layout">
             {(
               [
+                ["grid", "Grid"],
                 ["list", "List"],
                 ["groups", "By group"],
               ] as const
@@ -700,6 +848,25 @@ export default function Proposals({ token, groups }: Props) {
               </button>
             ))}
           </div>
+          {layout === "grid" && (
+            <>
+              <select aria-label="Account manager" value={manager} onChange={(e) => setManager(e.target.value as typeof manager)} style={gridFilter}>
+                <option value="All">All managers</option>
+                <option value="debbie">Debbie</option>
+                <option value="tracy">Tracy</option>
+              </select>
+              <select aria-label="Which groups" value={need} onChange={(e) => setNeed(e.target.value)} style={gridFilter}>
+                <option value="All">All groups</option>
+                <option value="missing">Missing a proposal</option>
+                <option value="complete">All four in</option>
+                {SLOTS.map((sl) => (
+                  <option key={sl} value={sl}>
+                    Missing {sl}
+                  </option>
+                ))}
+              </select>
+            </>
+          )}
           {layout === "list" && (
             <div style={{ display: "flex", gap: 2 }} role="group" aria-label="Which proposals">
               {(
@@ -734,7 +901,60 @@ export default function Proposals({ token, groups }: Props) {
             {error}
           </div>
         )}
-        {layout === "groups" ? (
+        {layout === "grid" ? (
+          <div>
+            <div style={{ margin: "4px 0 10px", fontSize: 12.5, color: C.faint }}>
+              {gridRows.length} group{gridRows.length === 1 ? "" : "s"} · {filled} of {gridRows.length * SLOTS.length} slots filled.
+              Drop a file on any box, or on the batch uploader above — a newer proposal replaces the one in that slot and the old one is kept.
+            </div>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 880 }}>
+                <thead>
+                  <tr>
+                    <th style={{ ...gridTh, textAlign: "left", paddingLeft: 0 }}>Group</th>
+                    {SLOTS.map((sl) => (
+                      <th key={sl} style={gridTh}>
+                        {sl}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {gridRows.map(({ g, slots, have }) => (
+                    <tr key={g.name}>
+                      <td style={{ padding: "5px 8px 5px 0", borderBottom: `1px solid ${C.hairline}`, verticalAlign: "top" }}>
+                        <Link href={groupPath(g.name)} style={{ fontWeight: 500 }}>
+                          {g.name}
+                        </Link>
+                        <div style={{ fontSize: 11.5, color: C.ghost }}>
+                          {g.enrolled} enrolled
+                          {g.manager ? ` · ${g.manager === "debbie" ? "Debbie" : "Tracy"}` : ""}
+                          {have === SLOTS.length ? " · all four in" : ` · ${have} of ${SLOTS.length}`}
+                        </div>
+                      </td>
+                      {SLOTS.map((sl, i) => (
+                        <SlotCell key={sl} group={g.name} slot={sl} current={slots[i]} token={token} onChanged={() => void load()} />
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {!gridRows.length && (
+              <div style={{ padding: "26px 0", textAlign: "center", fontSize: 13, color: C.faint }}>Nothing matches.</div>
+            )}
+            {(unassignedRows.length > 0 || untrackedRows.length > 0) && (
+              <section style={{ marginTop: 18, paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
+                <h2 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: unassignedRows.length ? C.amber : C.faint }}>
+                  {unassignedRows.length ? `To Assign · ${unassignedRows.length}` : "Filed, But Not One Of The Four"}
+                </h2>
+                {[...unassignedRows, ...untrackedRows].map((p) => (
+                  <ProposalRow key={p.id} p={p} token={token} groups={sortedGroups} onChanged={() => void load()} />
+                ))}
+              </section>
+            )}
+          </div>
+        ) : layout === "groups" ? (
           <div>
             {unassignedRows.length > 0 && (
               <section style={{ padding: "12px 0 4px" }}>
