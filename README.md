@@ -261,7 +261,9 @@ org that is a group's name outright (a typo or two allowed) files the invoice
 there even when the people billed match a sister company.
 
 The Import tab then shows, group by group, what the XML says against what the
-month's billing says — participants and medical premium, with the difference —
+month's billing says — participants and medical premium, with the difference;
+the workbook is the two captives' billing, so the XML side is the group's
+EBPA/HealthEZ medical and a Blue Cross plan, billed elsewhere, is left out —
 and each company page has a billing panel: every plan and tier with the number
 billed and the billed rate, beside the XML's billed rate for that tier. On
 upload, and again whenever an invoice is filed by hand, the billed amount is

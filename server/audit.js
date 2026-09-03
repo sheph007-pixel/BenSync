@@ -81,15 +81,21 @@ export function reconcileCarriers(stats, groups) {
   });
 }
 
-/** Each group's month of billing against its XML: people and premium. */
+/**
+ * Each group's month of billing against its XML: people and premium. The
+ * workbook is the two captives' billing — EBPA and HealthEZ — so the XML side
+ * is the group's group-health medical; a Blue Cross plan is billed elsewhere
+ * and is not expected here.
+ */
 export function reconcileBilling(funding, groups) {
   if (!funding) return null;
   const rows = [];
   for (const g of groups) {
     if (g.archived || g.eligible === false) continue;
     const f = funding.summary[g.name] || null;
-    const xmlN = g.enrolled || 0;
-    const xml$ = g.medicalMonthly ?? (g.plans || []).reduce((n, p) => n + (p.monthly || 0), 0);
+    const gh = (g.plans || []).filter((p) => p.groupHealth);
+    const xmlN = g.groupHealthEnrolled ?? gh.reduce((n, p) => n + (p.enrolled || 0), 0);
+    const xml$ = g.groupHealthMonthly ?? gh.reduce((n, p) => n + (p.monthly || 0), 0);
     if (!f && !xmlN) continue;
     const billN = f ? f.medical.participants : 0;
     const bill$ = f ? f.medical.monthly : 0;
@@ -150,8 +156,11 @@ export function runAudit({ groups, carrierStats, funding, lastImport }) {
   return { generated: new Date().toISOString(), complete, files, portal, verdict, carriers, billing };
 }
 
-/** What identifies this audit: the three uploads and the invoice filings. */
+/** Bump when the audit's rules change, so a stored read is not reused for a different comparison. */
+export const AUDIT_VERSION = 2;
+
+/** What identifies this audit: the rules, the three uploads and the invoice filings. */
 export function auditFingerprint({ carrierStats, funding, lastImport }) {
   const filed = funding ? Object.values(funding.byInvoice || {}).filter((a) => a.group).length : 0;
-  return [lastImport?.uploaded_at || "-", carrierStats?.uploadedAt || "-", funding?.uploadedAt || "-", filed].join("|");
+  return [`v${AUDIT_VERSION}`, lastImport?.uploaded_at || "-", carrierStats?.uploadedAt || "-", funding?.uploadedAt || "-", filed].join("|");
 }
