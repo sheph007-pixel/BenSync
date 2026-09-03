@@ -19,7 +19,7 @@ export interface GroupFunding {
     retro: number;
     credits: number;
     billed: number;
-    byPlan: Record<string, { lines: number; monthly: number; adjustments: number; byTier: Record<string, { n: number; monthly: number; adjustments: number; rate: number | null; rateLines: number; otherRates: { rate: number; n: number }[]; retro: number; credits: number }> }>;
+    byPlan: Record<string, { lines: number; monthly: number; adjustments: number; byTier: Record<string, { n: number; monthly: number; adjustments: number; rate: number | null; rateLines: number; rateProrated?: boolean; otherRates: { rate: number; n: number }[]; partialLines?: number; retro: number; credits: number }>; untiered?: { n: number; monthly: number; rates: number[] } | null }>;
   };
   other: { lines: number; monthly: number; byProduct: Record<string, { lines: number; monthly: number }> };
   totalMonthly: number;
@@ -145,7 +145,12 @@ export default function FundingPanel({ token, funding, groups, onFunding, onOver
       });
       const j = await r.json().catch(() => ({ error: `Server returned ${r.status}.` }));
       if (!r.ok) setError(j.error || "Could not read the workbook.");
-      else onFunding(j.funding, j.groups);
+      else {
+        onFunding(j.funding, j.groups);
+        if (j.overrides) onOverrides(j.overrides);
+        const a = j.rates?.applied || 0;
+        setDone(`Workbook read. ${a ? `${a} tier rate${a === 1 ? "" : "s"} set from billing across ${j.rates.groups} group${j.rates.groups === 1 ? "" : "s"}` : "Every billed rate already matched the XML"}${j.rates?.skipped ? ` · ${j.rates.skipped} billed plan${j.rates.skipped === 1 ? "" : "s"} not in the group's XML` : ""}.`);
+      }
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -159,6 +164,7 @@ export default function FundingPanel({ token, funding, groups, onFunding, onOver
     try {
       const j = await post(token, "/api/admin/funding/assign", { invoice, group });
       onFunding(j.funding, j.groups);
+      if (j.overrides) onOverrides(j.overrides);
     } catch (e) {
       setError((e as Error).message);
     }
@@ -450,6 +456,11 @@ export function GroupBilling({ token, group, month, onOverrides }: BillingProps)
                 <td style={{ ...cell(), whiteSpace: "normal" }}>
                   {plan}
                   {!inXml.has(plan) && <div style={{ fontSize: 11, color: C.amber }}>not among this group&rsquo;s XML plans</div>}
+                  {p.untiered && (
+                    <div style={{ fontSize: 11, color: C.amber }}>
+                      {p.untiered.n} line{p.untiered.n === 1 ? "" : "s"} with no rate band @ {p.untiered.rates.map((r) => `$${r.toFixed(2)}`).join(", ")}
+                    </div>
+                  )}
                 </td>
                 {TIERS.map((t) => {
                   const x = p.byTier[t];
@@ -457,10 +468,11 @@ export function GroupBilling({ token, group, month, onOverrides }: BillingProps)
                   const off = x && x.rate != null && xr != null && Math.abs(xr - x.rate) > 0.01;
                   return (
                     <td key={t} style={cell(true)}>
-                      {x ? (
+                      {x && (x.n > 0 || x.rate != null) ? (
                         <>
                           <div>
                             <strong>{x.n}</strong> @ {x.rate == null ? "—" : `$${x.rate.toFixed(2)}`}
+                            {x.rateProrated ? <span style={{ fontSize: 11, color: C.amber }}> prorated</span> : ""}
                           </div>
                           <div style={{ fontSize: 11, color: off ? C.red : xr == null ? C.amber : C.ghost }}>
                             {xr == null ? "XML: no billed rate" : off ? `XML: $${xr.toFixed(2)}` : "XML same"}
@@ -468,6 +480,11 @@ export function GroupBilling({ token, group, month, onOverrides }: BillingProps)
                             {x.credits ? ` · ${x.credits} credit${x.credits === 1 ? "" : "s"}` : ""}
                           </div>
                         </>
+                      ) : x ? (
+                        <span style={{ fontSize: 11, color: C.ghost }}>
+                          —{x.retro ? ` · ${x.retro} retro` : ""}
+                          {x.credits ? ` · ${x.credits} credit${x.credits === 1 ? "" : "s"}` : ""}
+                        </span>
                       ) : (
                         <span style={{ color: C.ghost }}>—</span>
                       )}
@@ -491,7 +508,11 @@ export function GroupBilling({ token, group, month, onOverrides }: BillingProps)
       </div>
       <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12 }}>
         <button onClick={() => void apply()} disabled={busy || !differing} style={{ ...btn(true), opacity: busy || !differing ? 0.6 : 1, cursor: busy || !differing ? "default" : "pointer" }}>
-          {differing ? `Use billed rates (${differing} tier${differing === 1 ? "" : "s"} differ)` : "Billed rates already match"}
+          {differing
+            ? `Use billed rates (${differing} tier${differing === 1 ? "" : "s"} differ)`
+            : plans.some(([plan]) => inXml.has(plan))
+              ? "Billed rates already match"
+              : "No XML plan to compare"}
         </button>
         {note && <span style={{ fontSize: 12.5, color: C.green }}>{note}</span>}
       </div>

@@ -108,12 +108,57 @@ export function parseFunding(buffer, filename = "") {
   // prior month billed late ("retro"), or a reversal ("credit"). Enrollment
   // and rates come from current lines only; the rest are adjustments.
   for (const l of lines) {
-    const m = /(\d{1,2})\/\d{1,2}\/(\d{4})/.exec(l.start);
-    const ym = m ? `${m[2]}-${m[1].padStart(2, "0")}` : null;
+    const m = /(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(l.start);
+    const ym = m ? `${m[3]}-${m[1].padStart(2, "0")}` : null;
     l.kind = l.rate < 0 ? "credit" : ym && month && ym !== month ? "retro" : "current";
+    // A full month runs from the 1st to the month's last day (or has no end).
+    // Anything shorter is prorated and must not set the tier's rate.
+    const e = /(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(l.end);
+    const lastDay = m ? new Date(Number(m[3]), Number(m[1]), 0).getDate() : null;
+    l.full = !!m && Number(m[2]) === 1 && (!e || (Number(e[2]) === lastDay && e[1] === m[1] && e[3] === m[3]));
   }
   const fm = /(\d{2})(\d{2})(\d{2})\d*/.exec(filename.replace(/^.*_(\d{6,})\D*$/, "$1"));
   return { month, lines, fileStamp: fm ? `20${fm[3]}-${fm[1]}-${fm[2]}` : null };
+}
+
+/**
+ * A plan name reduced to what identifies it: case, punctuation and any plan
+ * year dropped. Billing product IDs carry the year mid-string ("EBPA Platinum
+ * 150 (MP34/MP92) 2026 - Union and Non") and are cut at 50 characters, so a
+ * billed name may also be a prefix of the XML's.
+ */
+export const planKey = (s) =>
+  String(s || "")
+    .toLowerCase()
+    .replace(/\b(19|20)\d{2}\b/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+
+/** The XML plan a billed product is, or the cleaned billed name when none fits. */
+export function resolvePlan(product, xmlPlans) {
+  const cleaned = product.replace(/\s+(19|20)\d{2}\s*$/, "").trim();
+  const k = planKey(product);
+  if (!k || !xmlPlans || !xmlPlans.length) return cleaned;
+  const exact = xmlPlans.find((x) => planKey(x) === k);
+  if (exact) return exact;
+  if (k.length >= 12) {
+    const pre = xmlPlans.filter((x) => planKey(x).startsWith(k) || k.startsWith(planKey(x)));
+    if (pre.length === 1) return pre[0];
+  }
+  return cleaned;
+}
+
+/** Levenshtein distance, for a billing org that is a group's name with a typo. */
+function editDistance(a, b) {
+  const m = a.length;
+  const n = b.length;
+  let prev = Array.from({ length: n + 1 }, (_, j) => j);
+  for (let i = 1; i <= m; i++) {
+    const cur = [i];
+    for (let j = 1; j <= n; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[n];
 }
 
 /**
@@ -177,6 +222,16 @@ export function assignInvoices(lines, groups) {
     const hits = [...byName.entries()].filter(([n]) => n.startsWith(k) || k.startsWith(n));
     return hits.length === 1 ? hits[0][1] : null;
   };
+  // A billing org that is a group's name outright (a typo or two allowed)
+  // says where the invoice belongs, whatever the names vote — sister
+  // companies share people, and the org line is the carrier's own filing.
+  const namedOutright = (org) => {
+    const k = loose(org);
+    if (!k || k.length < 8) return null;
+    if (byName.has(k)) return byName.get(k);
+    const near = [...byName.entries()].filter(([n]) => Math.abs(n.length - k.length) <= 2 && editDistance(n, k) <= 2);
+    return near.length === 1 ? near[0][1] : null;
+  };
 
   const byInvoice = {};
   const unassigned = [];
@@ -187,6 +242,11 @@ export function assignInvoices(lines, groups) {
     const total = totals.get(invoice) || 0;
     const orgs = [...new Set(lines.filter((l) => l.invoice === invoice).map((l) => l.org))];
     const candidates = ranked.slice(0, 3).map(([g, n]) => ({ group: g, votes: Math.round(n * 100) / 100 }));
+    const outright = orgs.map(namedOutright).find(Boolean);
+    if (outright) {
+      byInvoice[invoice] = { group: outright, votes: Math.round((v[outright] || 0) * 100) / 100, matched: Math.round(matched * 100) / 100, total, orgs, by: "org name", candidates };
+      continue;
+    }
     // Majority of the people we could place, and at least one whole person.
     if (ranked.length && ranked[0][1] >= 1 && ranked[0][1] / matched >= 0.6) {
       byInvoice[invoice] = { group: ranked[0][0], votes: Math.round(ranked[0][1] * 100) / 100, matched: Math.round(matched * 100) / 100, total, orgs, by: "names", candidates };
@@ -209,8 +269,9 @@ export function assignInvoices(lines, groups) {
  * billed rate, other products, and totals. No participant names here — this
  * is what the admin screens and the reconciliation use.
  */
-export function summariseFunding(lines, byInvoice) {
+export function summariseFunding(lines, byInvoice, xmlPlansByGroup = {}) {
   const groups = {};
+  const planNames = new Map(); // group||product → resolved plan
   for (const l of lines) {
     const a = byInvoice[l.invoice];
     if (!a || !a.group) continue;
@@ -223,10 +284,17 @@ export function summariseFunding(lines, byInvoice) {
     g.invoices.add(l.invoice);
     g.orgs.add(l.org);
     if (l.medical) {
-      const plan = l.product.replace(/\s+(19|20)\d{2}\s*$/, "").trim();
-      const p = (g.medical.byPlan[plan] = g.medical.byPlan[plan] || { lines: 0, monthly: 0, adjustments: 0, byTier: {} });
-      const tier = bandTier(l.band) || "(unknown)";
-      const t = (p.byTier[tier] = p.byTier[tier] || { n: 0, monthly: 0, adjustments: 0, rates: {}, retro: 0, credits: 0 });
+      const pk = `${a.group}||${l.product}`;
+      if (!planNames.has(pk)) planNames.set(pk, resolvePlan(l.product, xmlPlansByGroup[a.group]));
+      const plan = planNames.get(pk);
+      const p = (g.medical.byPlan[plan] = g.medical.byPlan[plan] || { lines: 0, monthly: 0, adjustments: 0, byTier: {}, unknown: [] });
+      let tier = bandTier(l.band);
+      if (!tier) {
+        // No rate band on the line: settled after the plan's tiers are known.
+        p.unknown.push(l);
+        continue;
+      }
+      const t = (p.byTier[tier] = p.byTier[tier] || { n: 0, monthly: 0, adjustments: 0, rates: {}, partial: {}, retro: 0, credits: 0 });
       if (l.kind === "current") {
         // One current line per participant per plan: the month's enrollment.
         g.medical.people.add(l.familyId || l.participant);
@@ -236,8 +304,10 @@ export function summariseFunding(lines, byInvoice) {
         p.monthly += l.rate;
         t.n++;
         t.monthly += l.rate;
+        // Only a full month's line says what the tier's rate is.
         const rk = l.rate.toFixed(2);
-        t.rates[rk] = (t.rates[rk] || 0) + 1;
+        if (l.full) t.rates[rk] = (t.rates[rk] || 0) + 1;
+        else t.partial[rk] = (t.partial[rk] || 0) + 1;
       } else {
         // Retro adds and credits change the invoice, not who is enrolled.
         g.medical.adjustments += l.rate;
@@ -260,27 +330,90 @@ export function summariseFunding(lines, byInvoice) {
     }
   }
   const r2 = (n) => Math.round(n * 100) / 100;
+  const modeOf = (counts) => Object.entries(counts).sort((a, b) => b[1] - a[1]);
   const out = {};
   for (const [name, g] of Object.entries(groups)) {
     const byPlan = {};
     for (const [plan, p] of Object.entries(g.medical.byPlan)) {
+      // Lines with no rate band: filed under the tier whose full-month rate
+      // they carry, when exactly one does; the rest are reported as untiered.
+      const untiered = [];
+      for (const l of p.unknown) {
+        const rk = Math.abs(l.rate).toFixed(2);
+        const fits = Object.entries(p.byTier).filter(([, t]) => modeOf(t.rates)[0]?.[0] === rk);
+        if (fits.length !== 1) {
+          untiered.push(l);
+          continue;
+        }
+        const t = fits[0][1];
+        if (l.kind === "current") {
+          g.medical.people.add(l.familyId || l.participant);
+          g.medical.lines++;
+          g.medical.monthly += l.rate;
+          p.lines++;
+          p.monthly += l.rate;
+          t.n++;
+          t.monthly += l.rate;
+        } else {
+          g.medical.adjustments += l.rate;
+          p.adjustments += l.rate;
+          t.adjustments += l.rate;
+          if (l.kind === "credit") {
+            g.medical.credits++;
+            t.credits++;
+          } else {
+            g.medical.retro++;
+            t.retro++;
+          }
+        }
+      }
       const byTier = {};
       for (const [tier, t] of Object.entries(p.byTier)) {
-        // The billed rate for the tier: the amount most current lines carry.
-        // Anything else is a partial month and is reported as such.
-        const ranked = Object.entries(t.rates).sort((a, b) => b[1] - a[1]);
+        // The billed rate for the tier: the amount most full-month lines
+        // carry. With none, the most common prorated amount, flagged.
+        const ranked = modeOf(t.rates);
+        const partial = modeOf(t.partial);
+        const lead = ranked[0] || partial[0] || null;
         byTier[tier] = {
           n: t.n,
           monthly: r2(t.monthly),
           adjustments: r2(t.adjustments),
-          rate: ranked[0] ? Number(ranked[0][0]) : null,
-          rateLines: ranked[0] ? ranked[0][1] : 0,
+          rate: lead ? Number(lead[0]) : null,
+          rateLines: lead ? lead[1] : 0,
+          rateProrated: !ranked[0] && !!partial[0],
           otherRates: ranked.slice(1).map(([r, n]) => ({ rate: Number(r), n })),
+          partialLines: Object.values(t.partial).reduce((a, b) => a + b, 0),
           retro: t.retro,
           credits: t.credits,
         };
       }
-      byPlan[plan] = { lines: p.lines, monthly: r2(p.monthly), adjustments: r2(p.adjustments), byTier };
+      // Untiered lines still count toward the group's month; they just cannot
+      // sit in a tier column.
+      let untieredMonthly = 0;
+      let untieredCurrent = 0;
+      for (const l of untiered) {
+        if (l.kind === "current") {
+          g.medical.people.add(l.familyId || l.participant);
+          g.medical.lines++;
+          g.medical.monthly += l.rate;
+          p.lines++;
+          p.monthly += l.rate;
+          untieredCurrent++;
+          untieredMonthly += l.rate;
+        } else {
+          g.medical.adjustments += l.rate;
+          p.adjustments += l.rate;
+          if (l.kind === "credit") g.medical.credits++;
+          else g.medical.retro++;
+        }
+      }
+      byPlan[plan] = {
+        lines: p.lines,
+        monthly: r2(p.monthly),
+        adjustments: r2(p.adjustments),
+        byTier,
+        untiered: untieredCurrent ? { n: untieredCurrent, monthly: r2(untieredMonthly), rates: [...new Set(untiered.filter((l) => l.kind === "current").map((l) => l.rate))] } : null,
+      };
     }
     const medical = {
       participants: g.medical.people.size,

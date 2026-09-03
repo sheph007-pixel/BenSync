@@ -531,7 +531,7 @@ app.post(
         if (a.by === "staff" && byInvoice[inv]) byInvoice[inv] = { ...byInvoice[inv], group: a.group, by: "staff" };
       }
     }
-    const summary = summariseFunding(parsed.lines, byInvoice);
+    const summary = summariseFunding(parsed.lines, byInvoice, xmlPlansByGroup());
     try {
       funding = await storeFunding({
         month: parsed.month,
@@ -545,10 +545,58 @@ app.post(
     } catch (e) {
       return res.status(500).json({ error: "Could not save the workbook: " + e.message });
     }
+    // The month's billed rates go straight onto the groups' plans, so what a
+    // client sees is what is being billed; nothing to press.
+    let rates = { applied: 0, skipped: 0, groups: 0 };
+    try {
+      rates = await applyBilledRates(Object.keys(funding.summary), req.staffEmail || "funding");
+    } catch (e) {
+      console.error("could not apply billed rates:", e.message);
+    }
     rebuild();
-    res.json({ ok: true, funding: fundingView(funding), groups: adminGroups });
+    res.json({ ok: true, funding: fundingView(funding), groups: adminGroups, rates, overrides });
   },
 );
+
+/** Each group's XML plan names, for matching billed products to plans. */
+const xmlPlansByGroup = () => Object.fromEntries(groups.map((g) => [g.name, (g.plans || []).map((p) => p.plan)]));
+
+/**
+ * Set tier rates from billing: for each plan and tier the workbook bills,
+ * where the XML has no billed rate for that tier or a different one, write a
+ * hand-keyed override with the billed amount. Plans the group's XML does not
+ * carry are skipped — a billed plan the census has never seen is a question,
+ * not a rate — and so is a rate known only from a prorated line.
+ */
+async function applyBilledRates(targets, by) {
+  let applied = 0;
+  let skipped = 0;
+  const touched = new Set();
+  for (const name of targets) {
+    const f = funding.summary[name];
+    const g = groups.find((x) => x.name === name);
+    if (!f || !g) continue;
+    const xmlPlans = new Set((g.plans || []).map((p) => p.plan));
+    for (const [plan, p] of Object.entries(f.medical.byPlan)) {
+      if (!xmlPlans.has(plan)) {
+        skipped++;
+        continue;
+      }
+      for (const [tier, t] of Object.entries(p.byTier)) {
+        if (t.rate == null || t.rate <= 0 || t.rateProrated || !bandTier(tier)) continue;
+        const billed = ((g.rates || {})[plan] || {})[tier];
+        const key = `${name}||${plan}||${tier}`;
+        const current = overrides[key] != null ? Number(overrides[key]) : billed;
+        if (current != null && Math.abs(current - t.rate) <= 0.01) continue;
+        overrides[key] = String(t.rate);
+        if (db) await db.setOverride(name, plan, tier, t.rate, by);
+        applied++;
+        touched.add(name);
+      }
+    }
+  }
+  return { applied, skipped, groups: touched.size };
+}
 
 /** File an invoice under a group by hand (or take it out of one). */
 app.post("/api/admin/funding/assign", requireStaff, express.json({ limit: "16kb" }), async (req, res) => {
@@ -559,59 +607,29 @@ app.post("/api/admin/funding/assign", requireStaff, express.json({ limit: "16kb"
   const clean = group == null || group === "" ? null : String(group);
   if (clean && !groups.some((g) => g.name === clean)) return res.status(404).json({ error: "No such group." });
   funding.byInvoice[inv] = { ...funding.byInvoice[inv], group: clean, by: clean ? "staff" : null };
-  funding.summary = summariseFunding(funding.lines, funding.byInvoice);
+  funding.summary = summariseFunding(funding.lines, funding.byInvoice, xmlPlansByGroup());
   try {
     if (db) await db.updateFunding(funding.id, funding.byInvoice, funding.summary);
+    if (clean) await applyBilledRates([clean], req.staffEmail || "funding");
   } catch (e) {
     return res.status(500).json({ error: "Could not save: " + e.message });
   }
   rebuild();
-  res.json({ ok: true, funding: fundingView(funding), groups: adminGroups });
+  res.json({ ok: true, funding: fundingView(funding), groups: adminGroups, overrides });
 });
 
-/**
- * Set tier rates from billing: for each plan and tier the workbook bills,
- * where the XML has no billed rate for that tier or a different one, write a
- * hand-keyed override with the billed amount. Plans the group's XML does not
- * carry are skipped — a billed plan the census has never seen is a question,
- * not a rate.
- */
+/** Re-run the billed-rate write for one group or all — after a hand filing, say. */
 app.post("/api/admin/funding/apply-rates", requireStaff, express.json({ limit: "16kb" }), async (req, res) => {
   if (!funding) return res.status(400).json({ error: "Upload the funding workbook first." });
   const { group, all } = req.body || {};
   const targets = all ? Object.keys(funding.summary) : group ? [String(group)] : [];
   if (!targets.length) return res.status(400).json({ error: "Say which group, or all." });
-  let applied = 0;
-  let skipped = 0;
-  const touched = new Set();
   try {
-    for (const name of targets) {
-      const f = funding.summary[name];
-      const g = groups.find((x) => x.name === name);
-      if (!f || !g) continue;
-      const xmlPlans = new Set((g.plans || []).map((p) => p.plan));
-      for (const [plan, p] of Object.entries(f.medical.byPlan)) {
-        if (!xmlPlans.has(plan)) {
-          skipped++;
-          continue;
-        }
-        for (const [tier, t] of Object.entries(p.byTier)) {
-          if (t.rate == null || t.rate <= 0 || !bandTier(tier) && tier === "(unknown)") continue;
-          const billed = ((g.rates || {})[plan] || {})[tier];
-          const key = `${name}||${plan}||${tier}`;
-          const current = overrides[key] != null ? Number(overrides[key]) : billed;
-          if (current != null && Math.abs(current - t.rate) <= 0.01) continue;
-          overrides[key] = String(t.rate);
-          if (db) await db.setOverride(name, plan, tier, t.rate, req.staffEmail || "funding");
-          applied++;
-          touched.add(name);
-        }
-      }
-    }
+    const r = await applyBilledRates(targets, req.staffEmail || "funding");
+    res.json({ ok: true, ...r, overrides });
   } catch (e) {
-    return res.status(500).json({ error: "Could not save: " + e.message });
+    res.status(500).json({ error: "Could not save: " + e.message });
   }
-  res.json({ ok: true, applied, skipped, groups: touched.size, overrides });
 });
 
 /**

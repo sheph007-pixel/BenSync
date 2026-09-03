@@ -8,6 +8,7 @@ import {
   rateFor,
   split,
   splitSource,
+  tierByCensus,
   type Group,
   type KennionData,
   type Overrides,
@@ -32,6 +33,29 @@ interface Props {
   eePct: number;
   depPct: number;
   onOpenPlan: (plan: string) => void;
+}
+
+/**
+ * True when every tier the month's billing prices, on a plan the census
+ * carries, is shown at that billed amount — so the page may say so.
+ */
+function billedRatesShown(data: KennionData, overrides: Overrides, g: Group): boolean {
+  const f = data.funding;
+  if (!f) return false;
+  const xmlPlans = new Set((g.plans || []).map((p) => p.plan));
+  let compared = 0;
+  for (const [plan, p] of Object.entries(f.byPlan)) {
+    if (!xmlPlans.has(plan)) continue;
+    for (const [tier, x] of Object.entries(p.byTier)) {
+      if (x.rate == null || x.n <= 0) continue;
+      const t = tierByCensus(tier);
+      if (!t) continue;
+      const shown = rateFor(overrides, g, plan, t.key).rate;
+      if (shown == null || Math.abs(shown - x.rate) > 0.01) return false;
+      compared++;
+    }
+  }
+  return compared > 0;
 }
 
 const monthName = (m: string | null) =>
@@ -79,7 +103,8 @@ export default function Current({
           <strong style={{ fontWeight: 600, color: C.ink }}>{monthName(data.funding.month)} billing:</strong> Employee Navigator billed{" "}
           {data.funding.participants} medical participant{data.funding.participants === 1 ? "" : "s"} for {money0(data.funding.monthly)} this month
           {data.funding.adjustments ? ` (${data.funding.adjustments < 0 ? "−" : "+"}${money0(Math.abs(data.funding.adjustments))} in prior-month adjustments)` : ""}
-          {data.funding.otherMonthly ? `, plus ${money0(data.funding.otherMonthly)} in dental, vision and other lines` : ""}. The rates below are the billed rates.
+          {data.funding.otherMonthly ? `, plus ${money0(data.funding.otherMonthly)} in dental, vision and other lines` : ""}.
+          {billedRatesShown(data, overrides, g) ? " The rates below are the rates billed for the month." : ""}
         </p>
       )}
 
