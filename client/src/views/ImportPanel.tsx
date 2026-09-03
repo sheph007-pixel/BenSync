@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
-import { C, money0, panel } from "@/lib/importui";
+import ImportSection, { type LastUpload } from "@/views/ImportSection";
+import { C, money0 } from "@/lib/importui";
 
 interface Company {
   name: string;
@@ -44,9 +45,11 @@ interface Props {
   durable: boolean;
   storage: string;
   onImported: (groups: unknown[], imports?: unknown[]) => void;
+  /** The most recent import on record, with what it produced. */
+  last?: (LastUpload & { companies: number; enrolled: number }) | null;
 }
 
-export default function ImportPanel({ token, durable, storage, onImported }: Props) {
+export default function ImportPanel({ token, onImported, last }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState("");
@@ -156,57 +159,23 @@ export default function ImportPanel({ token, durable, storage, onImported }: Pro
   const chosenCount = preview ? preview.companies.filter((c) => chosen[c.name]).length : 0;
 
   return (
-    <div style={{ ...panel, marginTop: 16, padding: "20px 22px" }}>
-      <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600, color: C.ink }}>
-        Import from Employee Navigator
-      </h2>
-      <div style={{ marginTop: 8, fontSize: 13, color: C.muted, lineHeight: 1.65, maxWidth: 880 }}>
-        Upload an Employee Navigator XML export — a single group, or a full Data API export with
-        every company in it. It reads every current enrollment — medical for the rate tables, every
-        other line for the premium totals — and pulls the billed rate and the actual employer/employee
-        split for every tier someone is enrolled in. Anyone still on a plan counts; terminated employees
-        and ended or waived elections do not. Nothing is saved
-        until you confirm.
-      </div>
-
-      {storage === "postgres"
-        ? banner(
-            C.greenTint,
-            C.greenEdge,
-            C.green,
-            <>Imports are stored in Postgres, so they survive deploys and are shared across the team.</>,
-          )
-        : !durable &&
-          banner(
-            C.amberTint,
-            C.amberEdge,
-            C.amber,
-            <>
-              No database is connected, so imports are held on the server's disk, which Railway
-              replaces on every deploy. Set <code>DATABASE_URL</code> (or <code>DATA_DIR</code> to a
-              mounted volume) to make them permanent.
-            </>,
-          )}
-
-      <div style={{ marginTop: 14, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
-        <input
-          ref={fileRef}
-          type="file"
-          accept=".xml,text/xml,application/xml"
-          disabled={!!busy}
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) void pick(f);
-          }}
-          style={{ fontSize: 13 }}
-        />
-        {fileName && <span style={{ fontSize: 12.5, color: C.faint }}>{fileName}</span>}
-        {busy && <span style={{ fontSize: 12.5, color: C.blue }}>{busy}</span>}
-      </div>
-
-      {error && banner(C.redTint, C.redEdge, C.red, error)}
-      {done && banner(C.greenTint, C.greenEdge, C.green, done)}
-
+    <ImportSection
+      step={1}
+      title="Employee Navigator XML export"
+      what="Data_API_….xml — the full Data API export, every company in it"
+      accept=".xml,text/xml,application/xml"
+      ariaLabel="Upload the Employee Navigator XML export"
+      inputRef={fileRef}
+      disabled={!!busy}
+      onFile={(f) => void pick(f)}
+      busy={busy || (fileName && !preview ? fileName : "")}
+      last={last || null}
+      status={last ? { kind: "ok", label: `Imported ${new Date(last.when).toLocaleDateString()}` } : { kind: "none", label: "Not uploaded yet" }}
+      summary={last ? `${last.companies} companies imported · ${last.enrolled.toLocaleString()} enrolled` : "The portal is serving the shipped census until an export is imported."}
+      error={error}
+      done={done}
+      open={!!preview}
+    >
       {preview && (
         <div style={{ marginTop: 16, paddingTop: 14, borderTop: `1px solid ${C.rule}` }}>
           <div
@@ -440,6 +409,6 @@ export default function ImportPanel({ token, durable, storage, onImported }: Pro
           </div>
         </div>
       )}
-    </div>
+    </ImportSection>
   );
 }

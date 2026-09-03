@@ -349,6 +349,16 @@ configuration — for groups whose export has been loaded, and is not adjustable
 there. Groups without one show a "Pending" notice and placeholder percentages,
 clearly labelled; their total premium is billed data and is correct.
 
+## The Import tab
+
+Three numbered sections, one per file from Employee Navigator, in the order
+they are used: the **XML export**, the **carrier stats report**, the **monthly
+funding workbook**. Each shows the file it wants, a Choose file button, the
+last upload (file, time, who), a one-line result, and a status pill; the
+tables, diagnostics and per-group checks sit behind "Show details". An XML
+import waiting to be confirmed keeps its details open. The XML import history
+is a collapsed list at the bottom.
+
 ## Importing an Employee Navigator export
 
 Upload an EN XML in Rate Administration — a single group, or a full Data API

@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState, type CSSProperties } from "react";
+import ImportSection from "@/views/ImportSection";
 import { C, money0, panel } from "@/lib/importui";
 import { pill } from "@/lib/ui";
 import Link from "@/lib/Link";
@@ -207,52 +208,32 @@ export default function FundingPanel({ token, funding, groups, onFunding, onOver
   const noBilling = rows.filter((r) => !r.f).length;
 
   return (
-    <div style={{ ...panel, marginTop: 16, padding: "20px 22px" }}>
-      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: 12 }}>
-        <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600, color: C.ink }}>Monthly funding</h2>
-        {funding && (
-          <span style={{ fontSize: 12.5, color: C.faint }}>
-            {funding.filename} · {monthLabel(funding.month)} billing{funding.fileStamp ? ` as of ${funding.fileStamp}` : ""} · uploaded{" "}
-            {new Date(funding.uploadedAt).toLocaleString()}
-            {funding.uploadedBy ? ` by ${funding.uploadedBy}` : ""}
-          </span>
-        )}
-      </div>
-      <div style={{ marginTop: 8, fontSize: 13, color: C.muted, lineHeight: 1.65, maxWidth: 880 }}>
-        Employee Navigator&rsquo;s funding workbook for the month: one billed line per participant per
-        product, with the rate, for both captives. Each invoice is filed under its group by matching the
-        people billed to the group&rsquo;s members from the XML — the workbook names billing divisions,
-        not companies — and the result is what each group is actually being billed this month, plan by
-        plan and tier by tier. Enrollment and rates come from the month&rsquo;s own lines; a prior month billed
-        late or reversed is an adjustment to the invoice, not a change in who is enrolled.
-      </div>
-
-      <div style={{ marginTop: 14, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
-        <input
-          ref={ref}
-          type="file"
-          accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) void upload(f);
-          }}
-          aria-label="Upload the monthly funding workbook"
-          disabled={!!busy}
-          style={{ fontSize: 13 }}
-        />
-        <span style={{ fontSize: 12.5, color: C.faint }}>{busy || "September_Funding_….xlsx, as Employee Navigator exports it"}</span>
-      </div>
-      {error && (
-        <div role="alert" style={{ marginTop: 10, padding: "9px 12px", background: C.redTint, border: `1px solid ${C.redEdge}`, borderRadius: 4, fontSize: 13, color: C.red }}>
-          {error}
-        </div>
-      )}
-      {done && (
-        <div style={{ marginTop: 10, padding: "9px 12px", background: C.greenTint, border: `1px solid ${C.greenEdge}`, borderRadius: 4, fontSize: 13, color: C.green }}>
-          {done}
-        </div>
-      )}
-
+    <ImportSection
+      step={3}
+      title="Monthly funding workbook"
+      what="September_Funding_….xlsx — the month's billing, one line per participant per product"
+      accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+      ariaLabel="Upload the monthly funding workbook"
+      inputRef={ref}
+      disabled={!!busy}
+      onFile={(f) => void upload(f)}
+      busy={busy}
+      last={funding ? { filename: funding.filename, when: funding.uploadedAt, by: funding.uploadedBy } : null}
+      status={
+        !funding
+          ? { kind: "none", label: "Not uploaded yet" }
+          : funding.totals.unassigned
+            ? { kind: "warn", label: `${funding.totals.unassigned} invoice${funding.totals.unassigned === 1 ? "" : "s"} need a group` }
+            : { kind: "ok", label: "Filed and applied" }
+      }
+      summary={
+        funding
+          ? `${monthLabel(funding.month)} · ${funding.totals.assigned} of ${funding.totals.invoices} invoices filed · ${funding.totals.participantsAll.toLocaleString()} medical participants · ${money0(funding.totals.medicalMonthly)} / mo · ${mismatches ? `${mismatches} group${mismatches === 1 ? "" : "s"} differ from the XML` : "every group within 1% of the XML"}`
+          : "Once uploaded, every invoice is filed under its group and the billed rates go onto the plans."
+      }
+      error={error}
+      done={done}
+    >
       {funding && (
         <>
           <div style={{ marginTop: 16, display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: 12 }}>
@@ -377,12 +358,7 @@ export default function FundingPanel({ token, funding, groups, onFunding, onOver
           </div>
         </>
       )}
-      {!funding && (
-        <div style={{ marginTop: 12, fontSize: 12.5, color: C.faint }}>
-          No funding workbook uploaded yet. Once it is, every group shows what it is billed this month against the XML.
-        </div>
-      )}
-    </div>
+    </ImportSection>
   );
 }
 
