@@ -8,7 +8,6 @@ import {
   type Overrides,
 } from "@/lib/model";
 import { C, chip, Logo, num, panel, pill, textInput, th } from "@/lib/ui";
-import { money0 } from "@/lib/model";
 import Link from "@/lib/Link";
 import { PATHS, navigate } from "@/lib/router";
 import Footer from "@/views/Footer";
@@ -137,6 +136,8 @@ export default function Admin({
     let nCalc = 0;
     let nNone = 0;
     let nOff = 0;
+    let nOnSchedule = 0;
+    let nUnjudged = 0;
     let totalCells = 0;
 
     const all = activeGroups.flatMap((g) =>
@@ -146,6 +147,8 @@ export default function Admin({
         // A plan can only be judged off-schedule once two tiers are billed.
         const offSchedule = billedCount >= 2 && !factorsHold(overrides, g, p.plan);
         if (offSchedule) nOff++;
+        else if (billedCount >= 2) nOnSchedule++;
+        else nUnjudged++;
 
         const cells = TIERS.map((t) => {
           totalCells++;
@@ -244,7 +247,7 @@ export default function Admin({
 
     return {
       all,
-      stats: { nBilled, nManual, nCalc, nNone, nOff, totalCells },
+      stats: { nBilled, nManual, nCalc, nNone, nOff, nOnSchedule, nUnjudged, totalCells },
     };
   }, [activeGroups, overrides]);
 
@@ -255,42 +258,6 @@ export default function Admin({
       (!gapsOnly || r.missing > 0) &&
       (!q || `${r.group} ${r.plan}`.toLowerCase().includes(q)),
   );
-
-  /**
-   * Where the medical premium sits, by carrier as the export named it. This
-   * is the reconciliation for the Groups page's group-health figure: every
-   * dollar is in exactly one row, and the rows say which are counted.
-   */
-  const audit = useMemo(() => {
-    type Row = { key: string; label: string; counted: boolean; carriers: Set<string>; groups: Set<string>; plans: number; enrolled: number; monthly: number };
-    const rows = new Map<string, Row>();
-    const zero: { group: string; plan: string; enrolled: number }[] = [];
-    const add = (key: string, label: string, counted: boolean, g: string, p: { plan: string; tpa?: string; enrolled?: number; monthly?: number }) => {
-      const r = rows.get(key) || { key, label, counted, carriers: new Set<string>(), groups: new Set<string>(), plans: 0, enrolled: 0, monthly: 0 };
-      r.carriers.add((p.tpa || "").trim() || "(blank)");
-      r.groups.add(g);
-      r.plans++;
-      r.enrolled += p.enrolled || 0;
-      r.monthly += p.monthly || 0;
-      rows.set(key, r);
-    };
-    activeGroups.forEach((g) => {
-      (g.plans || []).forEach((raw) => {
-        const p = raw as unknown as { plan: string; tpa?: string; enrolled?: number; monthly?: number; program?: string | null; groupHealth?: boolean; assumed?: boolean };
-        if ((p.enrolled || 0) > 0 && !((p.monthly || 0) > 0)) zero.push({ group: g.name, plan: p.plan, enrolled: p.enrolled || 0 });
-        if (p.assumed) add("assumed", "Carrier not named on the plan — counted, because the group is EBPA / HealthEZ only", true, g.name, p);
-        else if (p.program === "EBPA") add("EBPA", "EBPA", true, g.name, p);
-        else if (p.program === "HealthEZ") add("HealthEZ", "HealthEZ", true, g.name, p);
-        else if (p.program === "BCBS-AL") add("BCBS-AL", "BCBS of Alabama — not group health", false, g.name, p);
-        else add("unknown", "Carrier not recognised — NOT counted", false, g.name, p);
-      });
-    });
-    const order = ["EBPA", "HealthEZ", "assumed", "BCBS-AL", "unknown"];
-    const list = [...rows.values()].sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key));
-    const medical = list.reduce((n, r) => n + r.monthly, 0);
-    const groupHealth = list.filter((r) => r.counted).reduce((n, r) => n + r.monthly, 0);
-    return { list, zero, medical, groupHealth };
-  }, [activeGroups]);
 
   const kpis = [
     {
@@ -311,7 +278,14 @@ export default function Admin({
     {
       label: "Still calculated",
       value: String(stats.nCalc + stats.nNone),
-      note: `${stats.nOff} on off-schedule plans`,
+      note: "at the tier schedule, until a real rate is keyed",
+    },
+    {
+      label: "On the tier schedule",
+      value: stats.nOff ? `${stats.nOnSchedule} of ${stats.nOnSchedule + stats.nOff}` : String(stats.nOnSchedule),
+      note: stats.nOff
+        ? `${stats.nOff} plan${stats.nOff === 1 ? "" : "s"} priced off it — key the real rates`
+        : "every plan with two billed tiers holds",
     },
   ];
 
@@ -453,63 +427,14 @@ export default function Admin({
           ))}
         </div>
 
-        <div style={{ ...panel, marginTop: 16, padding: "16px 18px" }}>
-          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: 12 }}>
-            <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: C.ink }}>
-              Where the medical premium sits
-            </h2>
-            <span style={{ fontSize: 12.5, color: C.faint }}>
-              {money0(audit.medical)} / mo across every medical plan · {money0(audit.groupHealth)} counted as group health
-            </span>
-          </div>
-          <div style={{ marginTop: 6, fontSize: 12.5, color: C.muted, lineHeight: 1.6, maxWidth: 900 }}>
-            The carrier is whatever the Employee Navigator export named on each plan. EBPA and HealthEZ
-            are the captive program and make up the Groups page&rsquo;s group-health figure; BCBS of
-            Alabama is left out on purpose. A carrier spelled in a way the rule does not recognise
-            shows up as its own row here instead of vanishing — say so and it will be matched.
-          </div>
-          <div style={{ overflowX: "auto", marginTop: 10 }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 760 }}>
-              <thead>
-                <tr>
-                  <th style={{ ...th, textAlign: "left", padding: "10px 8px 9px 0" }}>Carrier</th>
-                  <th style={{ ...th, textAlign: "left" }}>As named in the export</th>
-                  <th style={{ ...th, textAlign: "right" }}>Groups</th>
-                  <th style={{ ...th, textAlign: "right" }}>Plans</th>
-                  <th style={{ ...th, textAlign: "right" }}>Enrolled</th>
-                  <th style={{ ...th, textAlign: "right" }}>Monthly</th>
-                  <th style={{ ...th, textAlign: "right", padding: "10px 0 9px 8px" }}>Group health?</th>
-                </tr>
-              </thead>
-              <tbody>
-                {audit.list.map((r) => (
-                  <tr key={r.key} style={{ color: r.counted ? C.ink : C.body }}>
-                    <td style={{ padding: "8px 8px 8px 0", borderBottom: `1px solid ${C.hairline}` }}>{r.label}</td>
-                    <td style={{ padding: 8, borderBottom: `1px solid ${C.hairline}`, color: C.faint, fontSize: 12 }}>
-                      {[...r.carriers].sort().join(" · ")}
-                    </td>
-                    <td style={{ padding: 8, borderBottom: `1px solid ${C.hairline}`, textAlign: "right", ...num }}>{r.groups.size}</td>
-                    <td style={{ padding: 8, borderBottom: `1px solid ${C.hairline}`, textAlign: "right", ...num }}>{r.plans}</td>
-                    <td style={{ padding: 8, borderBottom: `1px solid ${C.hairline}`, textAlign: "right", ...num }}>{r.enrolled.toLocaleString()}</td>
-                    <td style={{ padding: 8, borderBottom: `1px solid ${C.hairline}`, textAlign: "right", fontWeight: 600, ...num }}>{money0(r.monthly)}</td>
-                    <td style={{ padding: "8px 0 8px 8px", borderBottom: `1px solid ${C.hairline}`, textAlign: "right" }}>
-                      <span style={r.counted ? pill(C.green, C.greenTint, C.greenEdge) : pill(C.faint, "#f2f4f5", "#e0e4e6")}>
-                        {r.counted ? "Counted" : "Excluded"}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {audit.zero.length > 0 && (
-            <div style={{ marginTop: 10, fontSize: 12.5, color: C.amber, lineHeight: 1.6 }}>
-              <strong>{audit.zero.length} plan{audit.zero.length === 1 ? "" : "s"} with people enrolled but no billed premium</strong>{" "}
-              — the export carried no PlanCost for them, so they add nothing to any total:{" "}
-              {audit.zero.slice(0, 8).map((z) => `${z.group} — ${z.plan} (${z.enrolled})`).join("; ")}
-              {audit.zero.length > 8 ? ` and ${audit.zero.length - 8} more` : ""}.
-            </div>
-          )}
+        <div style={{ ...panel, marginTop: 16, padding: "12px 16px", fontSize: 12.5, color: C.body, lineHeight: 1.6 }}>
+          <strong style={{ color: C.ink }}>Tier schedule</strong> — Employee 1.00 · Employee + Child(ren) 1.85 · Employee
+          + Spouse 2.00 · Employee + Family 2.85. Every calculated rate on this page is the plan&rsquo;s employee rate at
+          these factors.{" "}
+          {stats.nOff
+            ? `${stats.nOnSchedule} of ${stats.nOnSchedule + stats.nOff} plans with two or more billed tiers hold the schedule; ${stats.nOff} do not and are marked "Off schedule".`
+            : `All ${stats.nOnSchedule} plans with two or more billed tiers hold it.`}
+          {stats.nUnjudged ? ` ${stats.nUnjudged} plan${stats.nUnjudged === 1 ? " has" : "s have"} fewer than two billed tiers, so there is nothing to check against.` : ""}
         </div>
 
         <div
@@ -646,21 +571,6 @@ export default function Admin({
           </table>
         </div>
 
-        <div
-          style={{
-            marginTop: 14,
-            fontSize: 12.5,
-            color: C.faint,
-            lineHeight: 1.6,
-            maxWidth: 900,
-            textWrap: "pretty",
-          }}
-        >
-          Grey numbers are calculated at the program tier factors — EE 1.00, EE+SP 2.00, EE+CH 1.85,
-          EE+Family 2.85. Those factors reconcile exactly on 97 of the 100 plans where two or more
-          tiers are billed; the three that do not are flagged <strong>Off schedule</strong> and
-          should be keyed by hand from the rate sheet.
-        </div>
         </>
         )}
 

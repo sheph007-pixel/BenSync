@@ -221,7 +221,7 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
   const [broker, setBroker] = useState<"All" | Broker>("All");
   const [renewal, setRenewal] = useState<"All" | Renewal>("All");
   const [proposalsFilter, setProposalsFilter] = useState<"All" | "with" | "without">("All");
-  const [view, setView] = useState<"live" | "excluded" | "archived">("live");
+  const [view, setView] = useState<"live" | "all" | "excluded" | "archived">("live");
   const [sort, setSort] = useState<SortKey>("name");
   const [dir, setDir] = useState(1);
   const [editing, setEditing] = useState<Record<string, string>>({});
@@ -271,11 +271,13 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
   // within the current slice and still let you switch between states.
   const slice = groups.filter(
     (g) =>
-      (view === "archived"
-        ? !!g.archived
-        : view === "excluded"
-          ? !g.archived && g.eligible === false
-          : !g.archived && g.eligible !== false) &&
+      (view === "all"
+        ? true
+        : view === "archived"
+          ? !!g.archived
+          : view === "excluded"
+            ? !g.archived && g.eligible === false
+            : !g.archived && g.eligible !== false) &&
       (size === "All" || g.sizeCategory === size) &&
       (broker === "All" || (g.broker || "kennion") === broker) &&
       (proposalsFilter === "All" || (proposalsFilter === "with" ? (g.proposals || 0) > 0 : !(g.proposals || 0))) &&
@@ -357,7 +359,7 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
 
   const exportRows = () => {
     const tag = [
-      view === "live" ? "" : view === "excluded" ? "not-in-program" : "archived",
+      view === "live" ? "" : view === "all" ? "all-groups" : view === "excluded" ? "not-in-program" : "archived",
       renewal === "All" ? "" : renewal,
       broker === "All" ? "" : broker === "outside" ? "outside-broker" : "kennion",
       size === "All" ? "" : size.replace("+", "plus"),
@@ -396,11 +398,13 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
         }}
       >
         {tile(
-          filtering ? "Groups shown" : "Groups",
+          view === "all" ? "Groups (all)" : filtering ? "Groups shown" : "Groups",
           String(rows.length),
-          filtering
-            ? `of ${live.length} in the portal · ${shown.small} at 2-50 · ${shown.large} at 51+`
-            : `${counts.small} at 2-50 · ${counts.large} at 51+ (ALE)`,
+          view === "all"
+            ? `${live.length} in the portal · ${counts.archived} archived · ${counts.excluded} not in program`
+            : filtering
+              ? `of ${live.length} in the portal · ${shown.small} at 2-50 · ${shown.large} at 51+`
+              : `${counts.small} at 2-50 · ${counts.large} at 51+ (ALE)`,
         )}
         {tile(
           "Enrolled employees",
@@ -509,7 +513,8 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
           </select>
           {(counts.excluded > 0 || counts.archived > 0) && (
             <select aria-label="Which groups" value={view} onChange={(e) => setView(e.target.value as typeof view)} style={filterSelect}>
-              <option value="live">In the portal</option>
+              <option value="live">In the portal ({live.length})</option>
+              <option value="all">All groups ({groups.length})</option>
               {counts.excluded > 0 && <option value="excluded">Not in program ({counts.excluded})</option>}
               {counts.archived > 0 && <option value="archived">Archived ({counts.archived})</option>}
             </select>
@@ -619,6 +624,13 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
                       <Link href={groupPath(g.name)} style={{ color: C.blue, fontWeight: 500 }}>
                         {g.name}
                       </Link>
+                      {/* In the all-groups view a row can be one the portal
+                          leaves out, so say which. */}
+                      {view === "all" && (g.archived || g.eligible === false) && (
+                        <span style={{ marginLeft: 6, fontSize: 11, color: C.faint }}>
+                          {g.archived ? "· archived" : "· not in program"}
+                        </span>
+                      )}
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 3 }}>
                         <input
                           value={val}
