@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   TIERS,
   factorsHold,
@@ -18,6 +18,7 @@ import GroupDetail from "@/views/GroupDetail";
 import Proposals from "@/views/Proposals";
 import Reconciliation, { portalComparable, reportGroupHealth, type CarrierStats, type ImportDiagnostics } from "@/views/Reconciliation";
 import FundingPanel, { type FundingInfo } from "@/views/Funding";
+import AuditPanel from "@/views/AuditPanel";
 
 interface Props {
   data: KennionData;
@@ -116,6 +117,10 @@ export default function Admin({
    * either. Plans & Rates used to iterate every group and disagreed with the
    * Groups tab's count.
    */
+  // Bumped after any upload so the audit at the top re-reads.
+  const [auditVersion, setAuditVersion] = useState(0);
+  const bump = () => setAuditVersion((v) => v + 1);
+
   const activeGroups = useMemo(
     () =>
       data.groups.filter(
@@ -732,19 +737,23 @@ export default function Admin({
         {tab === "import" && (
           <>
             <div style={{ marginTop: 16, fontSize: 13, color: C.muted, lineHeight: 1.6, maxWidth: 840 }}>
-              Three files from Employee Navigator keep the portal current. Upload each one when a new one comes
-              out; the portal reads it, files it and checks it against the others.
+              The snapshot is taken once: three files from Employee Navigator. Upload each one; the portal reads it,
+              files it, checks it against the others and audits the whole.
               {storage === "postgres"
                 ? " Uploads are stored in Postgres and shared across the team."
                 : durable
                   ? ""
                   : " No database is connected, so uploads are lost on the next deploy."}
             </div>
+            <AuditPanel token={token} version={auditVersion} ai={ai} />
             <ImportPanel
               token={token}
               durable={durable}
               storage={storage}
-              onImported={(gs, ims) => onImported(gs, ims as ImportRecord[] | undefined)}
+              onImported={(gs, ims) => {
+                onImported(gs, ims as ImportRecord[] | undefined);
+                bump();
+              }}
               last={
                 imports[0]
                   ? {
@@ -762,7 +771,10 @@ export default function Admin({
               token={token}
               stats={carrierStats}
               groups={data.groups as unknown as AdminGroup[]}
-              onStats={onCarrierStats}
+              onStats={(st) => {
+                onCarrierStats(st);
+                bump();
+              }}
               diagnostics={imports[0]?.diagnostics || null}
               lastImport={imports[0] ? { filename: imports[0].filename, when: imports[0].uploaded_at } : null}
               ai={ai}
@@ -772,7 +784,10 @@ export default function Admin({
               token={token}
               funding={funding}
               groups={data.groups as unknown as AdminGroup[]}
-              onFunding={onFunding}
+              onFunding={(f, gs) => {
+                onFunding(f, gs);
+                bump();
+              }}
               onOverrides={onOverrides}
             />
 

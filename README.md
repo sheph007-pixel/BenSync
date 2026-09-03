@@ -351,9 +351,20 @@ clearly labelled; their total premium is billed data and is correct.
 
 ## The Import tab
 
-Three numbered sections, one per file from Employee Navigator, in the order
-they are used: the **XML export**, the **carrier stats report**, the **monthly
-funding workbook**. Each shows the file it wants, a Choose file button, the
+The snapshot is taken once a year: three files from Employee Navigator go in,
+and from then on the portal does the work. At the top of the tab sits **the
+audit**, computed on the server after every upload and at boot: which of the
+three files are in, the verdict in one line (carriers that match Employee
+Navigator's report, groups whose billing matches the XML, invoices still
+unfiled), the portal's headline figures, and — once all three files are in —
+**Claude's read** of the whole picture, written for an advisor and kept in the
+database (`kennion.audits`, one per combination of uploads) so nobody presses
+anything and the model is never asked twice for the same files. "Show the
+numbers" opens the per-carrier rows.
+
+Below it, three numbered sections, one per file, in the order they are used:
+the **XML export**, the **carrier stats report**, the **monthly funding
+workbook**. Each shows the file it wants, a Choose file button, the
 last upload (file, time, who), a one-line result, and a status pill; the
 tables, diagnostics and per-group checks sit behind "Show details". An XML
 import waiting to be confirmed keeps its details open. The XML import history

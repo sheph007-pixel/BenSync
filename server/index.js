@@ -14,9 +14,10 @@ import { parseEnStream, premiumBreakdown, classifyPlans, newDiagnostics, mergeDi
 import { createDb } from "./db.js";
 import { assignCodes, sizeFor, normalizeName } from "./group-id.js";
 import { eligibilityOf } from "./eligibility.js";
-import { aiEnabled, analyzeProposal, explainReconciliation } from "./ai.js";
+import { aiEnabled, analyzeProposal, explainReconciliation, explainAudit } from "./ai.js";
 import { expandUpload, prepareForModel } from "./intake.js";
 import { parseCarrierStats } from "./carrier-stats.js";
+import { runAudit, auditFingerprint } from "./audit.js";
 import { parseFunding, assignInvoices, summariseFunding, bandTier } from "./funding.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -310,10 +311,84 @@ app.use(express.json({ limit: "256kb" }));
 app.get("/healthz", (_req, res) => res.type("text/plain").send("ok"));
 
 /** What a staff session sees: the PII-free rate projection and its bookkeeping. */
+/**
+ * The audit runs itself: after every upload and at boot, the computed result
+ * is refreshed, and once all three files are in Claude reads it — once per
+ * combination of uploads, the read kept in the database.
+ */
+let audit = null;
+let auditReadInFlight = null;
+async function refreshAudit() {
+  const lastImport = recentImports[0] || null;
+  const result = runAudit({ groups: adminGroups, carrierStats, funding, lastImport });
+  const fingerprint = auditFingerprint({ carrierStats, funding, lastImport });
+  const prior = audit && audit.fingerprint === fingerprint ? audit : null;
+  let read = prior ? prior.read : null;
+  let readAt = prior ? prior.readAt : null;
+  if (!prior && db) {
+    try {
+      const saved = await db.getAudit(fingerprint);
+      if (saved && saved.read) {
+        read = saved.read;
+        readAt = saved.createdAt;
+      }
+    } catch (e) {
+      console.error("could not load the audit:", e.message);
+    }
+  }
+  audit = { ...result, fingerprint, read, readAt, reading: false };
+  if (db) {
+    try {
+      await db.saveAudit(fingerprint, result, read);
+    } catch (e) {
+      console.error("could not save the audit:", e.message);
+    }
+  }
+  if (result.complete && !read && aiEnabled() && auditReadInFlight !== fingerprint) {
+    auditReadInFlight = fingerprint;
+    audit.reading = true;
+    const payload = {
+      files: result.files,
+      portal: result.portal,
+      carriers: result.carriers.map((c) => ({ carrier: c.carrier, report: c.report, portal: c.portal, diff: c.diff, pct: c.pct, ok: c.ok })),
+      billing: result.billing && {
+        month: result.billing.month,
+        groups: result.billing.groups,
+        matches: result.billing.matches,
+        unassignedInvoices: result.billing.unassigned,
+        differ: result.billing.rows.filter((r) => r.ok === false || r.noBilling),
+      },
+      unfiledInvoices: funding ? Object.entries(funding.byInvoice).filter(([, a]) => !a.group).map(([inv, a]) => ({ invoice: inv, orgs: a.orgs, lines: a.total })) : [],
+      diagnostics: lastImport ? lastImport.diagnostics : null,
+    };
+    explainAudit(payload)
+      .then(async (text) => {
+        if (audit && audit.fingerprint === fingerprint) {
+          audit.read = text;
+          audit.readAt = new Date().toISOString();
+          audit.reading = false;
+        }
+        if (db) await db.saveAudit(fingerprint, result, text);
+      })
+      .catch((e) => {
+        console.error("audit read failed:", e.message);
+        if (audit && audit.fingerprint === fingerprint) {
+          audit.reading = false;
+          audit.readError = e.message;
+        }
+      })
+      .finally(() => {
+        if (auditReadInFlight === fingerprint) auditReadInFlight = null;
+      });
+  }
+  return audit;
+}
+
 function adminPayload() {
   return {
     kind: "admin",
     ai: aiEnabled(),
+    audit,
     carrierStats,
     funding: fundingView(funding),
     durable: !!db || DURABLE,
@@ -465,7 +540,8 @@ app.post(
     } catch (e) {
       return res.status(500).json({ error: "Could not save the report: " + e.message });
     }
-    res.json({ ok: true, stats: carrierStats });
+    await refreshAudit();
+    res.json({ ok: true, stats: carrierStats, audit });
   },
 );
 
@@ -497,6 +573,16 @@ app.post("/api/admin/reconcile/explain", requireStaff, express.json({ limit: "25
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
+});
+
+/** The audit as it stands; `?read=1` asks Claude again when the last read failed. */
+app.get("/api/admin/audit", requireStaff, async (req, res) => {
+  if (String(req.query.read || "") === "1" && audit && !audit.read && !audit.reading) {
+    audit.readError = null;
+    auditReadInFlight = null;
+    await refreshAudit();
+  }
+  res.json({ audit });
 });
 
 /**
@@ -556,7 +642,8 @@ app.post(
       console.error("could not apply billed rates:", e.message);
     }
     rebuild();
-    res.json({ ok: true, funding: fundingView(funding), groups: adminGroups, rates, overrides });
+    await refreshAudit();
+    res.json({ ok: true, funding: fundingView(funding), groups: adminGroups, rates, overrides, audit });
   },
 );
 
@@ -617,7 +704,8 @@ app.post("/api/admin/funding/assign", requireStaff, express.json({ limit: "16kb"
     return res.status(500).json({ error: "Could not save: " + e.message });
   }
   rebuild();
-  res.json({ ok: true, funding: fundingView(funding), groups: adminGroups, overrides });
+  await refreshAudit();
+  res.json({ ok: true, funding: fundingView(funding), groups: adminGroups, overrides, audit });
 });
 
 /** Re-run the billed-rate write for one group or all — after a hand filing, say. */
@@ -740,6 +828,29 @@ app.post("/api/admin/import/preview", requireStaff, async (req, res) => {
   }
 });
 
+/**
+ * A census row for a company a full export no longer carries — or carries
+ * with nothing current — is a company that has left: archive it, once, and
+ * say why. Staff can restore it and later imports leave that alone.
+ */
+async function archiveLeavers(exported) {
+  const at = new Date().toISOString();
+  for (const g of data.groups) {
+    if (!(g.plans || []).length || imported.groups[g.name] || exported.has(g.name)) continue;
+    const m = meta[g.name] || {};
+    if ((m.fields || {}).notInExport || m.archived) continue;
+    meta[g.name] = { ...m, archived: true, fields: { ...(m.fields || {}), notInExport: at } };
+    try {
+      if (db) {
+        await db.setField(g.name, "notInExport", at, "import");
+        await db.setMeta(g.name, "archived", true, "import");
+      }
+    } catch (e) {
+      console.error(`could not archive ${g.name}:`, e.message);
+    }
+  }
+}
+
 /** Apply. `only` (a list of company names) limits which are written. */
 app.post("/api/admin/import", requireStaff, async (req, res) => {
   const only = String(req.query.only || "").trim();
@@ -778,28 +889,10 @@ app.post("/api/admin/import", requireStaff, async (req, res) => {
     // a carrier's stats may count them when the portal does not.
     diagnostics.rejected = failures.map((f) => ({ name: f.name, reason: f.reason }));
 
-    // A census row for a company the export no longer carries is a company
-    // that has left: archive it, once, and say why. Staff can restore it and
-    // the next import leaves that alone.
     // Only a full export can say a company has left: one carrying at least
     // half the roster. A single-company export touches nothing else.
-    if (!wanted && companies.length + failures.length >= groups.length / 2) {
-      const at = new Date().toISOString();
-      const exported = new Set(companies.map((c) => c.group.name));
-      for (const g of data.groups) {
-        if (!(g.plans || []).length || imported.groups[g.name] || exported.has(g.name)) continue;
-        const m = meta[g.name] || {};
-        if ((m.fields || {}).notInExport) continue;
-        meta[g.name] = { ...m, archived: true, fields: { ...(m.fields || {}), notInExport: at } };
-        try {
-          if (db) {
-            await db.setField(g.name, "notInExport", at, "import");
-            await db.setMeta(g.name, "archived", true, "import");
-          }
-        } catch (e) {
-          console.error(`could not archive ${g.name}:`, e.message);
-        }
-      }
+    if (companies.length + failures.length >= groups.length / 2) {
+      await archiveLeavers(new Set(companies.map((c) => c.group.name)));
     }
     if (db) {
       const at = await db.logImport(
@@ -834,9 +927,11 @@ app.post("/api/admin/import", requireStaff, async (req, res) => {
       ].slice(0, 8);
     }
     rebuild();
+    await refreshAudit();
 
     res.json({
       ok: true,
+      audit,
       durable: !!db || DURABLE,
       storage: db ? "postgres" : DURABLE ? "volume" : "ephemeral",
       imports: recentImports,
@@ -1392,7 +1487,15 @@ async function boot() {
     }
   }
   rebuild();
+  // An import that covered the roster before this rule existed still says
+  // who has left: every census-only group it did not touch.
+  const last = recentImports[0];
+  if (last && last.companies_applied >= groups.length / 2) {
+    await archiveLeavers(new Set(Object.keys(imported.groups || {})));
+    rebuild();
+  }
   await proposalsChanged();
+  await refreshAudit();
 }
 
 await boot();
