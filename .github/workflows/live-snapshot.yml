@@ -45,6 +45,11 @@ jobs:
             -o data-snapshots/reconciliation.json
           curl -sS -f "$SITE/api/admin/proposals" -H "Authorization: Bearer $TOKEN" \
             -o data-snapshots/proposals.json
+          curl -sS -f "$SITE/api/admin/audit" -H "Authorization: Bearer $TOKEN" \
+            -o data-snapshots/audit.json || echo '{"audit":null}' > data-snapshots/audit.json
+          echo "::group::Audit"
+          jq '.audit | if . then {generated, complete, verdict, portal, files, read} else null end' data-snapshots/audit.json
+          echo "::endgroup::"
           echo "::group::Summary"
           jq '{generated, storage, roster, portalByProgram,
                carrierStats: (.carrierStats | if . then {reportDate, uploadedAt, rows} else null end),
