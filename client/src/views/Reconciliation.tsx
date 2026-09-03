@@ -160,6 +160,21 @@ export default function Reconciliation({ token, stats, groups, onStats, diagnost
     }
   }
 
+  /** Pull the reconciliation file down with the staff token and hand it to the browser. */
+  async function download() {
+    const r = await fetch("/api/admin/reconcile/export", { headers: { Authorization: `Bearer ${token}` } });
+    if (!r.ok) {
+      setError("Could not build the reconciliation file — sign in again.");
+      return;
+    }
+    const blob = await r.blob();
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `kennion-reconciliation-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  }
+
   async function upload(f: File) {
     setBusy(true);
     setError("");
@@ -408,6 +423,22 @@ export default function Reconciliation({ token, stats, groups, onStats, diagnost
             }}
           >
             {explaining ? "Claude is reading…" : "Ask Claude what explains the gap"}
+          </button>
+          <button
+            onClick={() => void download()}
+            title="A small JSON file with the report, the portal totals by carrier, the import exclusions and each group's plan classification — no employee data. Attach it to a chat with Claude Code to have the reconciliation done outside this server."
+            style={{
+              padding: "8px 14px",
+              fontSize: 13,
+              fontWeight: 500,
+              color: C.blue,
+              background: "#fff",
+              border: `1px solid ${C.blue}`,
+              borderRadius: 4,
+              cursor: "pointer",
+            }}
+          >
+            Download reconciliation file
           </button>
           <span style={{ fontSize: 12, color: C.faint }}>Aggregates only — no member data leaves the server.</span>
         </div>

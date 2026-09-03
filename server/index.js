@@ -416,6 +416,63 @@ app.post("/api/admin/reconcile/explain", requireStaff, express.json({ limit: "25
   }
 });
 
+/**
+ * Everything needed to reconcile the import against the carrier stats report,
+ * as one small file — aggregates only, no member records — so it can be
+ * handed to someone (or to Claude in a chat) who cannot reach this server.
+ */
+app.get("/api/admin/reconcile/export", requireStaff, (_req, res) => {
+  const live = groups.filter((g) => !g.archived && g.eligible);
+  const perGroup = live.map((g) => {
+    const b = premiumBreakdown(g);
+    return {
+      name: g.name,
+      tpa: g.tpa || null,
+      enrolled: g.enrolled,
+      lives: g.lives,
+      programs: g.programs || [],
+      carriersSeen: g.carriersSeen || [],
+      importedAt: importedAt[g.name] || null,
+      plans: classifyPlans(g).map((p) => ({
+        plan: p.plan,
+        tpa: p.tpa || "",
+        program: p.program,
+        groupHealth: p.groupHealth,
+        assumed: p.assumed,
+        enrolled: p.enrolled,
+        monthly: p.monthly,
+      })),
+      lines: (g.lines || []).map((l) => ({ benefit: l.benefit, carrier: l.carrier, plan: l.plan, enrolled: l.enrolled, monthly: l.monthly })),
+      ...b,
+    };
+  });
+  const byProgram = {};
+  perGroup.forEach((g) =>
+    g.plans.forEach((p) => {
+      const k = p.assumed ? "assumed" : p.program || "unknown";
+      const t = (byProgram[k] = byProgram[k] || { groups: new Set(), plans: 0, enrolled: 0, monthly: 0, carriers: new Set() });
+      t.groups.add(g.name);
+      t.plans++;
+      t.enrolled += p.enrolled || 0;
+      t.monthly += p.monthly || 0;
+      t.carriers.add(p.tpa || "(blank)");
+    }),
+  );
+  res.setHeader("Content-Disposition", `attachment; filename="kennion-reconciliation-${new Date().toISOString().slice(0, 10)}.json"`);
+  res.json({
+    generated: new Date().toISOString(),
+    storage: db ? "postgres" : DURABLE ? "volume" : "ephemeral",
+    carrierStats,
+    lastImport: recentImports[0] || null,
+    importHistory: recentImports.map((r) => ({ filename: r.filename, uploaded_at: r.uploaded_at, companies_found: r.companies_found, companies_applied: r.companies_applied })),
+    portalByProgram: Object.fromEntries(
+      Object.entries(byProgram).map(([k, t]) => [k, { groups: t.groups.size, plans: t.plans, enrolled: t.enrolled, monthly: Math.round(t.monthly * 100) / 100, carriers: [...t.carriers].sort() }]),
+    ),
+    roster: { live: live.length, archived: groups.filter((g) => g.archived).length, notInProgram: groups.filter((g) => !g.archived && !g.eligible).length },
+    groups: perGroup,
+  });
+});
+
 /** Preview: parse and report what would change. Saves nothing. */
 app.post("/api/admin/import/preview", requireStaff, async (req, res) => {
   try {
