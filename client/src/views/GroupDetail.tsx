@@ -357,7 +357,7 @@ export default function GroupDetail({ group, token, onChanged, onBack, onOpenRat
 
       {!!group.plans?.length && (
         <div style={{ ...panel, marginTop: 16, padding: "18px 22px" }}>
-          <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: C.ink }}>Plans in force</h3>
+          <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: C.ink }}>Plans In Force</h3>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginTop: 10 }}>
             <thead>
               <tr>
@@ -408,7 +408,7 @@ export default function GroupDetail({ group, token, onChanged, onBack, onOpenRat
           as premium totals only; the portal never prices these. */}
       {!!group.plans?.length && (
         <div style={{ ...panel, marginTop: 16, padding: "18px 22px" }}>
-          <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: C.ink }}>Other lines in force</h3>
+          <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: C.ink }}>Other Lines In Force</h3>
           {group.lines?.length ? (
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginTop: 10 }}>
               <thead>

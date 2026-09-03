@@ -20,10 +20,10 @@ export type SortKey = TierKey | "plan" | "monthly" | "delta" | "ded" | "oop" | "
 
 /** Sections on this page, in order, for the "On this page" links. */
 export const OPTIONS_SECTIONS = [
-  { id: "market", label: "Market summary" },
-  { id: "recommends", label: "Kennion recommends" },
-  { id: "all-options", label: "All options" },
-  { id: "shortlist", label: "Your shortlist" },
+  { id: "market", label: "Market Summary" },
+  { id: "recommends", label: "Kennion Recommends" },
+  { id: "all-options", label: "All Options" },
+  { id: "shortlist", label: "Your Shortlist" },
 ];
 
 interface Props {
@@ -180,7 +180,7 @@ export default function Options({
     { key: "EC", label: "EE + Child(ren)" },
     { key: "FAM", label: "EE + Family" },
     { key: "monthly", label: "Monthly Premium" },
-    { key: "delta", label: "vs Today" },
+    { key: "delta", label: "Vs Today" },
     { key: "ded", label: "Deductible" },
     { key: "oop", label: "OOP Max" },
     { key: "copays", label: "PCP / SPC", align: "left" },
@@ -209,7 +209,7 @@ export default function Options({
       >
         <div style={{ maxWidth: 660 }}>
           <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: C.ink }}>
-            We shopped the market for January 1, 2027
+            We Shopped The Market For January 1, 2027
           </h2>
           <p
             style={{
@@ -290,7 +290,7 @@ export default function Options({
       </div>
 
       <div id="recommends" className="anchor" style={sectionHead}>
-        <h2 style={h2}>Kennion recommends</h2>
+        <h2 style={h2}>Kennion Recommends</h2>
       </div>
 
       <div
@@ -567,7 +567,7 @@ export default function Options({
       </div>
 
       <div id="shortlist" className="panel anchor" style={{ ...panel, marginTop: 24, padding: "18px 20px" }}>
-        <h2 style={{ ...h2, margin: "0 0 4px" }}>Your shortlist</h2>
+        <h2 style={{ ...h2, margin: "0 0 4px" }}>Your Shortlist</h2>
         <p style={{ margin: "0 0 12px", fontSize: 13, color: C.muted }}>
           {short.length
             ? `${short.length} plan${short.length > 1 ? "s" : ""} selected. Add a note and send — your rep will come back with firm rates and a contribution model.`

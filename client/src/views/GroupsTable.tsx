@@ -12,6 +12,8 @@ export interface AdminGroup {
   /** Who brokers the group. Only the label is kept, never a broker's name. */
   broker?: "kennion" | "outside";
   brokerIsSet?: boolean;
+  /** The Kennion account manager who looks after the group. */
+  manager?: "debbie" | "tracy" | null;
   /** Where the 2027 renewal stands, for tracking. */
   renewal?: Renewal;
   /** Carrier proposals filed under this group. */
@@ -74,6 +76,11 @@ export interface AdminLine {
 export const BROKER_LABEL = { kennion: "Kennion", outside: "Outside Broker" } as const;
 type Broker = keyof typeof BROKER_LABEL;
 
+/** Kennion's account managers, as the roster names them. */
+export const MANAGER_LABEL = { debbie: "Debbie", tracy: "Tracy" } as const;
+const MANAGER_FULL = { debbie: "Debbie Bostic", tracy: "Tracy Sanders" } as const;
+type Manager = keyof typeof MANAGER_LABEL;
+
 export const RENEWALS = ["open", "sent", "renewed", "non-renewed"] as const;
 export type Renewal = (typeof RENEWALS)[number];
 export const RENEWAL_LABEL: Record<Renewal, string> = {
@@ -90,9 +97,9 @@ export const RENEWAL_TONE: Record<Renewal, [string, string, string]> = {
   "non-renewed": [C.red, C.redTint, C.redEdge],
 };
 
-type Field = "companyId" | "sizeCategory" | "broker" | "renewal";
+type Field = "companyId" | "sizeCategory" | "broker" | "renewal" | "manager";
 
-type SortKey = "name" | "location" | "contact" | "enrolled" | "share" | "sizeCategory" | "broker" | "renewal";
+type SortKey = "name" | "location" | "contact" | "enrolled" | "share" | "sizeCategory" | "broker" | "manager" | "renewal";
 
 /** Share of the block, as "4.2%". */
 const pct = (part: number, whole: number) => (whole ? `${((part / whole) * 100).toFixed(1)}%` : "—");
@@ -116,6 +123,7 @@ function groupsCsv(rows: AdminGroup[], blockEnrolled: number): string {
     ["Renewal", (g) => RENEWAL_LABEL[g.renewal || "open"]],
     ["Proposals on file", (g) => g.proposals || 0],
     ["Broker", (g) => BROKER_LABEL[g.broker || "kennion"]],
+    ["Manager", (g) => (g.manager ? MANAGER_FULL[g.manager] : "")],
     ["Size", (g) => g.sizeCategory],
     ["Enrolled", (g) => g.enrolled],
     ["% of block (enrolled)", (g) => (blockEnrolled ? ((g.enrolled || 0) / blockEnrolled * 100).toFixed(1) : "")],
@@ -126,7 +134,7 @@ function groupsCsv(rows: AdminGroup[], blockEnrolled: number): string {
     ["Group health premium (EBPA+HealthEZ)", (g) => groupHealthOf(g).toFixed(2)],
     ["Medical premium", (g) => (g.medicalMonthly ?? monthlyOf(g)).toFixed(2)],
     ["Supplemental premium", (g) => (g.supplementalMonthly ?? 0).toFixed(2)],
-    ["Total premium", (g) => totalOf(g).toFixed(2)],
+    ["Total Premium", (g) => totalOf(g).toFixed(2)],
     ["Supplemental loaded", (g) => (g.linesLoaded ? "Yes" : "No")],
     ["Address", (g) => g.address1],
     ["City", (g) => g.city],
@@ -219,6 +227,7 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
   const [query, setQuery] = useState("");
   const [size, setSize] = useState<"All" | "2-50" | "51+">("All");
   const [broker, setBroker] = useState<"All" | Broker>("All");
+  const [manager, setManager] = useState<"All" | Manager | "none">("All");
   const [renewal, setRenewal] = useState<"All" | Renewal>("All");
   const [proposalsFilter, setProposalsFilter] = useState<"All" | "with" | "without">("All");
   const [view, setView] = useState<"live" | "all" | "excluded" | "archived">("live");
@@ -249,20 +258,35 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
   // The roster the dashboard describes: in the portal, not archived. The same
   // rule Plans & Rates uses, so the two pages count the same groups.
   const live = useMemo(() => groups.filter((g) => !g.archived && g.eligible !== false), [groups]);
+  // The block a "% of block" is a share of: every group the current view holds,
+  // before the other filters. So a share can never exceed 100%.
+  const block = useMemo(
+    () =>
+      groups.filter((g) =>
+        view === "all"
+          ? true
+          : view === "archived"
+            ? !!g.archived
+            : view === "excluded"
+              ? !g.archived && g.eligible === false
+              : !g.archived && g.eligible !== false,
+      ),
+    [groups, view],
+  );
   const counts = {
-    small: live.filter((g) => g.sizeCategory === "2-50").length,
-    large: live.filter((g) => g.sizeCategory === "51+").length,
+    small: block.filter((g) => g.sizeCategory === "2-50").length,
+    large: block.filter((g) => g.sizeCategory === "51+").length,
     archived: groups.filter((g) => g.archived).length,
     excluded: groups.filter((g) => !g.archived && g.eligible === false).length,
-    outside: live.filter((g) => g.broker === "outside").length,
+    outside: block.filter((g) => g.broker === "outside").length,
     dupes: groups.filter((g) => !g.archived && (g.duplicateOf || []).length).length,
-    enrolled: live.reduce((n, g) => n + (g.enrolled || 0), 0),
-    lives: live.reduce((n, g) => n + (g.lives || 0), 0),
-    monthly: live.reduce((n, g) => n + monthlyOf(g), 0),
-    groupHealth: live.reduce((n, g) => n + groupHealthOf(g), 0),
-    total: live.reduce((n, g) => n + totalOf(g), 0),
+    enrolled: block.reduce((n, g) => n + (g.enrolled || 0), 0),
+    lives: block.reduce((n, g) => n + (g.lives || 0), 0),
+    monthly: block.reduce((n, g) => n + monthlyOf(g), 0),
+    groupHealth: block.reduce((n, g) => n + groupHealthOf(g), 0),
+    total: block.reduce((n, g) => n + totalOf(g), 0),
     renewal: Object.fromEntries(
-      RENEWALS.map((r) => [r, live.filter((g) => (g.renewal || "open") === r).length]),
+      RENEWALS.map((r) => [r, block.filter((g) => (g.renewal || "open") === r).length]),
     ) as Record<Renewal, number>,
   };
 
@@ -280,9 +304,10 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
             : !g.archived && g.eligible !== false) &&
       (size === "All" || g.sizeCategory === size) &&
       (broker === "All" || (g.broker || "kennion") === broker) &&
+      (manager === "All" || (manager === "none" ? !g.manager : g.manager === manager)) &&
       (proposalsFilter === "All" || (proposalsFilter === "with" ? (g.proposals || 0) > 0 : !(g.proposals || 0))) &&
       (!q ||
-        `${g.name} ${g.enName ?? ""} ${g.code} ${g.city ?? ""} ${g.state ?? ""} ${g.zip ?? ""} ${g.sic ?? ""} ${g.sicDesc ?? ""} ${g.taxId ?? ""} ${g.tpa ?? ""} ${BROKER_LABEL[g.broker || "kennion"]} ${RENEWAL_LABEL[g.renewal || "open"]} ${(g.contacts ?? []).map((c) => `${c.name} ${c.email}`).join(" ")}`
+        `${g.name} ${g.enName ?? ""} ${g.code} ${g.city ?? ""} ${g.state ?? ""} ${g.zip ?? ""} ${g.sic ?? ""} ${g.sicDesc ?? ""} ${g.taxId ?? ""} ${g.tpa ?? ""} ${BROKER_LABEL[g.broker || "kennion"]} ${g.manager ? MANAGER_FULL[g.manager] : ""} ${RENEWAL_LABEL[g.renewal || "open"]} ${(g.contacts ?? []).map((c) => `${c.name} ${c.email}`).join(" ")}`
           .toLowerCase()
           .includes(q)),
   );
@@ -296,6 +321,7 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
     if (sort === "contact") return (g.contacts?.[0]?.name || "").toLowerCase();
     if (sort === "location") return `${g.state || ""} ${g.city || ""}`.trim().toLowerCase();
     if (sort === "broker") return BROKER_LABEL[g.broker || "kennion"].toLowerCase();
+    if (sort === "manager") return g.manager ? MANAGER_LABEL[g.manager].toLowerCase() : "";
     if (sort === "renewal") return RENEWALS.indexOf(g.renewal || "open");
     const v = (g as unknown as Record<string, unknown>)[sort];
     return String(v ?? "").toLowerCase();
@@ -312,7 +338,7 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
   });
 
   const filtering =
-    !!q || size !== "All" || broker !== "All" || renewal !== "All" || proposalsFilter !== "All" || view !== "live";
+    !!q || size !== "All" || broker !== "All" || manager !== "All" || renewal !== "All" || proposalsFilter !== "All" || view !== "live";
 
   // Totals for what is on screen. They follow every search, filter and sort.
   const shown = {
@@ -352,6 +378,7 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
     setQuery("");
     setSize("All");
     setBroker("All");
+    setManager("All");
     setRenewal("All");
     setProposalsFilter("All");
     setView("live");
@@ -362,6 +389,7 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
       view === "live" ? "" : view === "all" ? "all-groups" : view === "excluded" ? "not-in-program" : "archived",
       renewal === "All" ? "" : renewal,
       broker === "All" ? "" : broker === "outside" ? "outside-broker" : "kennion",
+      manager === "All" ? "" : manager === "none" ? "no-manager" : manager,
       size === "All" ? "" : size.replace("+", "plus"),
       q ? "search" : "",
     ]
@@ -373,7 +401,7 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
 
   const tile = (label: string, value: string, note: string, aside?: string) => (
     <div key={label} style={{ ...panel, padding: "11px 13px" }}>
-      <div style={{ fontSize: 12, color: C.muted }}>{label}</div>
+      <div style={{ fontSize: 12, fontWeight: 600, color: C.body }}>{label}</div>
       <div style={{ marginTop: 4, fontSize: 20, fontWeight: 600, color: C.ink, letterSpacing: "-0.3px", ...num }}>
         {value}
       </div>
@@ -398,7 +426,7 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
         }}
       >
         {tile(
-          view === "all" ? "Groups (all)" : filtering ? "Groups shown" : "Groups",
+          view === "all" ? "Groups (All)" : filtering ? "Groups Shown" : "Groups",
           String(rows.length),
           view === "all"
             ? `${live.length} in the portal · ${counts.archived} archived · ${counts.excluded} not in program`
@@ -407,17 +435,17 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
               : `${counts.small} at 2-50 · ${counts.large} at 51+ (ALE)`,
         )}
         {tile(
-          "Enrolled employees",
+          "Enrolled Employees",
           shown.enrolled.toLocaleString(),
           `${shown.lives.toLocaleString()} covered lives${filtering ? ` · ${pct(shown.enrolled, counts.enrolled)} of block` : ""}`,
         )}
         {tile(
-          "Group health premium",
+          "Group Health Premium",
           `${money0(shown.groupHealth)} / mo`,
           `${money0(shown.groupHealth * 12)} / yr · ${shown.groupHealthEnrolled.toLocaleString()} enrolled${filtering ? ` · ${pct(shown.groupHealth, counts.groupHealth)} of block` : ""}`,
         )}
         {tile(
-          "Total premium",
+          "Total Premium",
           `${money0(shown.total)} / mo`,
           `${money0(shown.total * 12)} / yr · all lines${filtering ? ` · ${pct(shown.total, counts.total)} of block` : ""}`,
           rows.length && !shown.linesLoaded
@@ -425,7 +453,7 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
             : undefined,
         )}
         <div style={{ ...panel, padding: "14px 16px", gridColumn: "span 2", minWidth: 0 }}>
-          <div style={{ fontSize: 12.5, color: C.muted }}>2027 renewal</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: C.body }}>2027 Renewal</div>
           <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>
             {RENEWALS.map((r) => {
               const [fg, bg, bd] = RENEWAL_TONE[r];
@@ -492,6 +520,15 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
             <option value="All">All sizes</option>
             <option value="2-50">2-50</option>
             <option value="51+">51+ (ALE)</option>
+          </select>
+          <select aria-label="Account manager" value={manager} onChange={(e) => setManager(e.target.value as typeof manager)} style={filterSelect}>
+            <option value="All">All managers</option>
+            {(Object.keys(MANAGER_LABEL) as Manager[]).map((m) => (
+              <option key={m} value={m}>
+                {MANAGER_FULL[m]}
+              </option>
+            ))}
+            <option value="none">No manager set</option>
           </select>
           <select aria-label="Broker" value={broker} onChange={(e) => setBroker(e.target.value as typeof broker)} style={filterSelect}>
             <option value="All">All brokers</option>
@@ -608,6 +645,7 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
                 <H k="share" label="% of block" align="right" width={96} />
                 <H k="sizeCategory" label="Size" width={110} />
                 <H k="broker" label="Broker" width={150} />
+                <H k="manager" label="Manager" width={120} />
                 <H k="renewal" label="Renewal" width={140} />
               </tr>
             </thead>
@@ -742,6 +780,25 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
                       >
                         <option value="kennion">Kennion</option>
                         <option value="outside">Outside Broker</option>
+                      </select>
+                    </td>
+                    <td style={{ ...td, padding: "7px 10px" }}>
+                      <select
+                        value={g.manager || ""}
+                        onChange={(e) => void save(g.name, "manager", e.target.value)}
+                        aria-label={`Account manager for ${g.name}`}
+                        title={g.manager ? MANAGER_FULL[g.manager] : "No account manager set"}
+                        style={selectStyle(
+                          g.manager ? C.ink : C.faint,
+                          saved === g.name + "|manager" ? C.greenTint : "#fff",
+                        )}
+                      >
+                        <option value="">—</option>
+                        {(Object.keys(MANAGER_LABEL) as Manager[]).map((m) => (
+                          <option key={m} value={m}>
+                            {MANAGER_LABEL[m]}
+                          </option>
+                        ))}
                       </select>
                     </td>
                     <td style={{ ...td, padding: "7px 10px" }}>

@@ -97,7 +97,7 @@ export default function AuditPanel({ token, version, ai }: Props) {
   return (
     <section style={{ ...panel, marginTop: 16, padding: "18px 22px", borderLeft: `4px solid ${v.kind === "ok" ? C.green : v.kind === "warn" ? C.amber : C.hairline}` }} aria-label="Audit">
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12 }}>
-        <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600, color: C.ink }}>The snapshot, audited</h2>
+        <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600, color: C.ink }}>The Snapshot, Audited</h2>
         <span style={{ ...tone, marginLeft: "auto" }}>{v.kind === "ok" ? "In order" : v.kind === "warn" ? "Needs a look" : "Incomplete"}</span>
       </div>
       <p style={{ margin: "10px 0 0", fontSize: 14, color: C.ink, lineHeight: 1.6, maxWidth: 900 }}>{v.headline}</p>
@@ -123,7 +123,7 @@ export default function AuditPanel({ token, version, ai }: Props) {
             aria-expanded={showRead || !audit.read}
             style={{ background: "none", border: "none", padding: 0, fontSize: 13, fontWeight: 600, color: audit.read ? C.blue : C.ink, cursor: "pointer" }}
           >
-            Claude&rsquo;s read{audit.read ? (showRead ? " ▾" : " ▸") : ""}
+            Claude&rsquo;s Read{audit.read ? (showRead ? " ▾" : " ▸") : ""}
           </button>
           {audit.read ? (
             showRead && <div style={{ marginTop: 6, fontSize: 13, color: C.body, lineHeight: 1.65, whiteSpace: "pre-wrap", maxWidth: 900 }}>{audit.read}</div>
@@ -152,7 +152,7 @@ export default function AuditPanel({ token, version, ai }: Props) {
       {audit.carriers.length > 0 && (
         <div style={{ marginTop: 12 }}>
           <button onClick={() => setShowRows((s) => !s)} aria-expanded={showRows} style={{ background: "none", border: "none", padding: 0, fontSize: 13, color: C.blue, cursor: "pointer" }}>
-            {showRows ? "Hide the numbers" : "Show the numbers"}
+            {showRows ? "Hide The Numbers" : "Show The Numbers"}
           </button>
           {showRows && (
             <div style={{ overflowX: "auto", marginTop: 8 }}>

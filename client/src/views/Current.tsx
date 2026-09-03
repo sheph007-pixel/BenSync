@@ -18,9 +18,9 @@ import { C, h2, num, panel, pill, sectionHead, smallPrimaryBtn, th } from "@/lib
 
 /** Sections on this page, in order, for the "On this page" links. */
 export const CURRENT_SECTIONS = [
-  { id: "plans", label: "Plans in force" },
+  { id: "plans", label: "Plans In Force" },
   { id: "summary", label: "Summary" },
-  { id: "split", label: "Employer / employee split" },
+  { id: "split", label: "Employer / Employee Split" },
   { id: "combined", label: "Combined" },
 ];
 
@@ -76,7 +76,7 @@ export default function Current({
   const kpis = [
     { label: "Enrolled employees", value: String(g.enrolled), note: "medical, active" },
     { label: "Covered lives", value: String(g.lives), note: "employees + dependents" },
-    { label: "Plans in force", value: String((g.plans || []).length), note: g.tpa },
+    { label: "Plans In Force", value: String((g.plans || []).length), note: g.tpa },
     { label: "Monthly premium", value: money0(totals.total), note: "employer + employee" },
     { label: "Annualized", value: money0(totals.total * 12), note: "at current enrollment" },
   ];
@@ -298,7 +298,7 @@ export default function Current({
       <div id="split" className="panel anchor" style={{ ...panel, marginTop: 16, padding: "16px 18px" }}>
         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
           <span style={{ fontSize: 15, fontWeight: 600, color: C.ink }}>
-            Employer / employee split
+            Employer / Employee Split
           </span>
           {actual ? (
             <span style={pill(C.green, C.greenTint, C.greenEdge)}>

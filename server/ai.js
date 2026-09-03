@@ -35,6 +35,7 @@ function fakeReading(file) {
     return {
       carrier: "Unknown",
       funding: "unknown",
+      quotes_medical: true,
       group_name_on_document: null,
       matched_group: null,
       confidence: 0,
@@ -48,7 +49,7 @@ function fakeReading(file) {
       ...j,
     };
   } catch {
-    return { carrier: "Unknown", funding: "unknown", group_name_on_document: null, matched_group: null, confidence: 0, effective_date: null, proposal_type: "unknown", enrolled_on_document: null, plans: [], total_monthly: null, summary: "Canned reading: not JSON.", audit_flags: ["unreadable"] };
+    return { carrier: "Unknown", funding: "unknown", quotes_medical: false, group_name_on_document: null, matched_group: null, confidence: 0, effective_date: null, proposal_type: "unknown", enrolled_on_document: null, plans: [], total_monthly: null, summary: "Canned reading: not JSON.", audit_flags: ["unreadable"] };
   }
 }
 
@@ -62,6 +63,7 @@ const SCHEMA = {
   required: [
     "carrier",
     "funding",
+    "quotes_medical",
     "group_name_on_document",
     "matched_group",
     "confidence",
@@ -83,6 +85,11 @@ const SCHEMA = {
       type: "string",
       description:
         "How the quoted plan is funded: 'fully insured', 'level funded', 'self funded', or 'unknown'. UnitedHealthcare quotes are usually one of the first two — say which.",
+    },
+    quotes_medical: {
+      type: "boolean",
+      description:
+        "True when the document quotes medical / health plan rates. False for an ancillary-only proposal — dental, vision, life, disability, accident or similar with no medical coverage quoted.",
     },
     group_name_on_document: {
       ...nullable("string"),
@@ -156,7 +163,7 @@ const SCHEMA = {
 
 const SYSTEM = `You read insurance carrier proposals for Kennion Benefit Advisors, a benefits brokerage in Alabama. Each proposal is a quote for one employer group's medical plan, sent by a carrier such as UnitedHealthcare (including Surest), Gravie, Nationwide, EBPA, HealthEZ or BCBS of Alabama.
 
-Your job: identify the carrier, read off the plans and tier rates, and decide which group on Kennion's roster the proposal is for. Match by the employer name on the document against the roster names. Treat legal-form words (LLC, Inc., Co., Corporation, Holdings) and punctuation loosely, but do not match on a shared common word alone — "Birmingham Steel" is not "Birmingham-Toledo". When two roster groups could both fit, pick neither and say so in the flags. Copy the matched roster name exactly as listed. Say whether the quote is fully insured or level funded — UnitedHealthcare sends both kinds and Kennion tracks them as separate proposals. Rates are monthly composite amounts per tier: EE (employee only), ES (employee + spouse), EC (employee + children), FAM (family). Leave a value null rather than guessing.`;
+Your job: identify the carrier, read off the plans and tier rates, and decide which group on Kennion's roster the proposal is for. Match by the employer name on the document against the roster names. Treat legal-form words (LLC, Inc., Co., Corporation, Holdings) and punctuation loosely, but do not match on a shared common word alone — "Birmingham Steel" is not "Birmingham-Toledo". When two roster groups could both fit, pick neither and say so in the flags. Copy the matched roster name exactly as listed. Say whether the quote is fully insured or level funded — UnitedHealthcare sends both kinds and Kennion tracks them as separate proposals. Surest is a UnitedHealthcare product, not a separate carrier: report a Surest quote with carrier "UnitedHealthcare" and say which funding it is, so it files under the group's UnitedHealthcare proposal. Kennion tracks exactly four medical proposals per group — UnitedHealthcare fully insured, UnitedHealthcare level funded, Gravie and Nationwide — so set quotes_medical false for an ancillary-only document (dental, vision, life, disability) even when it comes from one of those carriers. Rates are monthly composite amounts per tier: EE (employee only), ES (employee + spouse), EC (employee + children), FAM (family). Leave a value null rather than guessing.`;
 
 /**
  * Read one proposal. `file` is { filename, prepared, context } where `prepared`
