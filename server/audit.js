@@ -103,6 +103,26 @@ export function reconcileBilling(funding, groups) {
     rows.push({ group: g.name, xmlN, xml$: r2(xml$), billN, bill$: r2(bill$), ok, noBilling: !f });
   }
   const unassigned = Object.values(funding.byInvoice || {}).filter((a) => !a.group).length;
+
+  // Where the month's whole billing sits, so the workbook's total and the
+  // Groups page tile can be told apart: the tile is live groups on the XML,
+  // the workbook bills archived companies and anything not yet filed too.
+  const byName = new Map(groups.map((g) => [g.name, g]));
+  const coverage = { total: 0, live: 0, archived: 0, unfiled: 0 };
+  for (const [name, f] of Object.entries(funding.summary || {})) {
+    const amount = f.medical.monthly || 0;
+    coverage.total += amount;
+    const g = byName.get(name);
+    if (g && !g.archived && g.eligible !== false) coverage.live += amount;
+    else coverage.archived += amount;
+  }
+  for (const [inv, a] of Object.entries(funding.byInvoice || {})) {
+    if (a.group) continue;
+    const amount = (funding.lines || []).filter((l) => l.invoice === inv && l.medical && l.kind === "current").reduce((n, l) => n + l.rate, 0);
+    coverage.total += amount;
+    coverage.unfiled += amount;
+  }
+
   return {
     month: funding.month,
     groups: rows.length,
@@ -110,6 +130,7 @@ export function reconcileBilling(funding, groups) {
     differ: rows.filter((r) => r.ok === false).map((r) => r.group),
     noBilling: rows.filter((r) => r.noBilling).map((r) => r.group),
     unassigned,
+    coverage: { total: r2(coverage.total), live: r2(coverage.live), archived: r2(coverage.archived), unfiled: r2(coverage.unfiled) },
     rows,
   };
 }
@@ -157,7 +178,7 @@ export function runAudit({ groups, carrierStats, funding, lastImport }) {
 }
 
 /** Bump when the audit's rules change, so a stored read is not reused for a different comparison. */
-export const AUDIT_VERSION = 2;
+export const AUDIT_VERSION = 3;
 
 /** What identifies this audit: the rules, the three uploads and the invoice filings. */
 export function auditFingerprint({ carrierStats, funding, lastImport }) {

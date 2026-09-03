@@ -40,6 +40,10 @@ const funding = { filename: "f.xlsx", uploadedAt: "2026-09-03T11:00:00Z", month:
 const billing = reconcileBilling(funding, groups);
 assert.equal(billing.groups, 2, "archived groups are not billed against");
 assert.equal(billing.matches, 2, "$10 on $5,000 is within range, and a Blue Cross group is judged on its captive plans only");
+assert.equal(billing.coverage.live, 7010, "billing filed under groups the portal shows");
+assert.equal(billing.coverage.archived, 0);
+assert.equal(billing.coverage.unfiled, 0, "the unfiled invoice has no lines in this fixture");
+assert.equal(billing.coverage.total, 7010);
 assert.equal(billing.unassigned, 1);
 
 const lastImport = { filename: "x.xml", uploaded_at: "2026-09-03T09:00:00Z", companies_applied: 3 };

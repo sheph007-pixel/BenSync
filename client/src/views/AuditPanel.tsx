@@ -23,7 +23,16 @@ export interface Audit {
   portal: { groups: number; enrolled: number; groupHealthMonthly: number; totalMonthly: number };
   verdict: { kind: "ok" | "warn" | "none"; headline: string };
   carriers: CarrierRow[];
-  billing: { month: string | null; groups: number; matches: number; differ: string[]; noBilling: string[]; unassigned: number } | null;
+  billing: {
+    month: string | null;
+    groups: number;
+    matches: number;
+    differ: string[];
+    noBilling: string[];
+    unassigned: number;
+    /** Where the month's whole billing sits, so the workbook total and the Groups tile can be told apart. */
+    coverage?: { total: number; live: number; archived: number; unfiled: number };
+  } | null;
   read: string | null;
   readAt: string | null;
   reading: boolean;
@@ -46,6 +55,9 @@ const few = (names: string[]) => (names.length <= 12 ? names.join(", ") : `${nam
  * server after every upload; Claude's read arrives once all three files are
  * in and is kept, so nobody has to press anything.
  */
+const monthLabel = (m: string | null) =>
+  m ? new Date(`${m}-01T00:00:00`).toLocaleDateString("en-US", { month: "long", year: "numeric" }) : "The month";
+
 export default function AuditPanel({ token, version, ai }: Props) {
   const [audit, setAudit] = useState<Audit | null>(null);
   const [showRows, setShowRows] = useState(false);
@@ -176,6 +188,15 @@ export default function AuditPanel({ token, version, ai }: Props) {
                   {audit.billing.differ.length ? ` · differ: ${few(audit.billing.differ)}` : ""}
                   {audit.billing.noBilling.length ? ` · no billing this month: ${few(audit.billing.noBilling)}` : ""}
                   {audit.billing.unassigned ? ` · ${audit.billing.unassigned} invoice${audit.billing.unassigned === 1 ? "" : "s"} not filed under a group` : ""}
+                </div>
+              )}
+              {audit.billing?.coverage && (
+                <div style={{ marginTop: 6, fontSize: 12.5, color: C.body }}>
+                  {monthLabel(audit.billing.month)} billed {money0(audit.billing.coverage.total)} of medical in all:{" "}
+                  {money0(audit.billing.coverage.live)} to the groups the portal shows
+                  {audit.billing.coverage.archived ? ` · ${money0(audit.billing.coverage.archived)} to archived companies` : ""}
+                  {audit.billing.coverage.unfiled ? ` · ${money0(audit.billing.coverage.unfiled)} not filed under a group` : ""}. The Groups page
+                  tile counts the first of those, on the XML.
                 </div>
               )}
             </div>
