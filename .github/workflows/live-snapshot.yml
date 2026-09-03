@@ -1,0 +1,62 @@
+# Pulls the reconciliation file from the live portal and publishes it where a
+# Claude Code session can read it: the job log, and the data/live-reconciliation
+# branch. GitHub's runners can reach app.kennion.com; the coding sandbox cannot.
+#
+# Aggregates only — the export endpoint carries no employee records. The staff
+# credentials come from repository secrets when set, else the app's defaults.
+name: Live reconciliation snapshot
+
+on:
+  workflow_dispatch:
+    inputs:
+      site:
+        description: Portal base URL
+        default: https://app.kennion.com
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull the reconciliation file from the live site
+        env:
+          SITE: ${{ inputs.site }}
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL || 'hunter@kennion.com' }}
+          ADMIN_CODE: ${{ secrets.ADMIN_CODE || '87878787' }}
+        run: |
+          set -euo pipefail
+          echo "health: $(curl -sS -f "$SITE/healthz")"
+          TOKEN=$(curl -sS -f -X POST "$SITE/api/signin" \
+            -H 'Content-Type: application/json' \
+            -d "{\"email\":\"$ADMIN_EMAIL\",\"code\":\"$ADMIN_CODE\"}" | jq -r .token)
+          test -n "$TOKEN" -a "$TOKEN" != null
+          mkdir -p data-snapshots
+          curl -sS -f "$SITE/api/admin/reconcile/export" -H "Authorization: Bearer $TOKEN" \
+            -o data-snapshots/reconciliation.json
+          curl -sS -f "$SITE/api/admin/proposals" -H "Authorization: Bearer $TOKEN" \
+            -o data-snapshots/proposals.json
+          echo "::group::Summary"
+          jq '{generated, storage, roster, portalByProgram,
+               carrierStats: (.carrierStats | if . then {reportDate, uploadedAt, rows} else null end),
+               lastImport: (.lastImport | if . then {filename, uploaded_at, companies_found, companies_applied, diagnostics} else null end),
+               groups: (.groups | length)}' data-snapshots/reconciliation.json
+          echo "::endgroup::"
+          echo "::group::Full reconciliation JSON"
+          cat data-snapshots/reconciliation.json
+          echo
+          echo "::endgroup::"
+
+      - name: Publish to the data/live-reconciliation branch
+        run: |
+          set -euo pipefail
+          git config user.name "kennion-snapshot"
+          git config user.email "noreply@kennion.com"
+          git checkout -B data/live-reconciliation
+          git add data-snapshots
+          git commit -m "Snapshot the live reconciliation file ($(date -u +%Y-%m-%dT%H:%MZ))" || echo "nothing changed"
+          git push -f origin data/live-reconciliation
