@@ -72,7 +72,10 @@ function isCurrent(en, asOf) {
   const end = text(en, "EndDate");
   if (end == null || end === "") return true;
   const d = new Date(end);
-  return isNaN(d) ? true : d > asOf;
+  if (isNaN(d)) return true;
+  // Coverage runs through the end date, so a line ending today is still on.
+  const day = (x) => `${x.getUTCFullYear()}-${String(x.getUTCMonth() + 1).padStart(2, "0")}-${String(x.getUTCDate()).padStart(2, "0")}`;
+  return day(d) >= day(asOf);
 }
 
 /** Whole years between a date of birth and an as-of date. */
@@ -165,6 +168,13 @@ export function newDiagnostics() {
       noPremium: { n: 0, byProgram: {} },
       endDates: { nil: 0, absent: 0, past: 0, future: 0 },
     },
+    // Every other benefit — dental, vision, life, disability… — by the same
+    // rules, so a gap against a carrier's stats can be traced here too.
+    lines: {
+      kept: { n: 0, premium: 0 },
+      excluded: { terminatedEmployee: 0, ended: 0, waived: 0 },
+      noPremium: 0,
+    },
   };
 }
 
@@ -194,6 +204,12 @@ export function mergeDiagnostics(a, b) {
   a.medical.noPremium.n += b.medical.noPremium.n;
   addMap(a.medical.noPremium.byProgram, b.medical.noPremium.byProgram);
   addMap(a.medical.endDates, b.medical.endDates);
+  if (b.lines) {
+    a.lines.kept.n += b.lines.kept.n;
+    a.lines.kept.premium = round2(a.lines.kept.premium + b.lines.kept.premium);
+    addMap(a.lines.excluded, b.lines.excluded);
+    a.lines.noPremium += b.lines.noPremium;
+  }
   return a;
 }
 
@@ -342,16 +358,23 @@ const companyBlock = wholeCompany.slice(0, headEnd > 0 ? headEnd : 8000);
       // A terminated employee whose medical coverage has not ended is the
       // classic reason EN's count runs higher than ours: record it.
       for (const en of allEnrollments) {
-        if (text(en, "Benefit") !== "Medical" || isWaived(en)) continue;
-        if (isCurrent(en, today)) note("terminatedEmployee", en);
-        else note("ended", en);
+        if (isWaived(en)) continue;
+        const medicalLine = text(en, "Benefit") === "Medical";
+        const reason = isCurrent(en, today) ? "terminatedEmployee" : "ended";
+        if (medicalLine) note(reason, en);
+        else diag.lines.excluded[reason]++;
       }
       continue;
     }
     for (const en of allEnrollments) {
-      if (text(en, "Benefit") !== "Medical") continue;
-      if (isWaived(en)) note("waived", en);
-      else if (!isCurrent(en, today)) note("ended", en);
+      const medicalLine = text(en, "Benefit") === "Medical";
+      if (isWaived(en)) {
+        if (medicalLine) note("waived", en);
+        else diag.lines.excluded.waived++;
+      } else if (!isCurrent(en, today)) {
+        if (medicalLine) note("ended", en);
+        else diag.lines.excluded.ended++;
+      }
     }
 
     // Same currency rule for every benefit: an enrollment that has not ended,
@@ -371,7 +394,11 @@ const companyBlock = wholeCompany.slice(0, headEnd > 0 ? headEnd : 8000);
       const a = lineAgg.get(key) || { benefit, carrier, plan, enrolled: 0, monthly: 0 };
       headOf(carrier, empIdx);
       a.enrolled++;
-      a.monthly += cost == null || cost === "" ? 0 : Number(cost) || 0;
+      const amount = cost == null || cost === "" ? null : Number(cost);
+      if (amount == null || !Number.isFinite(amount)) diag.lines.noPremium++;
+      a.monthly += amount == null || !Number.isFinite(amount) ? 0 : amount;
+      diag.lines.kept.n++;
+      diag.lines.kept.premium = round2(diag.lines.kept.premium + (amount == null || !Number.isFinite(amount) ? 0 : amount));
       lineAgg.set(key, a);
     }
 

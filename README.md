@@ -203,7 +203,9 @@ report counts: **every line** a carrier has (medical plus dental, vision, life,
 disability …), "enrolled" as **distinct employees** on any of those lines (the
 importer keeps a per-carrier head count for each company), and **every
 company** — groups archived in the portal are shown in their own column rather
-than dropped, because Employee Navigator still counts them. Each row shows
+than dropped, because Employee Navigator still counts them. A carrier the
+report names twice ("Blue Cross Blue Shield" beside "Blue Cross Blue Shield of
+Alabama") is read as one row. Each row shows
 enrolled, companies and monthly premium side by side with the difference,
 marked **Matches** within 1% or **Check** otherwise. A company with no medical
 but with other lines in force is imported too (flagged ancillary-only; it is
@@ -385,10 +387,21 @@ Rows that are the same client under two names — created before this matching
 existed — are flagged in the Groups table with the row they duplicate, so the
 stale one can be archived.
 
-An import **never removes a group**. Only the companies you tick are touched;
+An import **never deletes a group**. Only the companies you tick are touched;
 every other group is left exactly as it was, so a partial export cannot wipe the
-roster. Staff edits live in their own tables and survive imports untouched:
-hand-assigned access codes, ALE buckets and hand-keyed rates all persist.
+roster. One thing a full export does say: a company it no longer carries has
+left. When an export holds at least half the roster, a census-only group (one
+never imported) that is absent from it is **archived** and marked "not in the
+Employee Navigator export", once; restoring it by hand sticks, and later imports
+leave it alone. Staff edits live in their own tables and survive imports
+untouched: hand-assigned access codes, ALE buckets and hand-keyed rates all
+persist.
+
+Company records the parser could not use (no plans, no enrollments) are kept
+in the import's record as rejected, with the reason, and listed under "What the
+last XML import left out" beside the excluded medical enrollments and the
+non-medical lines left out by the same rules. Coverage runs through its end
+date: a line ending today is still on.
 
 Within a group that you do import, the enrollment **is replaced** rather than
 merged, and that is deliberate. An export is a snapshot: if someone terminated

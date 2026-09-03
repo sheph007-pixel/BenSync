@@ -34,6 +34,8 @@ export interface AdminGroup {
   imported?: boolean;
   importedAt?: string | null;
   archived?: boolean;
+  /** Set when an import found no record of this census-only company and archived it. */
+  notInExport?: string | null;
   eligible?: boolean;
   programs?: string[];
   carriersSeen?: string[];

@@ -244,6 +244,8 @@ function rebuild() {
     lives: g.lives,
     plans: classifyPlans(g),
     carrierHeads: g.carrierHeads || null,
+    /** Set (an ISO time) when an import found no record of a census-only company and archived it. */
+    notInExport: g.notInExport || null,
     ancillaryOnly: !!g.ancillaryOnly,
     /** This month's billing for the group, from the funding workbook. */
     funding: (funding && funding.summary[g.name]) || null,
@@ -772,11 +774,38 @@ app.post("/api/admin/import", requireStaff, async (req, res) => {
     saveImports();
 
     const diagnostics = rollupDiagnostics(companies);
+    // Company records the parser could not use are part of the record too —
+    // a carrier's stats may count them when the portal does not.
+    diagnostics.rejected = failures.map((f) => ({ name: f.name, reason: f.reason }));
+
+    // A census row for a company the export no longer carries is a company
+    // that has left: archive it, once, and say why. Staff can restore it and
+    // the next import leaves that alone.
+    // Only a full export can say a company has left: one carrying at least
+    // half the roster. A single-company export touches nothing else.
+    if (!wanted && companies.length + failures.length >= groups.length / 2) {
+      const at = new Date().toISOString();
+      const exported = new Set(companies.map((c) => c.group.name));
+      for (const g of data.groups) {
+        if (!(g.plans || []).length || imported.groups[g.name] || exported.has(g.name)) continue;
+        const m = meta[g.name] || {};
+        if ((m.fields || {}).notInExport) continue;
+        meta[g.name] = { ...m, archived: true, fields: { ...(m.fields || {}), notInExport: at } };
+        try {
+          if (db) {
+            await db.setField(g.name, "notInExport", at, "import");
+            await db.setMeta(g.name, "archived", true, "import");
+          }
+        } catch (e) {
+          console.error(`could not archive ${g.name}:`, e.message);
+        }
+      }
+    }
     if (db) {
       const at = await db.logImport(
         String(req.query.filename || "").slice(0, 200) || null,
         req.staffEmail || null,
-        companies.length,
+        companies.length + failures.length,
         applied.length,
         applied.map((a) => a.name),
         diagnostics,
@@ -797,7 +826,7 @@ app.post("/api/admin/import", requireStaff, async (req, res) => {
           filename: String(req.query.filename || "").slice(0, 200) || null,
           uploaded_at: at,
           uploaded_by: req.staffEmail || null,
-          companies_found: companies.length,
+          companies_found: companies.length + failures.length,
           companies_applied: applied.length,
           diagnostics,
         },

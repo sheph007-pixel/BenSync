@@ -127,7 +127,7 @@ export default function GroupDetail({ group, token, onChanged, onBack, onOpenRat
               padding: "3px 8px",
             }}
           >
-            Archived — cannot sign in
+            Archived — cannot sign in{group.notInExport ? " · not in the Employee Navigator export" : ""}
           </span>
         )}
       </div>
@@ -474,7 +474,7 @@ export default function GroupDetail({ group, token, onChanged, onBack, onOpenRat
         </h3>
         <div style={{ marginTop: 8, fontSize: 12.5, color: C.muted, lineHeight: 1.6, maxWidth: 720 }}>
           {group.archived
-            ? "This group is archived: hidden from the list by default, and its access code is refused at sign-in. Nothing was deleted — restoring puts it straight back."
+            ? `This group is archived${group.notInExport ? ` because the Employee Navigator export of ${new Date(group.notInExport).toLocaleDateString()} no longer carried it` : ""}: hidden from the list by default, and its access code is refused at sign-in. Nothing was deleted — restoring puts it straight back, and later imports leave that alone.`
             : "Archiving hides the group from the list and refuses its access code at sign-in. Nothing is deleted, and it can be restored at any time."}
         </div>
         <div style={{ marginTop: 12, display: "flex", gap: 10, alignItems: "center" }}>

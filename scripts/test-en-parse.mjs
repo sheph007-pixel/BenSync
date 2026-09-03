@@ -100,6 +100,8 @@ assert.deepEqual(
   ],
 );
 assert.equal(g.members.length, 2);
+const diag = companies[0].stats.diagnostics;
+assert.deepEqual(diag.lines, { kept: { n: 3, premium: 92 }, excluded: { terminatedEmployee: 1, ended: 1, waived: 0 }, noPremium: 0 }, "non-medical lines are accounted for too");
 assert.ok(!g.members.some((m) => m.first === "Dee" || m.first === "Eve"), "waived and terminated never become members");
 
 // Supplemental lines: only the open enrollments on active employees.
@@ -174,3 +176,15 @@ console.log({
 assert.deepEqual(g.carrierHeads, { EBPA: 1, Guardian: 2, VSP: 1, "Blue Cross Blue Shield of Alabama": 1 });
 assert.equal(g.ancillaryOnly, false);
 console.log("en-parse: carrier head counts ok", g.carrierHeads);
+
+// Coverage runs through its end date: a medical line ending today is still on.
+const today = new Date().toISOString().slice(0, 10);
+const xmlToday = xml.replace(/<Employees>[\s\S]*<\/Employees>/, `<Employees>${employee("Fay", "Active", [
+  { benefit: "Medical", plan: "EBPA Preferred Silver 2026", tier: "Employee", cost: 500, ee: 100, endDate: today + "T00:00:00" },
+])}${employee("Gus", "Active", [
+  { benefit: "Medical", plan: "EBPA Preferred Silver 2026", tier: "Employee", cost: 500, ee: 100, endDate: "2026-01-31T00:00:00" },
+])}</Employees>`);
+const todayRun = await parseEnStream(Readable.from([Buffer.from(xmlToday, "utf8")], { objectMode: false }));
+assert.equal(todayRun.companies.length, 1, JSON.stringify(todayRun.failures));
+assert.equal(todayRun.companies[0].group.enrolled, 1, "Fay (ends today) counts, Gus (ended in January) does not");
+console.log("en-parse: end-date-today check passed");
