@@ -218,6 +218,11 @@ the per-carrier portal totals and those diagnostics to Claude and shows a
 plain-language explanation of which rule differs from Employee Navigator's
 counting and what to change; no member data leaves the server.
 
+**Download reconciliation file** produces one small JSON file — the report,
+the portal's totals by carrier, the last import's exclusions and every group's
+plan classification, with no employee records — for reconciling outside the
+server, for instance by attaching it to a Claude Code chat.
+
 Who counts as enrolled follows the report: anyone still on a plan — active, on
 leave, on COBRA, a retiree with coverage — while a terminated employee is
 skipped, and an enrollment counts until its end date has passed.
