@@ -231,6 +231,34 @@ Who counts as enrolled follows the report: anyone still on a plan — active, on
 leave, on COBRA, a retiree with coverage — while a terminated employee is
 skipped, and an enrollment counts until its end date has passed.
 
+### The monthly funding workbook
+
+The third file, Employee Navigator's **funding workbook** for the month
+(`September_Funding_….xlsx`), is the billing itself: one line per participant
+per product with the rate, for both captives. Uploaded on the Import tab, it is
+stored whole (`kennion.funding`; the participant names stay on the server, as
+the members do) and every invoice is filed under a group — the workbook names
+billing divisions rather than companies, so each invoice goes to the group most
+of its billed people belong to, by matching names against the group members the
+XML produced; a billing org that simply carries a company's name is accepted
+too. Invoices that match nothing (companies not in the export) are listed for
+staff to file by hand or leave out.
+
+Enrollment and rates come from the month's own lines: one current line per
+participant per plan. A prior month billed late (a retro add) or reversed (a
+credit, a negative rate) changes the invoice, not who is enrolled, so those are
+kept as adjustments beside the count. EBPA's dental plans appear on the
+workbook's "(HEALTH)" sheets and are treated as lines, not medical, the same as
+the XML treats them.
+
+The Import tab then shows, group by group, what the XML says against what the
+month's billing says — participants and medical premium, with the difference —
+and each company page has a billing panel: every plan and tier with the number
+billed and the billed rate, beside the XML's billed rate for that tier. **Use
+billed rates** (per group, or for every group at once) writes the billed amount
+as the tier's rate wherever the XML had none or a different one, so the rates
+the client sees are the ones actually being billed.
+
 ### Checking the premium figures
 
 **Existing Plans & Rates** opens with "Where the medical premium sits": every

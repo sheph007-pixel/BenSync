@@ -111,6 +111,22 @@ CREATE TABLE IF NOT EXISTS kennion.carrier_stats (
   uploaded_at   timestamptz NOT NULL DEFAULT now()
 );
 
+-- A month's funding workbook: every billed line (participant names included —
+-- server-side only, like the members), which invoice went to which group,
+-- and the per-group summary the screens use. Latest upload wins.
+CREATE TABLE IF NOT EXISTS kennion.funding (
+  id            bigserial PRIMARY KEY,
+  month         text,
+  filename      text,
+  file_stamp    text,
+  lines         jsonb NOT NULL,
+  by_invoice    jsonb NOT NULL,
+  summary       jsonb NOT NULL,
+  uploaded_by   text,
+  uploaded_at   timestamptz NOT NULL DEFAULT now(),
+  updated_at    timestamptz NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS kennion.rate_overrides (
   group_name   text NOT NULL,
   plan         text NOT NULL,
@@ -366,6 +382,31 @@ export function createDb(url) {
            FROM kennion.carrier_stats ORDER BY uploaded_at DESC, id DESC LIMIT 1`,
       );
       return rows[0] ? shapeStats(rows[0]) : null;
+    },
+
+    async saveFunding(rec) {
+      const { rows } = await pool.query(
+        `INSERT INTO kennion.funding (month, filename, file_stamp, lines, by_invoice, summary, uploaded_by)
+         VALUES ($1,$2,$3,$4,$5,$6,$7)
+         RETURNING id, month, filename, file_stamp, by_invoice, summary, uploaded_by, uploaded_at`,
+        [rec.month, rec.filename, rec.fileStamp, JSON.stringify(rec.lines), JSON.stringify(rec.byInvoice), JSON.stringify(rec.summary), rec.uploadedBy || null],
+      );
+      return rows[0];
+    },
+
+    async latestFunding() {
+      const { rows } = await pool.query(
+        `SELECT id, month, filename, file_stamp, lines, by_invoice, summary, uploaded_by, uploaded_at
+           FROM kennion.funding ORDER BY uploaded_at DESC, id DESC LIMIT 1`,
+      );
+      return rows[0] || null;
+    },
+
+    async updateFunding(id, byInvoice, summary) {
+      await pool.query(
+        "UPDATE kennion.funding SET by_invoice = $2, summary = $3, updated_at = now() WHERE id = $1",
+        [id, JSON.stringify(byInvoice), JSON.stringify(summary)],
+      );
     },
 
     async stats() {

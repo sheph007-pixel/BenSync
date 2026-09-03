@@ -4,6 +4,7 @@ import Link from "@/lib/Link";
 import { PATHS } from "@/lib/router";
 import { BROKER_LABEL, RENEWALS, RENEWAL_LABEL, RENEWAL_TONE, type AdminGroup } from "@/views/GroupsTable";
 import { GroupProposals } from "@/views/Proposals";
+import { GroupBilling } from "@/views/Funding";
 
 interface Props {
   group: AdminGroup & {
@@ -21,6 +22,9 @@ interface Props {
   onBack: () => void;
   /** Called before following the link to Plans & Rates, so it opens filtered to this group. */
   onOpenRates: (name: string) => void;
+  /** The month the funding workbook covers, when one is uploaded. */
+  fundingMonth?: string | null;
+  onOverrides?: (o: Record<string, string>) => void;
 }
 
 const FIELDS: { key: string; label: string; width?: number }[] = [
@@ -36,7 +40,7 @@ const FIELDS: { key: string; label: string; width?: number }[] = [
   { key: "situsState", label: "Situs state", width: 90 },
 ];
 
-export default function GroupDetail({ group, token, onChanged, onBack, onOpenRates }: Props) {
+export default function GroupDetail({ group, token, onChanged, onBack, onOpenRates, fundingMonth, onOverrides }: Props) {
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const [saved, setSaved] = useState("");
@@ -459,6 +463,8 @@ export default function GroupDetail({ group, token, onChanged, onBack, onOpenRat
           </div>
         </div>
       )}
+
+      <GroupBilling token={token} group={group} month={fundingMonth || null} onOverrides={onOverrides || (() => undefined)} />
 
       <GroupProposals group={group.name} token={token} />
 

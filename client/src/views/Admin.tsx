@@ -17,6 +17,7 @@ import GroupsTable, { type AdminGroup } from "@/views/GroupsTable";
 import GroupDetail from "@/views/GroupDetail";
 import Proposals from "@/views/Proposals";
 import Reconciliation, { portalComparable, reportGroupHealth, type CarrierStats, type ImportDiagnostics } from "@/views/Reconciliation";
+import FundingPanel, { type FundingInfo } from "@/views/Funding";
 
 interface Props {
   data: KennionData;
@@ -30,6 +31,10 @@ interface Props {
   carrierStats: CarrierStats | null;
   /** Whether the server has an Anthropic key. */
   ai: boolean;
+  /** The month's funding workbook, if uploaded. */
+  funding: FundingInfo | null;
+  onFunding: (f: FundingInfo, groups?: unknown[]) => void;
+  onOverrides: (o: Record<string, string>) => void;
   onCarrierStats: (s: CarrierStats) => void;
   /** Which tab the address names. */
   tab: AdminTab;
@@ -89,6 +94,9 @@ export default function Admin({
   carrierStats,
   onCarrierStats,
   ai,
+  funding,
+  onFunding,
+  onOverrides,
   tab,
   openGroup,
   overrides,
@@ -682,6 +690,8 @@ export default function Admin({
                     onQuery(name);
                     onTpa("All");
                   }}
+                  fundingMonth={funding?.month || null}
+                  onOverrides={onOverrides}
                 />
               ) : (
                 <div style={{ ...panel, marginTop: 16, padding: "20px 22px" }}>
@@ -736,6 +746,14 @@ export default function Admin({
               diagnostics={imports[0]?.diagnostics || null}
               lastImport={imports[0] ? { filename: imports[0].filename, when: imports[0].uploaded_at } : null}
               ai={ai}
+            />
+
+            <FundingPanel
+              token={token}
+              funding={funding}
+              groups={data.groups as unknown as AdminGroup[]}
+              onFunding={onFunding}
+              onOverrides={onOverrides}
             />
 
             <div style={{ ...panel, marginTop: 16, padding: "20px 22px" }}>

@@ -16,6 +16,10 @@ export interface AdminGroup {
   renewal?: Renewal;
   /** Carrier proposals filed under this group. */
   proposals?: number;
+  /** Billed rates from the XML, plan → tier → rate. */
+  rates?: Record<string, Record<string, number>>;
+  /** This month's billing for the group, from the funding workbook. */
+  funding?: import("@/views/Funding").GroupFunding | null;
   address1: string | null;
   city: string | null;
   state: string | null;
