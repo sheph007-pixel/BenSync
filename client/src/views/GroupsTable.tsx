@@ -513,8 +513,9 @@ export default function GroupsTable({ groups, token, onChanged }: Props) {
           </select>
           {(counts.excluded > 0 || counts.archived > 0) && (
             <select aria-label="Which groups" value={view} onChange={(e) => setView(e.target.value as typeof view)} style={filterSelect}>
-              <option value="live">In the portal ({live.length})</option>
+              {/* Widest first, then the parts of it, so the counts read as a sum. */}
               <option value="all">All groups ({groups.length})</option>
+              <option value="live">In the portal ({live.length})</option>
               {counts.excluded > 0 && <option value="excluded">Not in program ({counts.excluded})</option>}
               {counts.archived > 0 && <option value="archived">Archived ({counts.archived})</option>}
             </select>
