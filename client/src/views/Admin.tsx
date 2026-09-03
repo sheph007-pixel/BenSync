@@ -16,7 +16,7 @@ import ImportPanel from "@/views/ImportPanel";
 import GroupsTable, { type AdminGroup } from "@/views/GroupsTable";
 import GroupDetail from "@/views/GroupDetail";
 import Proposals from "@/views/Proposals";
-import Reconciliation, { reportGroupHealth, type CarrierStats, type ImportDiagnostics } from "@/views/Reconciliation";
+import Reconciliation, { portalComparable, reportGroupHealth, type CarrierStats, type ImportDiagnostics } from "@/views/Reconciliation";
 
 interface Props {
   data: KennionData;
@@ -703,7 +703,10 @@ export default function Admin({
               groups={data.groups as unknown as AdminGroup[]}
               token={token}
               onChanged={(gs) => onImported(gs as unknown[])}
-              enReport={reportGroupHealth(carrierStats)}
+              enReport={(() => {
+                const r = reportGroupHealth(carrierStats);
+                return r ? { ...r, comparable: portalComparable(data.groups as unknown as AdminGroup[]).monthly } : null;
+              })()}
             />
           ))}
 
@@ -728,7 +731,7 @@ export default function Admin({
             <Reconciliation
               token={token}
               stats={carrierStats}
-              groups={activeGroups as unknown as AdminGroup[]}
+              groups={data.groups as unknown as AdminGroup[]}
               onStats={onCarrierStats}
               diagnostics={imports[0]?.diagnostics || null}
               lastImport={imports[0] ? { filename: imports[0].filename, when: imports[0].uploaded_at } : null}

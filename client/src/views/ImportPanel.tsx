@@ -5,6 +5,8 @@ interface Company {
   name: string;
   enIdentifier: string | null;
   tpa: string;
+  /** No medical in force — dental, vision or life only. Not a portal group. */
+  ancillaryOnly?: boolean;
   pyStart: string | null;
   pyEnd: string | null;
   enrolled: number;
@@ -317,6 +319,9 @@ export default function ImportPanel({ token, durable, storage, onImported }: Pro
                     </td>
                     <td style={{ padding: "8px 10px", borderBottom: `1px solid ${C.hairline}`, color: C.ink }}>
                       {c.name}
+                      {c.ancillaryOnly && (
+                        <div style={{ fontSize: 11.5, color: C.amber }}>no medical — other lines only; counts in premium totals, not a portal group</div>
+                      )}
                       <div style={{ fontSize: 11.5, color: C.ghost }}>
                         {c.tpa || "—"} · {c.plans.map((p) => `${p.plan} (${p.enrolled})`).join(" · ")}
                       </div>

@@ -191,6 +191,8 @@ function rebuild() {
     enrolled: g.enrolled,
     lives: g.lives,
     plans: classifyPlans(g),
+    carrierHeads: g.carrierHeads || null,
+    ancillaryOnly: !!g.ancillaryOnly,
     rates: g.rates,
     // Group health (EBPA + HealthEZ medical), all medical, supplemental lines
     // and the total. Census rows and older imports carry no `lines`, so their
@@ -345,6 +347,7 @@ const summarise = (parsed) => {
     hasSplit: !!parsed.split,
     stats: parsed.stats,
     isNew: !current,
+    ancillaryOnly: !!g.ancillaryOnly,
     matchedName: current && current.name !== g.name ? current.name : null,
     current: current && {
       enrolled: current.enrolled,
@@ -422,11 +425,17 @@ app.post("/api/admin/reconcile/explain", requireStaff, express.json({ limit: "25
  * handed to someone (or to Claude in a chat) who cannot reach this server.
  */
 app.get("/api/admin/reconcile/export", requireStaff, (_req, res) => {
+  // Every group, archived and not-in-program included: Employee Navigator's
+  // report knows nothing of either, so the comparison must not drop them.
   const live = groups.filter((g) => !g.archived && g.eligible);
-  const perGroup = live.map((g) => {
+  const perGroup = groups.map((g) => {
     const b = premiumBreakdown(g);
     return {
       name: g.name,
+      archived: !!g.archived,
+      eligible: !!g.eligible,
+      ancillaryOnly: !!g.ancillaryOnly,
+      carrierHeads: g.carrierHeads || null,
       tpa: g.tpa || null,
       enrolled: g.enrolled,
       lives: g.lives,
@@ -447,7 +456,7 @@ app.get("/api/admin/reconcile/export", requireStaff, (_req, res) => {
     };
   });
   const byProgram = {};
-  perGroup.forEach((g) =>
+  perGroup.filter((g) => !g.archived && g.eligible).forEach((g) =>
     g.plans.forEach((p) => {
       const k = p.assumed ? "assumed" : p.program || "unknown";
       const t = (byProgram[k] = byProgram[k] || { groups: new Set(), plans: 0, enrolled: 0, monthly: 0, carriers: new Set() });

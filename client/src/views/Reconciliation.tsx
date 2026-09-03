@@ -33,18 +33,43 @@ const REASON_LABEL: Record<string, string> = {
 
 type Plan = { plan: string; tpa?: string; enrolled?: number; monthly?: number; program?: string | null; groupHealth?: boolean; assumed?: boolean };
 type Line = { benefit: string; carrier: string; plan: string; enrolled: number; monthly: number };
+type G = AdminGroup & {
+  lines?: Line[];
+  linesLoaded?: boolean;
+  /** Distinct employees on any line, per carrier as the export named it. */
+  carrierHeads?: Record<string, number> | null;
+  groupHealthMonthly?: number;
+  groupHealthEnrolled?: number;
+};
 
-interface Recon {
+/**
+ * One side of the comparison, live groups or archived ones. Employee
+ * Navigator's report counts every benefit line a carrier has — medical,
+ * dental, vision, life … — and "enrolled" is distinct employees on any of
+ * them, so the portal is added up the same way.
+ */
+interface Side {
+  heads: number;
+  headsExact: boolean;
+  medical: number;
+  lines: number;
+  groups: number;
+  assumedMedical: number;
+}
+const side = (): Side => ({ heads: 0, headsExact: true, medical: 0, lines: 0, groups: 0, assumedMedical: 0 });
+const total = (s: Side) => s.medical + s.lines;
+
+export interface Recon {
   carrier: string;
   program: string | null;
   report: { enrolled: number; companies: number; monthly: number };
-  portal: { enrolled: number; groups: number; monthly: number; assumedMonthly: number } | null;
-  pending: boolean; // supplemental line, but no group has lines loaded yet
+  live: Side;
+  archived: Side;
   service: boolean; // no premium either side — an administrator, not a carrier
   ok: boolean | null;
 }
 
-/** Group health as the report states it: EBPA + HealthEZ. */
+/** Group health as the report states it: EBPA + HealthEZ, every line. */
 export function reportGroupHealth(stats: CarrierStats | null) {
   if (!stats) return null;
   const gh = stats.rows.filter((r) => {
@@ -54,62 +79,79 @@ export function reportGroupHealth(stats: CarrierStats | null) {
   return { enrolled: gh.reduce((n, r) => n + r.enrolled, 0), monthly: gh.reduce((n, r) => n + r.planCosts, 0) };
 }
 
+/**
+ * The portal added up on the report's basis for EBPA + HealthEZ: medical plus
+ * every other line on those carriers, live groups and archived ones.
+ */
+export function portalComparable(groups: AdminGroup[]) {
+  let medicalLive = 0;
+  let linesLive = 0;
+  let archived = 0;
+  (groups as G[]).forEach((g) => {
+    const med = ((g.plans || []) as Plan[]).filter((p) => p.groupHealth).reduce((n, p) => n + (p.monthly || 0), 0);
+    const ln = (g.lines || []).filter((l) => ["EBPA", "HealthEZ"].includes(matchCarrier(l.carrier) || "")).reduce((n, l) => n + (l.monthly || 0), 0);
+    if (g.archived) archived += med + ln;
+    else {
+      medicalLive += med;
+      linesLive += ln;
+    }
+  });
+  return { monthly: medicalLive + linesLive + archived, medicalLive, linesLive, archived };
+}
+
 const close = (a: number, b: number, tolFrac: number, tolAbs: number) => Math.abs(a - b) <= Math.max(tolAbs, tolFrac * Math.abs(b));
 
 /** Every carrier in the report against what the portal holds from the XML. */
 export function reconcile(stats: CarrierStats, groups: AdminGroup[]): Recon[] {
-  const linesLoaded = groups.some((g) => (g as unknown as { linesLoaded?: boolean }).linesLoaded);
+  const gs = groups as G[];
   return stats.rows.map((r) => {
     const program = matchCarrier(r.carrier);
+    const key = carrierKey(r.carrier);
     const report = { enrolled: r.enrolled, companies: r.companies, monthly: r.planCosts };
-    let portal: Recon["portal"] = null;
-    let pending = false;
-    if (program) {
-      const gs = new Set<string>();
-      let enrolled = 0;
-      let monthly = 0;
-      let assumedMonthly = 0;
-      groups.forEach((g) => {
-        ((g.plans || []) as Plan[]).forEach((p) => {
-          const counts = p.program === program || (p.assumed && program !== "BCBS-AL" && !p.program);
-          if (!counts) return;
-          gs.add(g.name);
-          enrolled += p.enrolled || 0;
-          monthly += p.monthly || 0;
-          if (p.assumed) assumedMonthly += p.monthly || 0;
-        });
+    const planMatches = (p: Plan) => (program ? p.program === program || (!!p.assumed && program !== "BCBS-AL") : carrierKey(p.tpa) === key);
+    const nameMatches = (c: string) => (program ? matchCarrier(c) === program : carrierKey(c) === key);
+
+    const live = side();
+    const archived = side();
+    gs.forEach((g) => {
+      const s = g.archived ? archived : live;
+      const plans = ((g.plans || []) as Plan[]).filter(planMatches);
+      const lines = (g.lines || []).filter((l) => nameMatches(l.carrier));
+      if (!plans.length && !lines.length) return;
+      s.groups++;
+      plans.forEach((p) => {
+        s.medical += p.monthly || 0;
+        if (p.assumed) s.assumedMedical += p.monthly || 0;
       });
-      portal = { enrolled, groups: gs.size, monthly, assumedMonthly };
-    } else if (!linesLoaded) {
-      pending = true;
-    } else {
-      const want = carrierKey(r.carrier);
-      const gs = new Set<string>();
-      let enrolled = 0;
-      let monthly = 0;
-      groups.forEach((g) => {
-        (((g as unknown as { lines?: Line[] }).lines || []) as Line[]).forEach((l) => {
-          if (carrierKey(l.carrier) !== want) return;
-          gs.add(g.name);
-          enrolled += l.enrolled || 0;
-          monthly += l.monthly || 0;
-        });
+      lines.forEach((l) => {
+        s.lines += l.monthly || 0;
       });
-      portal = { enrolled, groups: gs.size, monthly, assumedMonthly: 0 };
-    }
-    const service = report.monthly === 0 && (!portal || portal.monthly === 0);
-    const ok =
-      portal && !service
-        ? close(portal.monthly, report.monthly, 0.01, 50) && close(portal.enrolled, report.enrolled, 0.01, 2)
-        : null;
-    return { carrier: r.carrier, program, report, portal, pending, service, ok };
+      if (g.carrierHeads) {
+        Object.entries(g.carrierHeads).forEach(([c, n]) => {
+          if (nameMatches(c)) s.heads += n;
+        });
+      } else {
+        // Older import without per-carrier head counts: enrollments instead
+        // of people, which over-counts anyone on two lines.
+        s.headsExact = false;
+        s.heads += plans.reduce((n, p) => n + (p.enrolled || 0), 0) + lines.reduce((n, l) => n + (l.enrolled || 0), 0);
+      }
+    });
+
+    const both = total(live) + total(archived);
+    const heads = live.heads + archived.heads;
+    const service = report.monthly === 0 && both === 0;
+    const ok = service
+      ? null
+      : close(both, report.monthly, 0.01, 50) && (!(live.headsExact && archived.headsExact) || close(heads, report.enrolled, 0.01, 2));
+    return { carrier: r.carrier, program, report, live, archived, service, ok };
   });
 }
 
 interface Props {
   token: string;
   stats: CarrierStats | null;
-  /** The live roster, with classified plans and lines. */
+  /** Every group — live and archived — with classified plans, lines and head counts. */
   groups: AdminGroup[];
   onStats: (s: CarrierStats) => void;
   diagnostics?: ImportDiagnostics | null;
@@ -124,12 +166,25 @@ const cell = (right = false): React.CSSProperties => ({
   fontVariantNumeric: "tabular-nums",
   whiteSpace: "nowrap",
 });
+const th = (right = false): React.CSSProperties => ({
+  ...cell(right),
+  fontWeight: 600,
+  color: C.muted,
+  fontSize: 11.5,
+  textTransform: "uppercase",
+  letterSpacing: ".3px",
+});
 
 const diff = (portal: number, report: number, money = false) => {
   const d = portal - report;
-  if (Math.abs(d) < (money ? 0.5 : 0.5)) return <span style={{ color: C.green }}>match</span>;
+  if (Math.abs(d) < 0.5) return <span style={{ color: C.green }}>match</span>;
   const s = money ? money0(Math.abs(d)) : Math.abs(d).toLocaleString();
-  return <span style={{ color: d < 0 ? C.red : C.amber }}>{d < 0 ? "−" : "+"}{s}</span>;
+  return (
+    <span style={{ color: d < 0 ? C.red : C.amber }}>
+      {d < 0 ? "−" : "+"}
+      {s}
+    </span>
+  );
 };
 
 /**
@@ -147,7 +202,7 @@ export default function Reconciliation({ token, stats, groups, onStats, diagnost
     setExplaining(true);
     setExplanation("");
     try {
-      const portal = rows.map((r) => ({ carrier: r.carrier, program: r.program, report: r.report, portal: r.portal, pending: r.pending }));
+      const portal = rows.map((r) => ({ carrier: r.carrier, program: r.program, report: r.report, live: r.live, archived: r.archived }));
       const r = await fetch("/api/admin/reconcile/explain", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
@@ -197,12 +252,12 @@ export default function Reconciliation({ token, stats, groups, onStats, diagnost
 
   const rows = stats ? reconcile(stats, groups) : [];
   const gh = reportGroupHealth(stats);
-  const portalGh = {
-    enrolled: groups.reduce((n, g) => n + ((g as unknown as { groupHealthEnrolled?: number }).groupHealthEnrolled ?? 0), 0),
-    monthly: groups.reduce((n, g) => n + ((g as unknown as { groupHealthMonthly?: number }).groupHealthMonthly ?? 0), 0),
-  };
+  const comparable = portalComparable(groups);
+  const tile = (groups as G[]).filter((g) => !g.archived && g.eligible !== false).reduce((n, g) => n + (g.groupHealthMonthly ?? 0), 0);
   const checked = rows.filter((r) => r.ok !== null);
   const mismatches = checked.filter((r) => r.ok === false);
+  const linesLoaded = (groups as G[]).some((g) => g.linesLoaded);
+  const archivedCount = (groups as G[]).filter((g) => g.archived).length;
 
   return (
     <div style={{ ...panel, marginTop: 16, padding: "20px 22px" }}>
@@ -217,9 +272,11 @@ export default function Reconciliation({ token, stats, groups, onStats, diagnost
         )}
       </div>
       <div style={{ marginTop: 8, fontSize: 13, color: C.muted, lineHeight: 1.65, maxWidth: 880 }}>
-        The second file from Employee Navigator: its own count of enrolled employees, companies and
-        monthly premium per carrier. Upload it with each XML export and the two are checked against
-        each other below — every carrier the report names, against what the XML import produced.
+        The second file from Employee Navigator: its own count per carrier. That report counts{" "}
+        <strong>every line</strong> a carrier has — medical, dental, vision, life, disability — with
+        &ldquo;enrolled&rdquo; meaning distinct employees on any of them, and it includes every
+        company, archived here or not. The portal is added up the same way below, so the two can be
+        checked against each other carrier by carrier.
       </div>
 
       <div style={{ marginTop: 14, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
@@ -257,72 +314,92 @@ export default function Reconciliation({ token, stats, groups, onStats, diagnost
               lineHeight: 1.7,
             }}
           >
-            <strong>Group health (EBPA + HealthEZ)</strong> — Employee Navigator reports{" "}
-            <strong>{gh.enrolled.toLocaleString()} enrolled · {money0(gh.monthly)} / mo</strong>; the portal holds{" "}
-            <strong>{portalGh.enrolled.toLocaleString()} enrolled · {money0(portalGh.monthly)} / mo</strong>{" "}
-            ({diff(portalGh.enrolled, gh.enrolled)} enrolled, {diff(portalGh.monthly, gh.monthly, true)} premium).
+            <strong>EBPA + HealthEZ, on the report&rsquo;s basis</strong> — Employee Navigator:{" "}
+            <strong>{gh.enrolled.toLocaleString()} enrolled · {money0(gh.monthly)} / mo</strong>; the portal:{" "}
+            <strong>{money0(comparable.monthly)} / mo</strong> ({diff(comparable.monthly, gh.monthly, true)}).
+            <div style={{ fontSize: 12.5, color: C.muted }}>
+              That portal figure is {money0(comparable.medicalLive)} medical in live groups + {money0(comparable.linesLive)} dental and other
+              EBPA/HealthEZ lines + {money0(comparable.archived)} in {archivedCount} archived group{archivedCount === 1 ? "" : "s"}. The Groups
+              page&rsquo;s group-health tile is the medical-only, live-groups part: {money0(tile)}.
+            </div>
             <div style={{ fontSize: 12.5, color: C.muted }}>
               {checked.length} carrier{checked.length === 1 ? "" : "s"} checked ·{" "}
-              {mismatches.length ? `${mismatches.length} off by more than 1% — re-import the XML, then look at the rows marked Check` : "all within 1%"}
+              {mismatches.length ? `${mismatches.length} off by more than 1% — see the rows marked Check` : "all within 1%"}
+              {!linesLoaded ? " · supplemental lines will fill in after the next XML import" : ""}
             </div>
           </div>
 
           <div style={{ overflowX: "auto", marginTop: 12 }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 900 }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 1040 }}>
               <thead>
                 <tr>
-                  <th style={{ ...cell(), fontWeight: 600, color: C.muted, fontSize: 12, textTransform: "uppercase" }}>Carrier</th>
-                  <th style={{ ...cell(true), fontWeight: 600, color: C.muted, fontSize: 12, textTransform: "uppercase" }}>EN enrolled</th>
-                  <th style={{ ...cell(true), fontWeight: 600, color: C.muted, fontSize: 12, textTransform: "uppercase" }}>Portal</th>
-                  <th style={{ ...cell(true), fontWeight: 600, color: C.muted, fontSize: 12, textTransform: "uppercase" }}>Diff</th>
-                  <th style={{ ...cell(true), fontWeight: 600, color: C.muted, fontSize: 12, textTransform: "uppercase" }}>EN companies</th>
-                  <th style={{ ...cell(true), fontWeight: 600, color: C.muted, fontSize: 12, textTransform: "uppercase" }}>Portal</th>
-                  <th style={{ ...cell(true), fontWeight: 600, color: C.muted, fontSize: 12, textTransform: "uppercase" }}>EN monthly</th>
-                  <th style={{ ...cell(true), fontWeight: 600, color: C.muted, fontSize: 12, textTransform: "uppercase" }}>Portal</th>
-                  <th style={{ ...cell(true), fontWeight: 600, color: C.muted, fontSize: 12, textTransform: "uppercase" }}>Diff</th>
-                  <th style={{ ...cell(true), fontWeight: 600, color: C.muted, fontSize: 12, textTransform: "uppercase" }}>Status</th>
+                  <th style={th()}>Carrier</th>
+                  <th style={th(true)}>EN enrolled</th>
+                  <th style={th(true)}>Portal</th>
+                  <th style={th(true)}>In archived</th>
+                  <th style={th(true)}>EN companies</th>
+                  <th style={th(true)}>Portal</th>
+                  <th style={th(true)}>EN monthly</th>
+                  <th style={th(true)}>Portal (medical + other lines)</th>
+                  <th style={th(true)}>In archived</th>
+                  <th style={th(true)}>Diff</th>
+                  <th style={th(true)}>Status</th>
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r) => (
-                  <tr key={r.carrier} style={{ color: r.service ? C.faint : C.ink }}>
-                    <td style={{ ...cell(), whiteSpace: "normal" }}>
-                      {r.carrier}
-                      {r.program && (
-                        <span style={{ fontSize: 11.5, color: r.program === "BCBS-AL" ? C.faint : C.green }}>
-                          {" "}
-                          · {r.program === "BCBS-AL" ? "medical, not group health" : "group health"}
-                        </span>
-                      )}
-                    </td>
-                    <td style={cell(true)}>{r.report.enrolled.toLocaleString()}</td>
-                    <td style={cell(true)}>{r.portal ? r.portal.enrolled.toLocaleString() : "—"}</td>
-                    <td style={cell(true)}>{r.portal && !r.service ? diff(r.portal.enrolled, r.report.enrolled) : ""}</td>
-                    <td style={cell(true)}>{r.report.companies}</td>
-                    <td style={cell(true)}>{r.portal ? r.portal.groups : "—"}</td>
-                    <td style={cell(true)}>{money0(r.report.monthly)}</td>
-                    <td style={cell(true)}>
-                      {r.portal ? money0(r.portal.monthly) : "—"}
-                      {r.portal && r.portal.assumedMonthly > 0 && (
-                        <div style={{ fontSize: 11, color: C.amber }}>incl. {money0(r.portal.assumedMonthly)} assumed</div>
-                      )}
-                    </td>
-                    <td style={cell(true)}>{r.portal && !r.service ? diff(r.portal.monthly, r.report.monthly, true) : ""}</td>
-                    <td style={cell(true)}>
-                      {r.service ? (
-                        <span style={pill(C.faint, "#f2f4f5", "#e0e4e6")}>No premium</span>
-                      ) : r.pending ? (
-                        <span style={pill(C.amber, C.amberTint, C.amberEdge)} title="Supplemental lines are read from the XML on the next import">
-                          After next import
-                        </span>
-                      ) : r.ok ? (
-                        <span style={pill(C.green, C.greenTint, C.greenEdge)}>Matches</span>
-                      ) : (
-                        <span style={pill(C.red, C.redTint, C.redEdge)}>Check</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                {rows.map((r) => {
+                  const both = total(r.live) + total(r.archived);
+                  const heads = r.live.heads + r.archived.heads;
+                  const exact = r.live.headsExact && r.archived.headsExact;
+                  return (
+                    <tr key={r.carrier} style={{ color: r.service ? C.faint : C.ink }}>
+                      <td style={{ ...cell(), whiteSpace: "normal" }}>
+                        {r.carrier}
+                        {r.program && (
+                          <span style={{ fontSize: 11.5, color: r.program === "BCBS-AL" ? C.faint : C.green }}>
+                            {" "}
+                            · {r.program === "BCBS-AL" ? "medical, not group health" : "group health"}
+                          </span>
+                        )}
+                      </td>
+                      <td style={cell(true)}>{r.report.enrolled.toLocaleString()}</td>
+                      <td style={cell(true)} title={exact ? "Distinct employees on any line with this carrier" : "Enrollments, not people — older import"}>
+                        {r.live.heads.toLocaleString()}
+                        {!exact ? "*" : ""}
+                      </td>
+                      <td style={{ ...cell(true), color: C.faint }}>{r.archived.heads ? r.archived.heads.toLocaleString() : "—"}</td>
+                      <td style={cell(true)}>{r.report.companies}</td>
+                      <td style={cell(true)}>
+                        {r.live.groups}
+                        {r.archived.groups ? <span style={{ color: C.faint }}> +{r.archived.groups}</span> : ""}
+                      </td>
+                      <td style={cell(true)}>{money0(r.report.monthly)}</td>
+                      <td style={cell(true)}>
+                        {money0(total(r.live))}
+                        {r.live.lines > 0 && (
+                          <div style={{ fontSize: 11, color: C.faint }}>
+                            {money0(r.live.medical)} medical + {money0(r.live.lines)} other
+                          </div>
+                        )}
+                        {r.live.assumedMedical > 0 && <div style={{ fontSize: 11, color: C.amber }}>incl. {money0(r.live.assumedMedical)} assumed</div>}
+                      </td>
+                      <td style={{ ...cell(true), color: C.faint }}>{total(r.archived) ? money0(total(r.archived)) : "—"}</td>
+                      <td style={cell(true)}>
+                        {!r.service && diff(both, r.report.monthly, true)}
+                        {!r.service && exact && <div style={{ fontSize: 11 }}>{diff(heads, r.report.enrolled)} people</div>}
+                      </td>
+                      <td style={cell(true)}>
+                        {r.service ? (
+                          <span style={pill(C.faint, "#f2f4f5", "#e0e4e6")}>No premium</span>
+                        ) : r.ok ? (
+                          <span style={pill(C.green, C.greenTint, C.greenEdge)}>Matches</span>
+                        ) : (
+                          <span style={pill(C.red, C.redTint, C.redEdge)}>Check</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
               {stats.total && (
                 <tfoot>
@@ -330,7 +407,7 @@ export default function Reconciliation({ token, stats, groups, onStats, diagnost
                     <td style={{ ...cell(), fontWeight: 600 }}>Report total</td>
                     <td colSpan={5} />
                     <td style={{ ...cell(true), fontWeight: 600 }}>{money0(stats.total.planCosts)}</td>
-                    <td colSpan={3} style={{ ...cell(), color: C.faint, fontSize: 12 }}>
+                    <td colSpan={4} style={{ ...cell(), color: C.faint, fontSize: 12 }}>
                       every line, every carrier — employee share {money0(stats.total.employeeCosts)}
                     </td>
                   </tr>
@@ -338,8 +415,13 @@ export default function Reconciliation({ token, stats, groups, onStats, diagnost
               )}
             </table>
           </div>
+          <div style={{ marginTop: 6, fontSize: 12, color: C.faint, lineHeight: 1.6 }}>
+            Diff is portal live + archived against the report. Groups you archived still count in Employee Navigator, so they are shown rather than dropped.
+            {rows.some((r) => !(r.live.headsExact && r.archived.headsExact)) ? " * Enrollments rather than people — re-import the XML for exact head counts." : ""}
+          </div>
         </>
       )}
+
       {diagnostics && (
         <div style={{ marginTop: 16, paddingTop: 14, borderTop: `1px solid ${C.rule}` }}>
           <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: 12 }}>
@@ -353,18 +435,17 @@ export default function Reconciliation({ token, stats, groups, onStats, diagnost
           </div>
           <div style={{ marginTop: 6, fontSize: 12.5, color: C.muted, lineHeight: 1.6, maxWidth: 880 }}>
             Every medical enrollment the parser did not count, by the rule that excluded it and the
-            carrier it was on, with the premium it carried. This is the bridge between the report&rsquo;s
-            numbers and the portal&rsquo;s: a gap should be accounted for here.
+            carrier it was on, with the premium it carried.
           </div>
           <div style={{ overflowX: "auto", marginTop: 8 }}>
             <table style={{ borderCollapse: "collapse", fontSize: 12.5, minWidth: 720 }}>
               <thead>
                 <tr>
-                  <th style={{ ...cell(), color: C.muted, fontWeight: 600, whiteSpace: "normal" }}>Left out because</th>
+                  <th style={{ ...th(), whiteSpace: "normal" }}>Left out because</th>
                   {["EBPA", "HealthEZ", "BCBS-AL", "Other"].map((p) => (
-                    <th key={p} style={{ ...cell(true), color: C.muted, fontWeight: 600 }}>{p === "BCBS-AL" ? "BCBS AL" : p}</th>
+                    <th key={p} style={th(true)}>{p === "BCBS-AL" ? "BCBS AL" : p}</th>
                   ))}
-                  <th style={{ ...cell(true), color: C.muted, fontWeight: 600 }}>Total</th>
+                  <th style={th(true)}>Total</th>
                 </tr>
               </thead>
               <tbody>
@@ -397,7 +478,7 @@ export default function Reconciliation({ token, stats, groups, onStats, diagnost
             </table>
           </div>
           <div style={{ marginTop: 8, fontSize: 12, color: C.faint, lineHeight: 1.6 }}>
-            Counted: {diagnostics.medical.kept.n.toLocaleString()} medical enrollments · {money0(diagnostics.medical.kept.premium)} / mo.
+            Counted: {diagnostics.medical.kept.n.toLocaleString()} medical enrollments · {money0(diagnostics.medical.kept.premium)} / mo, every company in the file.
             {" "}Employees by status: {Object.entries(diagnostics.employees.byStatus).map(([k, n]) => `${k} ${n}`).join(" · ")}.
             {" "}Medical EndDate: {diagnostics.medical.endDates.nil} nil · {diagnostics.medical.endDates.absent} absent · {diagnostics.medical.endDates.future} future · {diagnostics.medical.endDates.past} past.
           </div>
@@ -426,7 +507,7 @@ export default function Reconciliation({ token, stats, groups, onStats, diagnost
           </button>
           <button
             onClick={() => void download()}
-            title="A small JSON file with the report, the portal totals by carrier, the import exclusions and each group's plan classification — no employee data. Attach it to a chat with Claude Code to have the reconciliation done outside this server."
+            title="A small JSON file with the report, the portal totals by carrier, the import exclusions and each group's plan classification — no employee data."
             style={{
               padding: "8px 14px",
               fontSize: 13,

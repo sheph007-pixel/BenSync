@@ -198,12 +198,16 @@ Employee Navigator's second file, the **Carrier Stats** report
 the XML. It carries EN's own count per carrier — eligible and enrolled
 employees, companies, plans, employee cost and total plan cost — and is stored
 (`kennion.carrier_stats`, latest wins). The Import tab then shows every carrier
-in the report against what the XML import produced: enrolled, companies and
-monthly premium side by side with the difference, marked **Matches** within 1%
-or **Check** otherwise. EBPA and HealthEZ rows are compared to the medical
-plans on those carriers; BCBS of Alabama to its medical plans; every other
-carrier (Guardian, VSP, UNUM, Sun Life …) to the supplemental lines, which
-appear once the XML has been imported with line capture. Administrators with
+in the report against what the XML import produced, added up the way the
+report counts: **every line** a carrier has (medical plus dental, vision, life,
+disability …), "enrolled" as **distinct employees** on any of those lines (the
+importer keeps a per-carrier head count for each company), and **every
+company** — groups archived in the portal are shown in their own column rather
+than dropped, because Employee Navigator still counts them. Each row shows
+enrolled, companies and monthly premium side by side with the difference,
+marked **Matches** within 1% or **Check** otherwise. A company with no medical
+but with other lines in force is imported too (flagged ancillary-only; it is
+not a portal group and cannot sign in) so its lines count. Administrators with
 no premium (a COBRA or FSA vendor) are shown greyed. The Groups page
 group-health tile quotes the report's figure next to the portal's.
 

@@ -167,3 +167,10 @@ console.log({
   totalMonthly: g.totalMonthly,
   lines: g.lines,
 });
+
+// Distinct employees per carrier, the way the Carrier Stats report counts:
+// Ann is on EBPA medical, Guardian dental and VSP vision; Bob on BCBS medical
+// and Guardian dental — Guardian has two people, every other carrier one.
+assert.deepEqual(g.carrierHeads, { EBPA: 1, Guardian: 2, VSP: 1, "Blue Cross Blue Shield of Alabama": 1 });
+assert.equal(g.ancillaryOnly, false);
+console.log("en-parse: carrier head counts ok", g.carrierHeads);
