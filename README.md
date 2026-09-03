@@ -259,6 +259,22 @@ billed rates** (per group, or for every group at once) writes the billed amount
 as the tier's rate wherever the XML had none or a different one, so the rates
 the client sees are the ones actually being billed.
 
+### 2027 options from the proposals on file
+
+A group's **2027 Options** page is built from the proposals filed in its slots.
+When a group signs in, the payload carries its current proposal per slot — the
+plans and tier rates Claude read off the document, nothing else — and every
+plan with a rate is priced at the group's own census and listed first, marked
+*quoted* with the proposal's effective date. A carrier placeholder ("quote
+requested") goes as soon as that carrier has quoted, and a menu plan the
+proposal also prices is shown at the proposal's rates. The page says which
+slots are quoted and which are still out with a carrier. Upload a newer
+proposal into the same slot and the page follows it.
+
+The **Current** page carries the month's billing line for the group — how many
+medical participants Employee Navigator billed, for how much, with adjustments
+and other lines — so what the client sees as "today" is the September snapshot.
+
 ### Checking the premium figures
 
 **Existing Plans & Rates** opens with "Where the medical premium sits": every
@@ -427,6 +443,18 @@ npm run dev      # Vite dev server
 npm run build    # type-check + production build to dist/public
 npm run start    # serve the build on $PORT (default 5000)
 ```
+
+Parser and pricing checks, no database or key needed:
+
+```bash
+node scripts/test-en-parse.mjs && node scripts/test-en-tiers.mjs && node scripts/test-en-ancillary.mjs
+node scripts/test-carrier-stats.mjs && node scripts/test-funding.mjs
+node --experimental-strip-types scripts/test-market-plans.mts
+```
+
+`KENNION_FAKE_AI=1` makes the server treat a text upload whose body is a JSON
+extraction as Claude's reading of it, so the whole proposal path can be walked
+locally without a key. It is for local runs only; never set it in a deployment.
 
 ## Deploy
 

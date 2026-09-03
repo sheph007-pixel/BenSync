@@ -109,6 +109,8 @@ export default function App() {
       planDesigns: p.planDesigns,
       uhc: p.uhc,
       splits: p.splits,
+      proposals: p.proposals || [],
+      funding: p.funding || null,
     } as KennionData);
     setCode(group.code);
     saveSession({ kind: "group", code: group.code });

@@ -1,6 +1,8 @@
 import { useMemo } from "react";
 import {
+  PROPOSAL_SLOTS,
   TIERS,
+  fmtDate,
   fmtDed,
   hasDirectQuote,
   marketPlans,
@@ -44,8 +46,6 @@ interface Props {
   onSend: () => void;
 }
 
-const CARRIERS = ["UnitedHealthcare", "Surest (UnitedHealthcare)", "Gravie"];
-
 export default function Options({
   data,
   g,
@@ -67,6 +67,19 @@ export default function Options({
 }: Props) {
   const plans = useMemo(() => marketPlans(data, g), [data, g]);
   const direct = hasDirectQuote(data, g);
+  const carrierList = useMemo(() => Array.from(new Set(plans.map((p) => p.carrier))), [plans]);
+
+  // Proposals on file for this group, slot by slot: what has been quoted and
+  // what is still out with a carrier.
+  const proposalsOnFile = useMemo(() => {
+    const have = new Map((data.proposals || []).map((p) => [p.slot, p]));
+    const quoted = PROPOSAL_SLOTS.filter((s) => have.has(s)).map((s) => {
+      const pr = have.get(s)!;
+      return `${s.replace(/^UHC/, "UnitedHealthcare")} (${pr.plans.length} plan${pr.plans.length === 1 ? "" : "s"}, ${fmtDate(pr.effectiveDate || pr.uploadedAt.slice(0, 10))})`;
+    });
+    const waiting = PROPOSAL_SLOTS.filter((s) => !have.has(s)).map((s) => s.replace(/^UHC/, "UnitedHealthcare"));
+    return { quoted, waiting, any: quoted.length > 0 };
+  }, [data.proposals]);
 
   // "Mapped 1-for-1" — each current plan costed on its closest 2027 match at
   // that plan's own tier counts. Deliberately a different figure from the
@@ -133,7 +146,7 @@ export default function Options({
     return pick.slice(0, 4);
   }, [data, rows, plans, priced]);
 
-  const active = CARRIERS.filter((c) => carriers[c]);
+  const active = carrierList.filter((c) => carriers[c]);
   const q = gridQuery.trim().toLowerCase();
 
   const list = useMemo(() => {
@@ -211,8 +224,16 @@ export default function Options({
             Surest and Gravie and priced every plan on their menus — {priced.length} options below,
             all costed at your current enrollment so the comparison is apples to apples.
             {!direct &&
+              !proposalsOnFile.any &&
               " UnitedHealthcare underwriting for your group is still open, so rates below are indicative: your own current rate level applied to the menu quoted for comparable Kennion groups. Firm rates land here the day they arrive."}
           </p>
+          {proposalsOnFile.any && (
+            <p style={{ margin: "8px 0 0", fontSize: 13, lineHeight: 1.6, color: C.body }}>
+              <strong style={{ fontWeight: 600, color: C.ink }}>Quoted for your group:</strong> {proposalsOnFile.quoted.join(" · ")}. Those rows are marked
+              <em> quoted</em> below and are the carrier&rsquo;s own rates for you.
+              {proposalsOnFile.waiting.length > 0 && ` Still out: ${proposalsOnFile.waiting.join(", ")}.`}
+            </p>
+          )}
         </div>
 
         <div
@@ -390,7 +411,7 @@ export default function Options({
           className="noprint"
           style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}
         >
-          {CARRIERS.map((c) => (
+          {carrierList.map((c) => (
             <button key={c} onClick={() => onToggleCarrier(c)} style={chip(!!carriers[c])}>
               {c.replace(" (UnitedHealthcare)", "")}
             </button>
@@ -466,7 +487,9 @@ export default function Options({
                   <td style={{ padding: "9px 8px", borderBottom: `1px solid ${C.hairline}` }}>
                     <div style={{ color: C.ink }}>{p.plan}</div>
                     <div style={{ fontSize: 11.5, color: C.faint }}>
-                      {p.carrier.replace(" (UnitedHealthcare)", " by UHC")} · {p.label} · {p.type}
+                      {p.carrier.replace(" (UnitedHealthcare)", " by UHC")} · {p.label}
+                      {p.type && p.type !== p.label ? ` · ${p.type}` : ""}
+                      {p.quoted && <span style={{ color: C.green, fontWeight: 600 }}> · quoted {fmtDate(p.quoted.date || undefined)}</span>}
                     </div>
                   </td>
                   <td style={cell}>
@@ -538,7 +561,9 @@ export default function Options({
         employee on that one plan; the 1-for-1 figure above instead maps each of your current plans
         to its closest match. HSA eligibility is not published on the carrier menu — ask us to
         confirm before relying on it. Final rates confirm at enrollment and underwriting approval.
-        Gravie rates are in progress; Surest is quoted where UnitedHealthcare included it.
+        {proposalsOnFile.any
+          ? " Rows marked quoted are read off the proposal the carrier sent for your group; copays and Rx for those are on the proposal itself."
+          : " Gravie rates are in progress; Surest is quoted where UnitedHealthcare included it."}
       </div>
 
       <div id="shortlist" className="panel anchor" style={{ ...panel, marginTop: 24, padding: "18px 20px" }}>

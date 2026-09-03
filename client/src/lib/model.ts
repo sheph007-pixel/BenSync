@@ -126,6 +126,43 @@ export interface GroupSplit {
   plans: Record<string, Record<string, SplitAmounts>>;
 }
 
+/** One plan option read off a carrier proposal, with monthly composite rates by tier. */
+export interface ProposalPlan {
+  name: string;
+  planType: string | null;
+  deductible: string | null;
+  oopMax: string | null;
+  rates: Record<TierKey, number | null>;
+  monthlyTotal: number | null;
+}
+
+/** A group's current proposal in one slot (UHC Fully Insured, UHC Level Funded, Gravie, Nationwide…). */
+export interface GroupProposal {
+  id: number;
+  slot: string;
+  carrier: string | null;
+  funding: string | null;
+  effectiveDate: string | null;
+  proposalType: string | null;
+  enrolledOnDocument: number | null;
+  plans: ProposalPlan[];
+  totalMonthly: number | null;
+  summary: string | null;
+  filename: string;
+  uploadedAt: string;
+}
+
+/** What Employee Navigator billed the group for the month — counts and rates only. */
+export interface GroupFundingSnapshot {
+  month: string | null;
+  participants: number;
+  monthly: number;
+  adjustments: number;
+  billed: number;
+  otherMonthly: number;
+  byPlan: Record<string, { monthly: number; byTier: Record<string, { n: number; rate: number | null }> }>;
+}
+
 export interface KennionData {
   meta: { source: string; asOf: string };
   groups: Group[];
@@ -137,6 +174,10 @@ export interface KennionData {
     mapping: MappingRow[];
   };
   splits: Record<string, GroupSplit>;
+  /** The signed-in group's proposals on file (group sessions only). */
+  proposals?: GroupProposal[];
+  /** The signed-in group's billing this month (group sessions only). */
+  funding?: GroupFundingSnapshot | null;
 }
 
 /** Rate overrides keyed by `group||plan||censusTier`, persisted per browser. */
@@ -399,6 +440,77 @@ export interface MarketPlan {
   indicative: boolean;
   /** Carrier has not returned rates at all. */
   pending?: boolean;
+  /** Read off a proposal the carrier sent for this group. */
+  quoted?: { slot: string; date: string | null; proposalId: number };
+}
+
+/** The four proposal slots a group's 2027 options are built from, in the order they are shown. */
+export const PROPOSAL_SLOTS = ["UHC Fully Insured", "UHC Level Funded", "Gravie", "Nationwide"];
+
+/** "$1,500" / "1500.00" / "$1,500 individual" → 1500; anything unreadable → null. */
+export function moneyNum(v: string | number | null | undefined): number | null {
+  if (v == null || v === "") return null;
+  if (typeof v === "number") return Number.isFinite(v) ? v : null;
+  const m = /-?\$?\s*([\d,]+(?:\.\d+)?)/.exec(String(v));
+  if (!m) return null;
+  const n = Number(m[1].replace(/,/g, ""));
+  return Number.isFinite(n) ? n : null;
+}
+
+const planKey = (s: string) => s.toLowerCase().replace(/\b(plan|option|uhc|unitedhealthcare|surest|gravie|nationwide)\b/g, " ").replace(/[^a-z0-9]+/g, " ").trim();
+
+/** How a proposal slot is shown: the carrier column and the funding label. */
+function slotPresentation(slot: string, carrier: string | null, planType: string | null): { carrier: string; label: string; network: string } {
+  if (slot === "UHC Fully Insured") return { carrier: "UnitedHealthcare", label: "Fully Insured", network: "UHC Choice Plus" };
+  if (slot === "UHC Level Funded") return { carrier: "UnitedHealthcare", label: "Level Funded", network: "UHC Choice Plus" };
+  if (slot === "Surest") return { carrier: "Surest (UnitedHealthcare)", label: "Copay-only", network: "UHC Choice Plus" };
+  if (slot === "Gravie") return { carrier: "Gravie", label: planType || "Level Funded", network: "Gravie / Aetna" };
+  if (slot === "Nationwide") return { carrier: "Nationwide", label: planType || "Level Funded", network: "Nationwide" };
+  return { carrier: carrier || "Other", label: planType || "Quoted", network: "On the proposal" };
+}
+
+/**
+ * The plans on a group's proposals, priced at its census. A plan with no rate
+ * on any tier is left out; one missing a tier that has people in it has no
+ * monthly figure.
+ */
+export function proposalPlans(data: KennionData, g: Group): MarketPlan[] {
+  const counts = censusCounts(g);
+  const out: MarketPlan[] = [];
+  for (const pr of data.proposals || []) {
+    for (const pl of pr.plans || []) {
+      const rates = {} as Record<TierKey, number | null>;
+      TIERS.forEach((t) => {
+        const v = pl.rates?.[t.key];
+        rates[t.key] = v == null ? null : v;
+      });
+      if (!TIERS.some((t) => rates[t.key] != null)) continue;
+      let monthly: number | null = 0;
+      TIERS.forEach((t) => {
+        if (!counts[t.key]) return;
+        const v = rates[t.key];
+        if (v == null) monthly = null;
+        else if (monthly != null) monthly += v * counts[t.key];
+      });
+      const show = slotPresentation(pr.slot, pr.carrier, pl.planType);
+      out.push({
+        carrier: show.carrier,
+        label: show.label,
+        plan: pl.name,
+        type: pl.planType || show.label,
+        ded: moneyNum(pl.deductible) ?? pl.deductible ?? null,
+        oop: moneyNum(pl.oopMax),
+        copays: "On the proposal",
+        rx: "On the proposal",
+        network: show.network,
+        rates,
+        monthly,
+        indicative: false,
+        quoted: { slot: pr.slot, date: pr.effectiveDate || pr.uploadedAt.slice(0, 10), proposalId: pr.id },
+      });
+    }
+  }
+  return out;
 }
 
 function uhcRows(data: KennionData, g: Group): DetailRow[] {
@@ -553,5 +665,16 @@ export function marketPlans(data: KennionData, g: Group): MarketPlan[] {
     indicative: false,
     pending: true,
   });
+
+  // Proposals the carriers actually sent for this group come first and win:
+  // a placeholder for a carrier that has now quoted goes, and a menu plan the
+  // proposal also prices is shown at the proposal's rates.
+  const fromProposals = proposalPlans(data, g);
+  if (fromProposals.length) {
+    const quotedCarriers = new Set(fromProposals.map((p) => p.carrier));
+    const quotedPlans = new Set(fromProposals.map((p) => planKey(p.plan)));
+    const rest = out.filter((p) => !(p.pending && quotedCarriers.has(p.carrier)) && !quotedPlans.has(planKey(p.plan)));
+    return [...fromProposals, ...rest];
+  }
   return out;
 }

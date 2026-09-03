@@ -34,6 +34,9 @@ interface Props {
   onOpenPlan: (plan: string) => void;
 }
 
+const monthName = (m: string | null) =>
+  m ? new Date(`${m}-01T00:00:00`).toLocaleDateString("en-US", { month: "long", year: "numeric" }) : "This month's";
+
 export default function Current({
   data,
   overrides,
@@ -71,6 +74,14 @@ export default function Current({
       <div id="plans" className="anchor" style={sectionHead}>
         <h2 style={h2}>Current Medical Plan(s)</h2>
       </div>
+      {data.funding && (
+        <p style={{ margin: "0 0 12px", fontSize: 13, lineHeight: 1.6, color: C.body, maxWidth: 820 }}>
+          <strong style={{ fontWeight: 600, color: C.ink }}>{monthName(data.funding.month)} billing:</strong> Employee Navigator billed{" "}
+          {data.funding.participants} medical participant{data.funding.participants === 1 ? "" : "s"} for {money0(data.funding.monthly)} this month
+          {data.funding.adjustments ? ` (${data.funding.adjustments < 0 ? "−" : "+"}${money0(Math.abs(data.funding.adjustments))} in prior-month adjustments)` : ""}
+          {data.funding.otherMonthly ? `, plus ${money0(data.funding.otherMonthly)} in dental, vision and other lines` : ""}. The rates below are the billed rates.
+        </p>
+      )}
 
       <div
         style={{
