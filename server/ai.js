@@ -1,6 +1,6 @@
 // Reads a carrier proposal and says which group it belongs to.
 //
-// A proposal from UnitedHealthcare, Gravie, Nationwide or anyone else arrives
+// A proposal from UnitedHealthcare, Gravie, Nationwide, Angle, Cobalt or anyone else arrives
 // as a PDF. Claude reads the document itself — no text extraction step to lose
 // a scanned page — and returns the carrier, the company named on the paper,
 // the plans and tier rates, and the roster group it matches with a confidence.
@@ -79,7 +79,7 @@ const SCHEMA = {
     carrier: {
       type: "string",
       description:
-        "The carrier or vendor issuing the proposal, e.g. UnitedHealthcare, Surest, Gravie, Nationwide, EBPA, HealthEZ, BCBS of Alabama. 'Unknown' if it cannot be told.",
+        "The carrier or vendor issuing the proposal, e.g. UnitedHealthcare, Surest, Gravie, Nationwide, Angle Health, Cobalt, EBPA, HealthEZ, BCBS of Alabama. 'Unknown' if it cannot be told.",
     },
     funding: {
       type: "string",
@@ -161,9 +161,9 @@ const SCHEMA = {
   },
 };
 
-const SYSTEM = `You read insurance carrier proposals for Kennion Benefit Advisors, a benefits brokerage in Alabama. Each proposal is a quote for one employer group's medical plan, sent by a carrier such as UnitedHealthcare (including Surest), Gravie, Nationwide, EBPA, HealthEZ or BCBS of Alabama.
+const SYSTEM = `You read insurance carrier proposals for Kennion Benefit Advisors, a benefits brokerage in Alabama. Each proposal is a quote for one employer group's medical plan, sent by a carrier such as UnitedHealthcare (including Surest), Gravie, Nationwide, Angle Health, Cobalt, EBPA, HealthEZ or BCBS of Alabama.
 
-Your job: identify the carrier, read off the plans and tier rates, and decide which group on Kennion's roster the proposal is for. Match by the employer name on the document against the roster names. Treat legal-form words (LLC, Inc., Co., Corporation, Holdings) and punctuation loosely, but do not match on a shared common word alone — "Birmingham Steel" is not "Birmingham-Toledo". When two roster groups could both fit, pick neither and say so in the flags. Copy the matched roster name exactly as listed. Say whether the quote is fully insured or level funded — UnitedHealthcare sends both kinds and Kennion tracks them as separate proposals. Surest is a UnitedHealthcare product, not a separate carrier: report a Surest quote with carrier "UnitedHealthcare" and say which funding it is, so it files under the group's UnitedHealthcare proposal. Kennion tracks exactly four medical proposals per group — UnitedHealthcare fully insured, UnitedHealthcare level funded, Gravie and Nationwide — so set quotes_medical false for an ancillary-only document (dental, vision, life, disability) even when it comes from one of those carriers. Rates are monthly composite amounts per tier: EE (employee only), ES (employee + spouse), EC (employee + children), FAM (family). Leave a value null rather than guessing.`;
+Your job: identify the carrier, read off the plans and tier rates, and decide which group on Kennion's roster the proposal is for. Match by the employer name on the document against the roster names. Treat legal-form words (LLC, Inc., Co., Corporation, Holdings) and punctuation loosely, but do not match on a shared common word alone — "Birmingham Steel" is not "Birmingham-Toledo". When two roster groups could both fit, pick neither and say so in the flags. Copy the matched roster name exactly as listed. Say whether the quote is fully insured or level funded — UnitedHealthcare sends both kinds and Kennion tracks them as separate proposals. Surest is a UnitedHealthcare product, not a separate carrier: report a Surest quote with carrier "UnitedHealthcare" and say which funding it is, so it files under the group's UnitedHealthcare proposal. Kennion tracks six medical proposals per group — UnitedHealthcare fully insured, UnitedHealthcare level funded, Gravie, Nationwide, Angle Health and Cobalt (a self-funded quote) — so set quotes_medical false for an ancillary-only document (dental, vision, life, disability) even when it comes from one of those carriers. Rates are monthly composite amounts per tier: EE (employee only), ES (employee + spouse), EC (employee + children), FAM (family). Leave a value null rather than guessing.`;
 
 /**
  * Read one proposal. `file` is { filename, prepared, context } where `prepared`

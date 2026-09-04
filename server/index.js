@@ -1132,12 +1132,12 @@ const proposalStore = db
     };
 
 /**
- * The four medical proposals a group can hold, and nothing else. A newer one
- * in the same slot replaces the older, which is kept. Surest is a
+ * The medical proposals a group can hold, one per slot, and nothing else. A
+ * newer one in a slot replaces the older, which is kept. Surest is a
  * UnitedHealthcare product, so a Surest quote is that group's UHC proposal;
  * an ancillary-only document (dental, vision, life) fills no slot at all.
  */
-const SLOTS = ["UHC Fully Insured", "UHC Level Funded", "Gravie", "Nationwide"];
+const SLOTS = ["UHC Fully Insured", "UHC Level Funded", "Gravie", "Nationwide", "Angle", "Cobalt"];
 function slotFor(carrier, funding, quotesMedical) {
   if (quotesMedical === false) return null;
   const c = String(carrier || "").toLowerCase();
@@ -1149,7 +1149,9 @@ function slotFor(carrier, funding, quotesMedical) {
   }
   if (/gravie/.test(c)) return "Gravie";
   if (/nationwide/.test(c)) return "Nationwide";
-  return null; // not one of the four: kept on file, but it fills no slot
+  if (/angle/.test(c)) return "Angle";
+  if (/cobalt/.test(c)) return "Cobalt";
+  return null; // not a tracked carrier: kept on file, but it fills no slot
 }
 
 /**

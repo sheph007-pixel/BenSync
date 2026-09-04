@@ -63,12 +63,12 @@ const isProposal = (p: Proposal) => p.status !== "container";
 
 /** The slots a group can hold; the first four are the ones tracked per group. */
 /**
- * The four medical proposals a group can hold, and nothing else. Surest is a
- * UnitedHealthcare product, so a Surest quote is that group's UHC proposal; an
- * ancillary-only document fills no slot. A newer proposal in a slot replaces
- * the older one, which is kept for the record.
+ * The medical proposals a group can hold, one per slot, and nothing else.
+ * Surest is a UnitedHealthcare product, so a Surest quote is that group's UHC
+ * proposal; an ancillary-only document fills no slot. A newer proposal in a
+ * slot replaces the older one, which is kept for the record.
  */
-export const SLOTS = ["UHC Fully Insured", "UHC Level Funded", "Gravie", "Nationwide"] as const;
+export const SLOTS = ["UHC Fully Insured", "UHC Level Funded", "Gravie", "Nationwide", "Angle", "Cobalt"] as const;
 const TRACKED = SLOTS;
 const isCurrent = (p: Proposal) => p.status === "assigned" && !p.superseded_by;
 
@@ -332,7 +332,7 @@ function ProposalRow({ p, token, groups, onChanged, fixedGroup, children: childC
   const conf = p.confidence != null ? `${Math.round(p.confidence * 100)}%` : null;
   // Read, but not one of the four medical proposals: an ancillary-only
   // document, or a carrier the portal does not track. Kept, never in a slot.
-  const untracked = !!x && !p.slot && (x.quotes_medical === false || !/united|uhc|surest|optum|gravie|nationwide/i.test(p.carrier || x.carrier || ""));
+  const untracked = !!x && !p.slot && (x.quotes_medical === false || !/united|uhc|surest|optum|gravie|nationwide|angle|cobalt/i.test(p.carrier || x.carrier || ""));
 
   // An email wrapper: the subject, who sent it, what came out of it.
   if (p.status === "container") {
@@ -475,7 +475,7 @@ function ProposalRow({ p, token, groups, onChanged, fixedGroup, children: childC
       )}
       {untracked && (
         <div style={{ marginTop: 6, fontSize: 12.5, color: C.faint }}>
-          Not one of the four medical proposals{x?.quotes_medical === false ? " — no medical rates quoted" : ""}. Kept on file, out of the group&rsquo;s 2027 options.
+          Not one of the tracked medical proposals{x?.quotes_medical === false ? " — no medical rates quoted" : ""}. Kept on file, out of the group&rsquo;s 2027 options.
         </div>
       )}
       {open && p.summary && p.status !== "analyzing" && (
@@ -858,7 +858,7 @@ export default function Proposals({ token, groups }: Props) {
               <select aria-label="Which groups" value={need} onChange={(e) => setNeed(e.target.value)} style={gridFilter}>
                 <option value="All">All groups</option>
                 <option value="missing">Missing a proposal</option>
-                <option value="complete">All four in</option>
+                <option value="complete">Every quote in</option>
                 {SLOTS.map((sl) => (
                   <option key={sl} value={sl}>
                     Missing {sl}
@@ -929,7 +929,7 @@ export default function Proposals({ token, groups }: Props) {
                         <div style={{ fontSize: 11.5, color: C.ghost }}>
                           {g.enrolled} enrolled
                           {g.manager ? ` · ${g.manager === "debbie" ? "Debbie" : "Tracy"}` : ""}
-                          {have === SLOTS.length ? " · all four in" : ` · ${have} of ${SLOTS.length}`}
+                          {` · ${have} of ${SLOTS.length}`}
                         </div>
                       </td>
                       {SLOTS.map((sl, i) => (
@@ -946,7 +946,7 @@ export default function Proposals({ token, groups }: Props) {
             {(unassignedRows.length > 0 || untrackedRows.length > 0) && (
               <section style={{ marginTop: 18, paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
                 <h2 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: unassignedRows.length ? C.amber : C.faint }}>
-                  {unassignedRows.length ? `To Assign · ${unassignedRows.length}` : "Filed, But Not One Of The Four"}
+                  {unassignedRows.length ? `To Assign · ${unassignedRows.length}` : "Filed, But Not One Of The Tracked Carriers"}
                 </h2>
                 {[...unassignedRows, ...untrackedRows].map((p) => (
                   <ProposalRow key={p.id} p={p} token={token} groups={sortedGroups} onChanged={() => void load()} />
