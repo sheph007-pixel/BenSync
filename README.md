@@ -167,8 +167,14 @@ with nothing attached is read as the proposal itself. The email is kept too, so
 the original can always be opened. Each file is stored whole in Postgres
 (`kennion.proposals`) and then read by Claude (`claude-opus-5`, via the
 Anthropic SDK) in the background: the carrier, the employer named on the
-document, the effective date, every plan with its tier rates, and which roster
-group it belongs to, with a confidence. A match at 85% or better is **assigned**
+document, the effective date, the carrier's own quote number, every plan with its code,
+network and tier rates, and which roster group it belongs to, with a
+confidence. A carrier quote runs to many pages and often dozens of options —
+the benchmark plans and the alternate and illustrative grids behind them are
+all read and stored, since Kennion prices from them; two plans that differ
+only by network or deductible are two plans. The reading is streamed with room
+for 64,000 tokens of output, because a long quote would otherwise be cut off
+mid-plan, and it runs at high effort. A match at 85% or better is **assigned**
 to the group; between 50% and 85% it is **suggested** and waits for a click to
 confirm; below that the proposal sits in the **to assign** queue with a group
 dropdown. Any assignment can be changed.

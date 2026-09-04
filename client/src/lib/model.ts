@@ -129,6 +129,10 @@ export interface GroupSplit {
 /** One plan option read off a carrier proposal, with monthly composite rates by tier. */
 export interface ProposalPlan {
   name: string;
+  /** The carrier's code for the plan, where one is printed. */
+  planCode?: string | null;
+  /** The network it is priced on, where the quote distinguishes them. */
+  network?: string | null;
   planType: string | null;
   deductible: string | null;
   oopMax: string | null;
@@ -506,7 +510,7 @@ export function proposalPlans(data: KennionData, g: Group): MarketPlan[] {
         oop: moneyNum(pl.oopMax),
         copays: "On the proposal",
         rx: "On the proposal",
-        network: show.network,
+        network: pl.network || show.network,
         rates,
         monthly,
         indicative: false,

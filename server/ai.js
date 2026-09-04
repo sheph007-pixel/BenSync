@@ -63,6 +63,7 @@ const SCHEMA = {
     "carrier",
     "funding",
     "quotes_medical",
+    "quote_id",
     "group_name_on_document",
     "matched_group",
     "confidence",
@@ -104,6 +105,11 @@ const SCHEMA = {
       description:
         "0 to 1. How sure the match is. 0.9+ only when the name on the document is unmistakably the roster group.",
     },
+    quote_id: {
+      ...nullable("string"),
+      description:
+        "The carrier's own identifier for this proposal — quote ID, proposal number, case or group number as printed on it. Null if none is shown.",
+    },
     effective_date: {
       ...nullable("string"),
       description: "Proposed effective date as printed (ISO yyyy-mm-dd if possible), or null.",
@@ -123,9 +129,19 @@ const SCHEMA = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["name", "plan_type", "deductible", "oop_max", "rates", "monthly_total"],
+        required: ["name", "plan_code", "network", "plan_type", "deductible", "oop_max", "rates", "monthly_total"],
         properties: {
           name: { type: "string" },
+          plan_code: {
+            ...nullable("string"),
+            description:
+              "The carrier's code for this plan where one is printed — a benefit or plan code such as \"P1000B22\" or \"MP34/MP92\". Null when the plan is named but not coded.",
+          },
+          network: {
+            ...nullable("string"),
+            description:
+              "The network the plan is priced on, where the quote distinguishes them (Choice, Choice Plus, INS-Choice, Options PPO…). Null when only one network is quoted.",
+          },
           plan_type: nullable("string"),
           deductible: nullable("string"),
           oop_max: nullable("string"),
@@ -163,7 +179,7 @@ const SCHEMA = {
 
 const SYSTEM = `You read insurance carrier proposals for Kennion Benefit Advisors, a benefits brokerage in Alabama. Each proposal is a quote for one employer group's medical plan, sent by a carrier such as UnitedHealthcare (including Surest), Gravie, Nationwide, Angle Health, Cobalt, EBPA, HealthEZ or BCBS of Alabama.
 
-Your job: identify the carrier, read off the plans and tier rates, and decide which group on Kennion's roster the proposal is for. Match by the employer name on the document against the roster names. Treat legal-form words (LLC, Inc., Co., Corporation, Holdings) and punctuation loosely, but do not match on a shared common word alone — "Birmingham Steel" is not "Birmingham-Toledo". When two roster groups could both fit, pick neither and say so in the flags. Copy the matched roster name exactly as listed. Say whether the quote is fully insured or level funded. UnitedHealthcare sends one of each for a group, in separate documents, and Kennion tracks them as separate proposals, so decide from the document in front of you and say which — a UHC quote whose funding you cannot tell is worth an audit flag. A quote runs to many pages and often dozens of plan options: read them all and list every plan with its tier rates, not just the first page. Surest is a UnitedHealthcare product, not a separate carrier: report a Surest quote with carrier "UnitedHealthcare" and say which funding it is, so it files under the group's UnitedHealthcare proposal. Kennion tracks six medical proposals per group — UnitedHealthcare fully insured, UnitedHealthcare level funded, Gravie, Nationwide, Angle Health and Cobalt (a self-funded quote) — so set quotes_medical false for an ancillary-only document (dental, vision, life, disability) even when it comes from one of those carriers. Rates are monthly composite amounts per tier: EE (employee only), ES (employee + spouse), EC (employee + children), FAM (family). Leave a value null rather than guessing.`;
+Your job: identify the carrier, read off the plans and tier rates, and decide which group on Kennion's roster the proposal is for. Match by the employer name on the document against the roster names. Treat legal-form words (LLC, Inc., Co., Corporation, Holdings) and punctuation loosely, but do not match on a shared common word alone — "Birmingham Steel" is not "Birmingham-Toledo". When two roster groups could both fit, pick neither and say so in the flags. Copy the matched roster name exactly as listed. Say whether the quote is fully insured or level funded. UnitedHealthcare sends one of each for a group, in separate documents, and Kennion tracks them as separate proposals, so decide from the document in front of you and say which — a UHC quote whose funding you cannot tell is worth an audit flag. A quote runs to many pages and often dozens of plan options: read every page and list every option, including the alternate, illustrative and benchmark grids that follow the headline plans — they are quotable options and Kennion prices from them. Give each one the name and the plan or benefit code printed on it, the network it is priced on where the quote distinguishes them, and its own tier rates. Two plans that differ only by network or by deductible are two plans. Never summarise a grid as "and other options"; list them. Surest is a UnitedHealthcare product, not a separate carrier: report a Surest quote with carrier "UnitedHealthcare" and say which funding it is, so it files under the group's UnitedHealthcare proposal. Kennion tracks six medical proposals per group — UnitedHealthcare fully insured, UnitedHealthcare level funded, Gravie, Nationwide, Angle Health and Cobalt (a self-funded quote) — so set quotes_medical false for an ancillary-only document (dental, vision, life, disability) even when it comes from one of those carriers. Rates are monthly composite amounts per tier: EE (employee only), ES (employee + spouse), EC (employee + children), FAM (family). Leave a value null rather than guessing.`;
 
 /**
  * Read one proposal. `file` is { filename, prepared, context } where `prepared`
@@ -213,38 +229,55 @@ export async function analyzeProposal(file, roster) {
 
   const params = {
     model: MODEL,
-    max_tokens: 16000,
+    // A carrier quote can list dozens of plans over many pages, and every one
+    // of them is written out here: 16k of output truncated the long ones.
+    max_tokens: 64000,
     system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],
-    output_config: { effort: "medium", format: jsonSchemaOutputFormat(SCHEMA) },
+    // Reading rate grids off scanned pages is the intelligence-sensitive part.
+    output_config: { effort: "high", format: jsonSchemaOutputFormat(SCHEMA) },
     messages: [{ role: "user", content }],
   };
 
-  // Server-side refusal fallback on the beta endpoint; if that request is
-  // refused as malformed (an org without the beta, say), the same call on the
-  // stable endpoint is identical minus the fallback.
+  // Streamed, because a long document at this output ceiling would otherwise
+  // sit past the HTTP timeout. Server-side refusal fallback on the beta
+  // endpoint; if that request is refused as malformed (an org without the
+  // beta, say), the same call on the stable endpoint is identical minus it.
   let response;
-  const beta = client.beta && client.beta.messages && typeof client.beta.messages.parse === "function";
+  const beta = client.beta && client.beta.messages && typeof client.beta.messages.stream === "function";
   if (beta) {
     try {
-      response = await client.beta.messages.parse({
-        ...params,
-        betas: ["server-side-fallback-2026-07-01"],
-        fallbacks: "default",
-      });
+      response = await client.beta.messages
+        .stream({ ...params, betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" })
+        .finalMessage();
     } catch (e) {
       if (!(e instanceof Anthropic.BadRequestError)) throw e;
       console.warn("beta fallback request rejected, retrying without it:", e.message);
     }
   }
-  if (!response) response = await client.messages.parse(params);
+  if (!response) response = await client.messages.stream(params).finalMessage();
 
   if (response.stop_reason === "refusal") {
     throw new Error("The model declined to read this document.");
   }
-  if (!response.parsed_output) {
+  if (response.stop_reason === "max_tokens") {
+    throw new Error("This proposal is longer than one reading can hold — the result would be cut off mid-plan.");
+  }
+  // The output format constrains the reply to JSON matching the schema, so the
+  // text blocks concatenate to the object.
+  const text = (response.content || [])
+    .filter((b) => b.type === "text")
+    .map((b) => b.text)
+    .join("");
+  let out;
+  try {
+    out = JSON.parse(text);
+  } catch {
     throw new Error("Could not read a structured result from the document.");
   }
-  return response.parsed_output;
+  if (!out || typeof out !== "object") {
+    throw new Error("Could not read a structured result from the document.");
+  }
+  return out;
 }
 
 
