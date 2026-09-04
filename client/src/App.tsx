@@ -110,6 +110,7 @@ export default function App() {
       uhc: p.uhc,
       splits: p.splits,
       proposals: p.proposals || [],
+      slots: p.slots || undefined,
       funding: p.funding || null,
     } as KennionData);
     setCode(group.code);

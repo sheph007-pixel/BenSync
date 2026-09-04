@@ -176,6 +176,8 @@ export interface KennionData {
   splits: Record<string, GroupSplit>;
   /** The signed-in group's proposals on file (group sessions only). */
   proposals?: GroupProposal[];
+  /** The proposal slots this group has — Cobalt only where it is quoted. */
+  slots?: string[];
   /** The signed-in group's billing this month (group sessions only). */
   funding?: GroupFundingSnapshot | null;
 }

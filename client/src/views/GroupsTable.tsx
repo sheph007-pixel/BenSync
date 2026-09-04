@@ -14,6 +14,8 @@ export interface AdminGroup {
   brokerIsSet?: boolean;
   /** The Kennion account manager who looks after the group. */
   manager?: "debbie" | "tracy" | null;
+  /** The proposal slots this group has — Cobalt only where it is quoted. */
+  slots?: string[];
   /** Where the 2027 renewal stands, for tracking. */
   renewal?: Renewal;
   /** Carrier proposals filed under this group. */
