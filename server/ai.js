@@ -35,7 +35,6 @@ function fakeReading(file) {
     return {
       carrier: "Unknown",
       funding: "unknown",
-      quotes_medical: true,
       group_name_on_document: null,
       matched_group: null,
       confidence: 0,

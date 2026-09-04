@@ -183,7 +183,14 @@ the ones it cannot hold, each in a named bucket: proposals still waiting for a
 group, a group health proposal whose slot is not yet decided (a UHC quote that
 does not say which funding, say), **ancillary proposals** — dental, vision,
 life, disability, no medical rates, so no slot and no part in the 2027 options —
-and carriers the portal does not track. The last two start folded. **List**
+and carriers the portal does not track. The last two start folded.
+
+Claude says outright whether a document quotes medical. A proposal read
+before that question existed is judged from the document itself — one that
+calls itself ancillary, or names only ancillary products and quotes no rated
+plan — and any slot an older reading gave it is cleared, so an ancillary
+proposal never sits in a group health column. **Re-read all** on the banner
+puts the whole set through the current questions. **List**
 and **By group** remain for working through a batch one file at a time.
 
 Each group holds one proposal per **slot** — UHC
@@ -526,7 +533,7 @@ Parser and pricing checks, no database or key needed:
 
 ```bash
 node scripts/test-en-parse.mjs && node scripts/test-en-tiers.mjs && node scripts/test-en-ancillary.mjs
-node scripts/test-carrier-stats.mjs && node scripts/test-funding.mjs
+node scripts/test-carrier-stats.mjs && node scripts/test-funding.mjs && node scripts/test-ancillary.mjs
 node --experimental-strip-types scripts/test-market-plans.mts
 ```
 
