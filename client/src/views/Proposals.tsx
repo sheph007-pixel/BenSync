@@ -740,21 +740,25 @@ export default function Proposals({ token, groups }: Props) {
   });
   const gridRows = sortedGroups
     .map((g) => {
-      const slots = SLOTS.map((s) => currentBySlot.get(`${g.name}||${s}`));
-      return { g, slots, have: slots.filter(Boolean).length };
+      // Cobalt quotes only a handful of groups, so a row's slots are its own.
+      const applies = new Set<string>(g.slots || SLOTS);
+      const slots = SLOTS.map((s) => (applies.has(s) ? currentBySlot.get(`${g.name}||${s}`) : undefined));
+      return { g, slots, applies, have: slots.filter(Boolean).length, of: applies.size };
     })
-    .filter(({ g, have }) => {
+    .filter(({ g, applies, have, of }) => {
       if (q && !`${g.name} ${g.code ?? ""}`.toLowerCase().includes(q)) return false;
       if (manager !== "All" && g.manager !== manager) return false;
-      if (need === "missing" && have === SLOTS.length) return false;
-      if (need === "complete" && have !== SLOTS.length) return false;
+      if (need === "missing" && have === of) return false;
+      if (need === "complete" && have !== of) return false;
       if (SLOTS.includes(need as (typeof SLOTS)[number])) {
-        const i = SLOTS.indexOf(need as (typeof SLOTS)[number]);
-        if (currentBySlot.get(`${g.name}||${SLOTS[i]}`)) return false;
+        // A slot that does not apply to the group is not "missing" from it.
+        if (!applies.has(need)) return false;
+        if (currentBySlot.get(`${g.name}||${need}`)) return false;
       }
       return true;
     });
   const filled = gridRows.reduce((n, r) => n + r.have, 0);
+  const slotsInPlay = gridRows.reduce((n, r) => n + r.of, 0);
   // Read but filling no slot: an ancillary document, or a carrier outside the
   // four. Listed under the grid so it can be filed by hand or deleted.
   const untrackedRows = proposals.filter((p) => p.group_name && !p.slot && p.status !== "analyzing" && matches(p));
@@ -904,7 +908,7 @@ export default function Proposals({ token, groups }: Props) {
         {layout === "grid" ? (
           <div>
             <div style={{ margin: "4px 0 10px", fontSize: 12.5, color: C.faint }}>
-              {gridRows.length} group{gridRows.length === 1 ? "" : "s"} · {filled} of {gridRows.length * SLOTS.length} slots filled.
+              {gridRows.length} group{gridRows.length === 1 ? "" : "s"} · {filled} of {slotsInPlay} slots filled.
               Drop a file on any box, or on the batch uploader above — a newer proposal replaces the one in that slot and the old one is kept.
             </div>
             <div style={{ overflowX: "auto" }}>
@@ -920,7 +924,7 @@ export default function Proposals({ token, groups }: Props) {
                   </tr>
                 </thead>
                 <tbody>
-                  {gridRows.map(({ g, slots, have }) => (
+                  {gridRows.map(({ g, slots, applies, have, of }) => (
                     <tr key={g.name}>
                       <td style={{ padding: "5px 8px 5px 0", borderBottom: `1px solid ${C.hairline}`, verticalAlign: "top" }}>
                         <Link href={groupPath(g.name)} style={{ fontWeight: 500 }}>
@@ -929,12 +933,18 @@ export default function Proposals({ token, groups }: Props) {
                         <div style={{ fontSize: 11.5, color: C.ghost }}>
                           {g.enrolled} enrolled
                           {g.manager ? ` · ${g.manager === "debbie" ? "Debbie" : "Tracy"}` : ""}
-                          {` · ${have} of ${SLOTS.length}`}
+                          {` · ${have} of ${of}`}
                         </div>
                       </td>
-                      {SLOTS.map((sl, i) => (
-                        <SlotCell key={sl} group={g.name} slot={sl} current={slots[i]} token={token} onChanged={() => void load()} />
-                      ))}
+                      {SLOTS.map((sl, i) =>
+                        applies.has(sl) ? (
+                          <SlotCell key={sl} group={g.name} slot={sl} current={slots[i]} token={token} onChanged={() => void load()} />
+                        ) : (
+                          <td key={sl} style={{ padding: "5px 6px", borderBottom: `1px solid ${C.hairline}`, textAlign: "center", color: C.ghost, fontSize: 12 }} title={`${sl} is not quoted for this group`}>
+                            —
+                          </td>
+                        ),
+                      )}
                     </tr>
                   ))}
                 </tbody>

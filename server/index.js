@@ -120,6 +120,30 @@ const MANAGER_LIST = JSON.parse(
 );
 export const MANAGERS = MANAGER_LIST.managers;
 const MANAGER_BY_NAME = new Map(MANAGER_LIST.list.map((r) => [normalizeName(r.group), r.manager]));
+/**
+ * Cobalt quotes a self-funded plan for a handful of groups, not the whole
+ * book, so its slot only applies to those — plus any group that already has a
+ * Cobalt proposal on file, so nothing uploaded is ever hidden.
+ */
+const COBALT_GROUPS = new Set(
+  JSON.parse(fs.readFileSync(path.join(__dirname, "data", "cobalt-groups.json"), "utf8")).list.map(normalizeName),
+);
+function cobaltApplies(name) {
+  const k = normalizeName(name);
+  if (!k) return false;
+  if (COBALT_GROUPS.has(k)) return true;
+  // The list names companies its own way ("Forestry Enviro"), so a single
+  // candidate either way round counts, the same rule an import uses.
+  const hits = [...COBALT_GROUPS].filter((n) => n.startsWith(k) || k.startsWith(n));
+  return hits.length === 1;
+}
+
+/** The slots that apply to one group: every carrier but Cobalt, which is by arrangement. */
+function slotsForGroup(name) {
+  const hasCobalt = Object.values(proposalSlotsByGroup[name] || {}).length > 0;
+  return SLOTS.filter((sl) => sl !== "Cobalt" || cobaltApplies(name) || hasCobalt);
+}
+
 function defaultManager(name) {
   const k = normalizeName(name);
   if (!k) return null;
@@ -140,6 +164,8 @@ let proposalCounts = {};
  * is what a group's 2027 Options page prices from; no file bytes, no flags.
  */
 let currentProposals = {};
+/** group -> { slot: true } for slots that already hold a proposal, so a slot in use is never hidden. */
+let proposalSlotsByGroup = {};
 /** The latest Employee Navigator carrier stats report, for reconciliation. */
 let carrierStats = null;
 /**
@@ -251,6 +277,8 @@ function rebuild() {
     broker: g.broker,
     brokerIsSet: !!(meta[g.name] || {}).broker,
     manager: g.manager || null,
+    /** The proposal slots this group has: Cobalt only where it is quoted. */
+    slots: slotsForGroup(g.name),
     renewal: g.renewal,
     proposals: proposalCounts[g.name] || 0,
     address1: g.address1 || null,
@@ -458,6 +486,7 @@ app.post("/api/signin", (req, res) => {
     // The carrier proposals on file for this group — plans and tier rates as
     // read off the documents — and this month's billing, counts and rates only.
     proposals: currentProposals[g.name] || [],
+    slots: slotsForGroup(g.name),
     funding: fundingSnapshot(g.name),
   });
 });
@@ -1222,6 +1251,9 @@ async function proposalsChanged() {
       });
     }
     currentProposals = current;
+    proposalSlotsByGroup = Object.fromEntries(
+      Object.entries(current).map(([g, list]) => [g, Object.fromEntries(list.filter((p) => p.slot === "Cobalt").map((p) => [p.slot, true]))]),
+    );
     proposalCounts = counts;
     rebuild();
   } catch (e) {

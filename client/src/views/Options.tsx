@@ -73,13 +73,14 @@ export default function Options({
   // what is still out with a carrier.
   const proposalsOnFile = useMemo(() => {
     const have = new Map((data.proposals || []).map((p) => [p.slot, p]));
-    const quoted = PROPOSAL_SLOTS.filter((s) => have.has(s)).map((s) => {
+    const slots = data.slots?.length ? data.slots : PROPOSAL_SLOTS;
+    const quoted = slots.filter((s) => have.has(s)).map((s) => {
       const pr = have.get(s)!;
       return `${s.replace(/^UHC/, "UnitedHealthcare")} (${pr.plans.length} plan${pr.plans.length === 1 ? "" : "s"}, ${fmtDate(pr.effectiveDate || pr.uploadedAt.slice(0, 10))})`;
     });
-    const waiting = PROPOSAL_SLOTS.filter((s) => !have.has(s)).map((s) => s.replace(/^UHC/, "UnitedHealthcare"));
+    const waiting = slots.filter((s) => !have.has(s)).map((s) => s.replace(/^UHC/, "UnitedHealthcare"));
     return { quoted, waiting, any: quoted.length > 0 };
-  }, [data.proposals]);
+  }, [data.proposals, data.slots]);
 
   // "Mapped 1-for-1" — each current plan costed on its closest 2027 match at
   // that plan's own tier counts. Deliberately a different figure from the

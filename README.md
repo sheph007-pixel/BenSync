@@ -183,8 +183,11 @@ still waiting for a group, and those filling no slot, sit under it. **List**
 and **By group** remain for working through a batch one file at a time.
 
 Each group holds one proposal per **slot** — UHC
-Fully Insured, UHC Level Funded, Gravie, Nationwide, Angle (Angle Health) and
-Cobalt (the self-funded quote) — and nothing else. Surest is a
+Fully Insured, UHC Level Funded, Gravie, Nationwide and Angle (Angle Health),
+plus Cobalt (a self-funded quote) for the groups Cobalt is quoting, listed in
+`server/data/cobalt-groups.json` and matched by normalised name. A group not on
+that list shows a dash in the Cobalt column and is never counted as missing it;
+upload a Cobalt proposal for one and the slot appears, so nothing is hidden. Surest is a
 UnitedHealthcare product, so a Surest quote fills that group's
 UnitedHealthcare slot for the funding it is written on. Claude fills the slot
 from the carrier and funding it reads; staff can change it. A document that
