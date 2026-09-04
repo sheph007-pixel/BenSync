@@ -1184,6 +1184,23 @@ function slotFor(carrier, funding, quotesMedical) {
 }
 
 /**
+ * Whether a proposal quotes no medical at all — dental, vision, life,
+ * disability. Claude says so directly on anything read since the field was
+ * added; for an older reading the document itself is the evidence: a file or
+ * summary that calls itself ancillary, or one that names only ancillary
+ * products and quoted no plan with a rate.
+ */
+function isAncillaryRow(row) {
+  const x = row.extracted || {};
+  if (typeof x.quotes_medical === "boolean") return !x.quotes_medical;
+  if (!row.extracted) return false;
+  const text = `${row.filename || ""} ${row.summary || ""} ${x.proposal_type || ""}`;
+  if (/\bancillar(y|ies)\b/i.test(text)) return true;
+  const rated = (x.plans || []).some((pl) => Object.values(pl.rates || {}).some((v) => v != null));
+  return !rated && /\b(dental|vision|life|ad&d|disability|std|ltd|accident|critical illness|hospital indemnity)\b/i.test(text);
+}
+
+/**
  * After any change: recount proposals per group for the Groups page, and
  * settle supersession — within a group and slot, the newest assigned proposal
  * is current and older ones are marked as replaced by it. Nothing is deleted.
@@ -1195,6 +1212,13 @@ async function proposalsChanged() {
     // before the list was cut back — is re-derived from what was read.
     let remapped = false;
     for (const r of rows) {
+      // An ancillary proposal fills no slot, whichever slot an older reading
+      // gave it: the four are group health.
+      if (r.slot && isAncillaryRow(r)) {
+        await proposalStore.updateProposal(r.id, { slot: null });
+        remapped = true;
+        continue;
+      }
       if (!r.slot || SLOTS.includes(r.slot)) continue;
       const x = r.extracted || {};
       const slot = slotFor(r.carrier || x.carrier, x.funding, x.quotes_medical);
@@ -1466,6 +1490,29 @@ app.get("/api/admin/proposals/:id/file", requireStaff, async (req, res) => {
 });
 
 /** Assign, reassign, confirm, or relabel a proposal. */
+/**
+ * Re-read every proposal whose extraction predates the current questions —
+ * anything with no `quotes_medical` on it. One click after a schema change,
+ * rather than pressing Re-read on each row. `all=1` re-reads everything.
+ */
+app.post("/api/admin/proposals/reanalyze", requireStaff, express.json({ limit: "4kb" }), async (req, res) => {
+  if (!aiEnabled()) return res.status(400).json({ error: "AI reading is off, so there is nothing to re-read with." });
+  const all = !!(req.body || {}).all;
+  const rows = await proposalStore.listProposals();
+  const want = rows.filter(
+    (r) => r.status !== "container" && (all || !r.extracted || typeof r.extracted.quotes_medical !== "boolean"),
+  );
+  for (const r of want) {
+    const f = await proposalStore.getProposalFile(r.id).catch(() => null);
+    if (!f) continue;
+    const keep = !!(r.group_name && r.assigned_by && r.assigned_by !== "ai" && r.assigned_by !== "filename");
+    await proposalStore.updateProposal(r.id, { status: "analyzing", error: null });
+    void runAnalysis(r.id, { buffer: f.data, mime: f.mime, filename: f.filename, context: r.context || null }, keep);
+  }
+  await proposalsChanged();
+  res.json({ ok: true, reading: want.length });
+});
+
 app.post("/api/admin/proposals/:id", requireStaff, express.json({ limit: "16kb" }), async (req, res) => {
   const id = Number(req.params.id);
   const { group, carrier, confirm, slot } = req.body || {};
