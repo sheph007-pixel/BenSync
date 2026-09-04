@@ -72,6 +72,16 @@ export const SLOTS = ["UHC Fully Insured", "UHC Level Funded", "Gravie", "Nation
 const TRACKED = SLOTS;
 const isCurrent = (p: Proposal) => p.status === "assigned" && !p.superseded_by;
 
+/**
+ * An ancillary proposal — dental, vision, life, disability — quotes no medical
+ * rates, so it fills no slot and is kept apart from the group health quotes
+ * the 2027 options are built from.
+ */
+const isAncillary = (p: Proposal) => p.extracted?.quotes_medical === false;
+/** A group health proposal that has been read but has no slot: staff say which. */
+const needsSlot = (p: Proposal) =>
+  p.status === "assigned" && !!p.group_name && !p.slot && !isAncillary(p) && !!p.extracted;
+
 /** "2027-01-01" → "1/1/27", for a grid cell. */
 const fmtDay = (s: string) => {
   const d = new Date(`${s.slice(0, 10)}T00:00:00`);
@@ -225,7 +235,11 @@ function useProposals(token: string, group?: string) {
 
 /** Plans and rates Claude read off the document, as a small table. */
 function Extracted({ x }: { x: Extraction }) {
-  const plans = x.plans || [];
+  const all = x.plans || [];
+  // A UHC quote can run to dozens of plans over many pages; show the first
+  // dozen and let the rest open, so Details stays a glance not a scroll.
+  const [showAll, setShowAll] = useState(false);
+  const plans = showAll ? all : all.slice(0, 12);
   return (
     <div style={{ marginTop: 8 }}>
       <div style={{ fontSize: 12.5, color: C.body, lineHeight: 1.6 }}>
@@ -285,6 +299,11 @@ function Extracted({ x }: { x: Extraction }) {
               ))}
             </tbody>
           </table>
+          {all.length > plans.length && (
+            <button onClick={() => setShowAll(true)} style={{ ...linkBtn, fontSize: 12.5, marginTop: 6 }}>
+              Show all {all.length} plans
+            </button>
+          )}
         </div>
       )}
       {!!x.audit_flags?.length && (
@@ -332,7 +351,8 @@ function ProposalRow({ p, token, groups, onChanged, fixedGroup, children: childC
   const conf = p.confidence != null ? `${Math.round(p.confidence * 100)}%` : null;
   // Read, but not one of the four medical proposals: an ancillary-only
   // document, or a carrier the portal does not track. Kept, never in a slot.
-  const untracked = !!x && !p.slot && (x.quotes_medical === false || !/united|uhc|surest|optum|gravie|nationwide|angle|cobalt/i.test(p.carrier || x.carrier || ""));
+  const ancillary = isAncillary(p);
+  const untracked = !!x && !p.slot && (ancillary || !/united|uhc|surest|optum|gravie|nationwide|angle|cobalt/i.test(p.carrier || x.carrier || ""));
 
   // An email wrapper: the subject, who sent it, what came out of it.
   if (p.status === "container") {
@@ -387,7 +407,7 @@ function ProposalRow({ p, token, groups, onChanged, fixedGroup, children: childC
               title="Which of the group's proposals this is"
               style={{ ...selectStyle, maxWidth: 180, borderColor: p.slot ? C.inputEdge : untracked ? C.inputEdge : C.amber }}
             >
-              <option value="">{untracked ? "— not one of the four —" : "— which proposal? —"}</option>
+              <option value="">{ancillary ? "— ancillary, no slot —" : untracked ? "— not a tracked carrier —" : "— which proposal? —"}</option>
               {SLOTS.map((s) => (
                 <option key={s} value={s}>
                   {s}
@@ -475,7 +495,9 @@ function ProposalRow({ p, token, groups, onChanged, fixedGroup, children: childC
       )}
       {untracked && (
         <div style={{ marginTop: 6, fontSize: 12.5, color: C.faint }}>
-          Not one of the tracked medical proposals{x?.quotes_medical === false ? " — no medical rates quoted" : ""}. Kept on file, out of the group&rsquo;s 2027 options.
+          {ancillary
+            ? "Ancillary proposal — no medical rates quoted. Kept on file, out of the group’s 2027 options."
+            : "Not one of the tracked carriers. Kept on file, out of the group’s 2027 options."}
         </div>
       )}
       {open && p.summary && p.status !== "analyzing" && (
@@ -684,6 +706,43 @@ function SlotCell({
   );
 }
 
+/** A named group of proposals under the grid; the quiet ones start folded. */
+function Bucket({
+  title,
+  note,
+  rows,
+  tone,
+  collapsed,
+  token,
+  groups,
+  onChanged,
+}: {
+  title: string;
+  note?: string;
+  rows: Proposal[];
+  tone: string;
+  collapsed?: boolean;
+  token: string;
+  groups: AdminGroup[];
+  onChanged: () => void;
+}) {
+  const [open, setOpen] = useState(!collapsed);
+  if (!rows.length) return null;
+  return (
+    <section style={{ marginTop: 16, paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        style={{ background: "none", border: "none", padding: 0, fontSize: 14, fontWeight: 600, color: tone, cursor: "pointer" }}
+      >
+        {title} · {rows.length} {open ? "▾" : "▸"}
+      </button>
+      {note && <div style={{ marginTop: 4, fontSize: 12.5, color: C.faint, maxWidth: 820 }}>{note}</div>}
+      {open && rows.map((p) => <ProposalRow key={p.id} p={p} token={token} groups={groups} onChanged={onChanged} />)}
+    </section>
+  );
+}
+
 interface Props {
   token: string;
   /** Live roster: what a proposal can be assigned to. */
@@ -713,6 +772,9 @@ export default function Proposals({ token, groups }: Props) {
   );
   const proposals = items.filter(isProposal);
   const counts = {
+    health: proposals.filter((p) => !isAncillary(p) && (!!p.slot || !!p.extracted)).length,
+    ancillary: proposals.filter(isAncillary).length,
+    noSlot: proposals.filter(needsSlot).length,
     queue: proposals.filter((p) => p.status === "unassigned" || p.status === "suggested").length,
     reading: proposals.filter((p) => p.status === "analyzing").length,
     assigned: proposals.filter((p) => p.status === "assigned").length,
@@ -759,9 +821,14 @@ export default function Proposals({ token, groups }: Props) {
     });
   const filled = gridRows.reduce((n, r) => n + r.have, 0);
   const slotsInPlay = gridRows.reduce((n, r) => n + r.of, 0);
-  // Read but filling no slot: an ancillary document, or a carrier outside the
-  // four. Listed under the grid so it can be filed by hand or deleted.
-  const untrackedRows = proposals.filter((p) => p.group_name && !p.slot && p.status !== "analyzing" && matches(p));
+  // Everything the grid cannot hold, in three plain buckets: a group health
+  // proposal still waiting for a slot (staff say which), an ancillary
+  // proposal, and a carrier the portal does not track.
+  const slotlessRows = proposals.filter((p) => needsSlot(p) && matches(p));
+  const ancillaryRows = proposals.filter((p) => p.group_name && isAncillary(p) && matches(p));
+  const otherRows = proposals.filter(
+    (p) => p.group_name && !p.slot && p.status !== "analyzing" && !isAncillary(p) && !needsSlot(p) && matches(p),
+  );
   const withRows = byGroup.filter((x) => x.rows.length);
   const without = byGroup.filter((x) => !x.rows.length && !proposals.some((p) => p.group_name === x.g.name));
 
@@ -773,7 +840,9 @@ export default function Proposals({ token, groups }: Props) {
             Proposals
           </h1>
           <span style={{ fontSize: 12.5, color: C.faint }}>
-            {proposals.length} on file · {counts.assigned} assigned · {counts.queue} to assign
+            {counts.health} group health · {counts.ancillary} ancillary
+            {counts.noSlot ? ` · ${counts.noSlot} waiting for a slot` : ""}
+            {counts.queue ? ` · ${counts.queue} to assign` : ""}
             {counts.reading ? ` · ${counts.reading} being read` : ""}
           </span>
         </div>
@@ -953,16 +1022,19 @@ export default function Proposals({ token, groups }: Props) {
             {!gridRows.length && (
               <div style={{ padding: "26px 0", textAlign: "center", fontSize: 13, color: C.faint }}>Nothing matches.</div>
             )}
-            {(unassignedRows.length > 0 || untrackedRows.length > 0) && (
-              <section style={{ marginTop: 18, paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
-                <h2 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: unassignedRows.length ? C.amber : C.faint }}>
-                  {unassignedRows.length ? `To Assign · ${unassignedRows.length}` : "Filed, But Not One Of The Tracked Carriers"}
-                </h2>
-                {[...unassignedRows, ...untrackedRows].map((p) => (
-                  <ProposalRow key={p.id} p={p} token={token} groups={sortedGroups} onChanged={() => void load()} />
-                ))}
-              </section>
-            )}
+            <Bucket title="To Assign" rows={unassignedRows} tone={C.amber} token={token} groups={sortedGroups} onChanged={() => void load()} />
+            <Bucket title="Group Health, Waiting For A Slot" rows={slotlessRows} tone={C.amber} token={token} groups={sortedGroups} onChanged={() => void load()} />
+            <Bucket
+              title="Ancillary Proposals"
+              note="Dental, vision, life and disability. No medical rates, so they fill no slot and stay out of the 2027 options."
+              rows={ancillaryRows}
+              tone={C.faint}
+              collapsed
+              token={token}
+              groups={sortedGroups}
+              onChanged={() => void load()}
+            />
+            <Bucket title="Other Carriers" rows={otherRows} tone={C.faint} collapsed token={token} groups={sortedGroups} onChanged={() => void load()} />
           </div>
         ) : layout === "groups" ? (
           <div>

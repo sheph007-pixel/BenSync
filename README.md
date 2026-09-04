@@ -173,13 +173,17 @@ to the group; between 50% and 85% it is **suggested** and waits for a click to
 confirm; below that the proposal sits in the **to assign** queue with a group
 dropdown. Any assignment can be changed.
 
-The tab opens on a **grid**: one row per group, one column per slot, so the
+The tab opens on a **grid of group health quotes**: one row per group, one column per slot, so the
 whole book reads at a glance — a filled slot shows the plan count and the
 effective date and opens the file; an empty one takes a drop or a click and
 uploads straight into that slot. Uploading over a filled slot is how a
 proposal is replaced. The grid filters by account manager and by what is
-missing (any slot, a named slot, or the groups with every quote in). Proposals
-still waiting for a group, and those filling no slot, sit under it. **List**
+missing (any slot, a named slot, or the groups with every quote in). Under the grid sit
+the ones it cannot hold, each in a named bucket: proposals still waiting for a
+group, a group health proposal whose slot is not yet decided (a UHC quote that
+does not say which funding, say), **ancillary proposals** — dental, vision,
+life, disability, no medical rates, so no slot and no part in the 2027 options —
+and carriers the portal does not track. The last two start folded. **List**
 and **By group** remain for working through a batch one file at a time.
 
 Each group holds one proposal per **slot** — UHC
