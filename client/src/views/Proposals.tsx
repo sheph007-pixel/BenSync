@@ -42,8 +42,13 @@ interface Extraction {
   effective_date?: string | null;
   proposal_type?: string;
   enrolled_on_document?: number | null;
+  quote_id?: string | null;
   plans?: {
     name: string;
+    /** The carrier's code for the plan, where one is printed. */
+    plan_code?: string | null;
+    /** The network it is priced on, where the quote distinguishes them. */
+    network?: string | null;
     plan_type?: string | null;
     deductible?: string | null;
     oop_max?: string | null;
@@ -257,6 +262,7 @@ function Extracted({ x }: { x: Extraction }) {
             On the document: <strong style={{ color: C.ink }}>{x.group_name_on_document}</strong>
           </>
         )}
+        {x.quote_id && ` · quote ${x.quote_id}`}
         {x.effective_date && ` · effective ${x.effective_date}`}
         {x.proposal_type && x.proposal_type !== "unknown" && ` · ${x.proposal_type}`}
         {x.enrolled_on_document != null && ` · priced on ${x.enrolled_on_document} enrolled`}
@@ -267,11 +273,11 @@ function Extracted({ x }: { x: Extraction }) {
           <table style={{ borderCollapse: "collapse", fontSize: 12.5, minWidth: 520 }}>
             <thead>
               <tr>
-                {["Plan", "Deductible", "OOP max", "EE", "EE+SP", "EE+CH", "Family", "Monthly"].map((h, i) => (
+                {["Plan", "Network", "Deductible", "OOP max", "EE", "EE+SP", "EE+CH", "Family", "Monthly"].map((h, i) => (
                   <th
                     key={h}
                     style={{
-                      textAlign: i >= 3 ? "right" : "left",
+                      textAlign: i >= 4 ? "right" : "left",
                       padding: "5px 8px 5px 0",
                       fontWeight: 600,
                       color: C.muted,
@@ -290,7 +296,9 @@ function Extracted({ x }: { x: Extraction }) {
                   <td style={{ padding: "5px 8px 5px 0", color: C.ink, borderBottom: `1px solid ${C.hairline}` }}>
                     {p.name}
                     {p.plan_type && <span style={{ color: C.ghost }}> · {p.plan_type}</span>}
+                    {p.plan_code && <div style={{ fontSize: 11.5, color: C.ghost }}>{p.plan_code}</div>}
                   </td>
+                  <td style={{ padding: "5px 8px 5px 0", color: C.body, borderBottom: `1px solid ${C.hairline}` }}>{p.network || "—"}</td>
                   <td style={{ padding: "5px 8px 5px 0", color: C.body, borderBottom: `1px solid ${C.hairline}` }}>{p.deductible || "—"}</td>
                   <td style={{ padding: "5px 8px 5px 0", color: C.body, borderBottom: `1px solid ${C.hairline}` }}>{p.oop_max || "—"}</td>
                   {(["EE", "ES", "EC", "FAM"] as const).map((t) => (
@@ -657,6 +665,7 @@ function SlotCell({
   };
   const plans = current?.extracted?.plans?.length || 0;
   const when = current?.extracted?.effective_date || current?.uploaded_at?.slice(0, 10) || "";
+  const quote = current?.extracted?.quote_id;
 
   return (
     <td style={{ padding: "5px 6px", borderBottom: `1px solid ${C.hairline}`, verticalAlign: "top" }}>
@@ -688,7 +697,7 @@ function SlotCell({
           <>
             <button
               onClick={() => void openFile(current.id, token)}
-              title={current.filename}
+              title={`${current.filename}${quote ? ` · quote ${quote}` : ""}`}
               style={{ ...linkBtn, fontSize: 12.5, fontWeight: 600, color: C.green, textAlign: "left", maxWidth: 170, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" }}
             >
               ✓ {plans ? `${plans} plan${plans === 1 ? "" : "s"}` : "on file"}

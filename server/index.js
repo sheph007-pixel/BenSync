@@ -1261,6 +1261,8 @@ async function proposalsChanged() {
         plans: Array.isArray(x.plans)
           ? x.plans.map((pl) => ({
               name: pl.name,
+              planCode: pl.plan_code || null,
+              network: pl.network || null,
               planType: pl.plan_type || null,
               deductible: pl.deductible || null,
               oopMax: pl.oop_max || null,
