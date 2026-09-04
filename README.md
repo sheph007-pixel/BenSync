@@ -9,7 +9,7 @@ with its access code and sees two things:
    named employee detail with ages, tier and per-person EE/ER/total, switchable
    between monthly, semi-monthly, bi-weekly and weekly.
 2. **2027 Medical Plan Options** — the shopped market (UnitedHealthcare Level
-   Funded, Surest by UHC, Gravie), every plan costed at the group's own census,
+   Funded, Gravie, Nationwide, Angle, Cobalt), every plan costed at the group's own census,
    with three Kennion recommendations above a sortable 95-plan grid. Groups
    build a shortlist and send it with a note to their rep.
 
@@ -155,8 +155,8 @@ want the whole book rather than the block the portal serves.
 
 ## Proposals
 
-Carrier proposals — UnitedHealthcare (Surest included), Gravie and Nationwide —
-are uploaded on the **Proposals** tab, a whole batch at once,
+Carrier proposals — UnitedHealthcare (Surest included), Gravie, Nationwide,
+Angle Health and Cobalt — are uploaded on the **Proposals** tab, a whole batch at once,
 or one at a time from a company's page. The drop zone takes the proposal in
 whatever form it came: a PDF, a spreadsheet, a Word file, a CSV, a picture of
 a rate sheet — or the **email itself** (`.eml` from Gmail or Apple Mail, `.msg`
@@ -178,18 +178,20 @@ whole book reads at a glance — a filled slot shows the plan count and the
 effective date and opens the file; an empty one takes a drop or a click and
 uploads straight into that slot. Uploading over a filled slot is how a
 proposal is replaced. The grid filters by account manager and by what is
-missing (any slot, a named slot, or the groups with all four in). Proposals
+missing (any slot, a named slot, or the groups with every quote in). Proposals
 still waiting for a group, and those filling no slot, sit under it. **List**
 and **By group** remain for working through a batch one file at a time.
 
-Each group holds exactly four **slots** — UHC
-Fully Insured, UHC Level Funded, Gravie and Nationwide — and nothing else.
-Surest is a UnitedHealthcare product, so a Surest quote fills that group's
+Each group holds one proposal per **slot** — UHC
+Fully Insured, UHC Level Funded, Gravie, Nationwide, Angle (Angle Health) and
+Cobalt (the self-funded quote) — and nothing else. Surest is a
+UnitedHealthcare product, so a Surest quote fills that group's
 UnitedHealthcare slot for the funding it is written on. Claude fills the slot
 from the carrier and funding it reads; staff can change it. A document that
 quotes no medical rates (an ancillary proposal for dental, vision or life) or
-comes from a carrier outside those three fills no slot: it is kept on file,
-marked "not one of the four", and stays out of the group's 2027 options. When a newer proposal lands in a slot a group already has, the older
+comes from a carrier outside those six fills no slot: it is kept on file,
+marked "not one of the tracked carriers", and stays out of the group's 2027
+options. When a newer proposal lands in a slot a group already has, the older
 one is marked **superseded** and kept, so the current set is always the latest
 from each carrier. That current set, stored in the database, is what the 2027
 options for each group will be built from. The extraction is shown under

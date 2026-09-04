@@ -136,7 +136,7 @@ export interface ProposalPlan {
   monthlyTotal: number | null;
 }
 
-/** A group's current proposal in one slot (UHC Fully Insured, UHC Level Funded, Gravie, Nationwide…). */
+/** A group's current proposal in one slot (UHC Fully Insured, UHC Level Funded, Gravie, Nationwide, Angle, Cobalt). */
 export interface GroupProposal {
   id: number;
   slot: string;
@@ -445,7 +445,7 @@ export interface MarketPlan {
 }
 
 /** The four proposal slots a group's 2027 options are built from, in the order they are shown. */
-export const PROPOSAL_SLOTS = ["UHC Fully Insured", "UHC Level Funded", "Gravie", "Nationwide"];
+export const PROPOSAL_SLOTS = ["UHC Fully Insured", "UHC Level Funded", "Gravie", "Nationwide", "Angle", "Cobalt"];
 
 /** "$1,500" / "1500.00" / "$1,500 individual" → 1500; anything unreadable → null. */
 export function moneyNum(v: string | number | null | undefined): number | null {
@@ -466,6 +466,8 @@ function slotPresentation(slot: string, carrier: string | null, planType: string
   if (slot === "Surest") return { carrier: "Surest (UnitedHealthcare)", label: "Copay-only", network: "UHC Choice Plus" };
   if (slot === "Gravie") return { carrier: "Gravie", label: planType || "Level Funded", network: "Gravie / Aetna" };
   if (slot === "Nationwide") return { carrier: "Nationwide", label: planType || "Level Funded", network: "Nationwide" };
+  if (slot === "Angle") return { carrier: "Angle Health", label: planType || "Level Funded", network: "Angle / Cigna PPO" };
+  if (slot === "Cobalt") return { carrier: "Cobalt", label: planType || "Self Funded", network: "On the proposal" };
   return { carrier: carrier || "Other", label: planType || "Quoted", network: "On the proposal" };
 }
 
